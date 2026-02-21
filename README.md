@@ -1,63 +1,156 @@
 # 2.8" ILI9341 Touch Display Enclosure for ESP32 with Home Assistant Integration
+![ESPHome](https://img.shields.io/badge/ESPHome-Compatible-blue)
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Integrated-orange)
+![LVGL](https://img.shields.io/badge/LVGL-UI-green)
+![Cheap Yellow Display](https://img.shields.io/badge/CYD-Supported-yellow)
 
-This project provides ESPHome config files and 3D-printable files for an enclosure designed to house a 2.8" ILI9341 touch display. Compatible with standalone 2.8" ILI9341 touch display connected to an ESP32 board or using the ESP32-2432S028 (integrating an ESP32 Wroom module and ILI9341 display on one board), this setup serves as an external, touchscreen-enabled display for your Home Assistant environment.
+An LVGL-powered ESPHome control panel for Home Assistant, built for the Cheap Yellow Display (CYD) and standalone ESP32 setups.
 
-The enclosure is designed for mounting beneath a desk and includes a swivel joint, allowing for easy adjustments to the viewing angle while keeping all cables neatly concealed for a clean, streamlined look. The touchscreen offers multiple customizable buttons linked to Home Assistant automations, making it easy to control functions such as lighting—and you’re free to create additional buttons as desired.
+------------------------------------------------------------------------
 
-The joint supports an adjustable tilt of +/- 35 degrees up and down. The display’s positioning tension can be fine-tuned by adjusting the screw tightness. The screw hole is deliberately sized slightly smaller than the M4 screw, requiring a bit of force during insertion to ensure a secure hold that prevents any looseness.
+This project provides complete ESPHome configurations and 3D-printable
+enclosure files for a 2.8" ILI9341 touch display powered by an ESP32.
 
-Simply print the files and flash the firmware to the ESP using ESPHome, connect it to Home Assistant.
+The goal of this project is to create a clean, wall- or desk-mounted
+smart control panel that integrates seamlessly with Home Assistant.
+It features a modern LVGL-based UI, real-time state synchronization, and
+direct Home Assistant service calls --- all without requiring additional
+automations.
 
-The images show the version with an ESP32-2432S028. I recommend using the ESP32-2432S028 as its just the power cable you need to pass-thru into the case and everything else is hidden. Down below you'll find some images of the ILI9341 display with an external ESP32.
+The enclosure is designed for:
+
+-   Clean cable routing
+-   Adjustable viewing angle (±35° tilt)
+-   Minimal footprint
+-   Professional, integrated appearance
+
+Two hardware variants are supported:
+
+-   ✅ **ESP32-2432S028 (also known as the "Cheap Yellow Display
+    Board")**
+-   ✅ **Standalone ILI9341 + External ESP32 wiring variant**
+
+The ESP32-2432S028 is commonly referred to as the **Cheap Yellow Display
+(CYD)** board in the maker community.
+It integrates the ESP32, ILI9341 display, touchscreen controller, and
+backlight circuitry on a single board, making it the easiest and
+cleanest option for this project.
 
 <img src="images/fusion1.jpg" width="40%">
 <img src="images/buttons.jpeg" width="40%">
 <img src="images/tilt.jpeg" width="40%">
 <img src="images/side.jpeg" width="40%">
 
+------------------------------------------------------------------------
 
+# 🆕 New Architecture (LVGL-Based UI)
 
-### Features:
+This project now uses ESPHome LVGL instead of a classic display lambda
+approach.
 
-- Customizable 3D-printed enclosure with hidden cable design for a clean setup
-- Swivel joint for adjustable viewing angles
-- Supports 2.8" ILI9341 touch display, compatible with ESP32 or ESP32-2432S028 (includes ESP32 Wroom and display on one board)
-- Connect to Home Assistant compatibility to control automations such as lighting
-- Using [ESPHome](https://www.esphome.io) which makes it easy to code and modify for your needs
+### What changed?
 
+-   The UI is rendered fully using LVGL widgets
+-   Buttons directly call Home Assistant services (homeassistant.action)
+-   Button states are mirrored from Home Assistant entities
+-   A centralized ui_refresh script keeps everything synchronized
+-   UI updates are triggered:
+    -   On boot
+    -   Every minute (for clock updates)
+    -   On Home Assistant state changes
 
-## Parts needed
+This makes the system:
+
+-   Cleaner
+-   More responsive
+-   Easier to extend
+-   More maintainable
+
+No Home Assistant automations are required anymore.
+
+> 💡 Tip: If touch input is mirrored or rotated, adjust BOTH
+> `display.transform` and `touchscreen.transform` — they must always match.
+
+# ⚙️ Requirements
+
+- Home Assistant installed
+- ESPHome Add-on installed
+- Basic ESPHome knowledge
+- 3D printer access (optional)
+
+---
+
+# 🧪 Tested With
+
+This project was tested using:
+
+- **ESPHome 2025.2+**
+- **Home Assistant 2025.2+**
+- ESP32-2432S028 (Cheap Yellow Display / CYD)
+- ILI9341 + XPT2046 standalone wiring variant
+
+LVGL and `homeassistant.action` require relatively recent ESPHome versions.
+If you are using an older version, please update before opening an issue.
+
+# ⚠️ IMPORTANT -- Enable "Actions" in Home Assistant
+
+Because this project uses:
+
+homeassistant.action → light.toggle
+
+You must allow the ESPHome device to perform Home Assistant service
+calls.
+
+### How to enable:
+
+1.  Open Home Assistant
+
+2.  Go to Settings
+
+3.  Click Devices & Services
+
+4.  Open the ESPHome integration
+
+5.  Select your device
+
+6.  Ensure:
+
+    "Allow the device to perform Home Assistant actions" is enabled
+
+Without this setting enabled, button presses will not trigger service
+calls.
+
+------------------------------------------------------------------------
+
+# ✨ Features
+
+-   LVGL-based lockscreen UI
+-   Live time & date (via Home Assistant time)
+-   4 configurable touch buttons
+-   Direct Home Assistant service calls
+-   Real-time state synchronization
+-   Adjustable 3D-printed enclosure
+-   Hidden cable routing
+-   Works with Cheap Yellow Display (ESP32-2432S028) or external ESP32
+    wiring
+
+------------------------------------------------------------------------
+
+# 📦 Hardware
+
+## Option A -- ESP32-2432S028 (Cheap Yellow Display Board -- Recommended)
 
 | Part                         | Price   | Comment                                         |
 |------------------------------|---------|-------------------------------------------------|
 | ESP32-2432S028			   | 15$     | 2.8" ILI9341 with integrated ESP                |
 | 2x M4 3.5x16 screw (flathead)| 0.10$   | Screws to connect the mount case with the base  |
 
-or
+Advantages:
 
-| Part                         | Price   | Comment                                         |
-|------------------------------|---------|-------------------------------------------------|
-| 2.8" ILI9341    			   | 8$      | 2.8" ILI9341                                    |
-| ESP32 Wroom 32D   		   | 8$      | or some ESP32                                   |
-| 2x M4 3.5x16 screw (flathead)| 0.10$   | Screws to connect the mount case with the base  |
-
-
-
-## How
-- Flash your ESP32 via ESPHome and use the yaml from the esphome folder. Adjust to your needs
-- Print the parts. 
-- Use two M4 screws to attach the display case and the base
-- *Connect all pins (when using a solo display with an ESP32)
-
-## HomeAssistant
-- Create some automations in home assistant using the exposed buttons as trigger.
-<br/>
-<br/>
-<br/>
-# Options
-
-## a) Using an ESP32-2432S028
-Simply connect to USB and flash the ESP using the yml file in the esphome directory. If your board is designed different check the pin layout
+-   Single USB cable
+-   Clean installation
+-   No manual wiring
+-   Widely available under the name "Cheap Yellow Display"
 
 | ESP32-2432S028               | PIN          | Comment                                              |
 |------------------------------|--------------|------------------------------------------------------|
@@ -77,11 +170,19 @@ Simply connect to USB and flash the ESP using the yml file in the esphome direct
 | ledc                         | GPIO21       | Backlight LED display                                |
 | ledc                         | GPIO4        | Onboard LED (not used for this project)              |
 
-To power the device, use the VIN and GND pins from the JST port (typically provided with a JST-to-pin cable). Pass the cable through the case using the hole in the center which runs through the swivel joint and connect these ends to the 5V and GND wires of an old USB cable
+------------------------------------------------------------------------
 
+## Option B -- Standalone Display + ESP32
 
-## b) Using an 2.8" ILI9141 standalone connected to an ESP32 Wroom 32D
-Follow the connection diagram, which shows how to put everything together.
+| Part                         | Price   | Comment                                         |
+|------------------------------|---------|-------------------------------------------------|
+| 2.8" ILI9341    			   | 8$      | 2.8" ILI9341                                    |
+| ESP32 Wroom 32D   		   | 8$      | or some ESP32                                   |
+| 2x M4 3.5x16 screw (flathead)| 0.10$   | Screws to connect the mount case with the base  |
+
+Requires manual wiring according to the YAML pin configuration.
+
+Use the wiring table below, which shows how to put everything together.
 
 | ILI9341                      | PIN  ESP32   | Comment                                              |
 |------------------------------|--------------|------------------------------------------------------|
@@ -90,26 +191,90 @@ Follow the connection diagram, which shows how to put everything together.
 | LCD                          |              |                                                      |
 | SCK                          | GPIO18       | SPI LCD Clock                                        |
 | SDI (MOSI)                   | GPIO23       | SPI LCD MOSI (sometimes also labeled as SDI)         |
-| SDOK (MISO)   	    	   | GPIO19       | SPI LCD MISO (sometimes also labeled as SDO	         |
+| SDO (MISO)   	    	   | GPIO19       | SPI LCD MISO (sometimes also labeled as SDO	         |
 | CS                           | GPIO27       | Display CS                                           |
 | D/C                          | GPIO26       | Display DC                                           |
-| RESET                        | GPI16        | Display Reset                                        |
+| RESET                        | GPIO16        | Display Reset                                        |
 | Touchscreen                  |              |                                                      |
 | T_CLK                        | GPIO25       | SPI Touchscreen Clock                                |
-| T_DO                         | GPIO35       | SPI Touchscreen MOSI (sometimes also labeled as DIN) |
-| T_DIN                        | GPIO32       | SPI Touchscreen MISO (sometimes also labeled as DO)  |
+| T_DO                         | GPIO35       | SPI Touchscreen MISO (sometimes also labeled as DO) |
+| T_DIN                        | GPIO32       | SPI Touchscreen MOSI (sometimes also labeled as DIN)  |
 | T_CS                         | GPIO33       | Touchscreen CS                                       |
 | T_IRQ                        | GPIO34       | Touchscreen Interrupt                                |
 | LED                          |              |                                                      |
 | ledc                         | GPIO4        | Backlight LED display                                |
 
+------------------------------------------------------------------------
 
-## 3D Print
-See folder print to get all SLT files and the fusion360 file. Feel free to adjust and remix
+# 🚀 Installation
 
-# DISCLAIMER
-This project is to be considered as a work in progress. 
-Feel free to adjust and remix the 3D cover to your needs. Its designed in Fusion 360, see fusion 360 file in the 3d_print folder.
+1.  Open ESPHome in Home Assistant
+2.  Create a new device
+3.  Copy the appropriate YAML file
+4.  Adjust WiFi credentials
+5.  Flash the device
+
+Available YAML variants:
+
+-   esp32-2432s028.yml
+-   ili9341-with-external-esp.yml
+
+Choose the one matching your hardware.
+
+------------------------------------------------------------------------
+
+# 🧠 System Logic Overview
+
+### Button Flow
+
+1.  LVGL button is pressed
+2.  ESPHome calls Home Assistant service (light.toggle)
+3.  Home Assistant updates entity state
+4.  ESPHome mirrors the entity as binary_sensor
+5.  ui_refresh updates the button checked state
+
+This guarantees full synchronization between UI and Home Assistant.
+
+------------------------------------------------------------------------
+
+# 🔧 Customization
+
+You can easily:
+
+-   Add more buttons
+-   Change service calls
+-   Modify fonts
+-   Adjust colors
+-   Change date language
+-   Adjust transforms for your panel
+
+If touch alignment is wrong, ensure:
+
+display.transform
+touchscreen.transform
+
+are identical.
+
+------------------------------------------------------------------------
+
+# 🖨 3D Printing
+
+See /3d_print folder for STL files and Fusion360 source.
+
+Designed for:
+
+-   Under-desk mounting
+-   Wall mounting
+-   Adjustable viewing angle
+-   Hidden cable routing
+
+------------------------------------------------------------------------
+
+# ⚠️ Disclaimer
+
+This is a hobby project and considered work-in-progress.
+
+Feel free to fork, remix and improve it.
 
 # Other
 <img src="images/display.jpeg" width="40%">
@@ -121,5 +286,4 @@ Feel free to adjust and remix the 3D cover to your needs. Its designed in Fusion
 
 # More projects
 Looking for more cool projects using this display? Check out the [LoctekMotion Touch Display GitHub repository](https://github.com/3DJupp/LoctekMotion-TouchDisplay)! This awesome project takes the same 2.8" ILI9341 touchscreen setup and repurposes it—not for lights, but for controlling a height-adjustable Flexispot desk with ease. If you're into smart home automation and custom builds, it's definitely worth a look!
-
 

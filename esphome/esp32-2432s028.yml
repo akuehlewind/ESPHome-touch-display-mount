@@ -1,260 +1,248 @@
+############################################################
+# SmartDisplay – ESPHome + LVGL lockscreen UI
+#
+# What this config does:
+# - ESP32 drives an ILI9341 (320x240) TFT and an XPT2046 touchscreen
+# - LVGL renders a simple "lockscreen" UI (time/date + 4 toggle buttons)
+# - Buttons call Home Assistant services (light.toggle)
+# - UI is refreshed on boot, every minute, and whenever HA light states change
+#
+# Notes for GitHub users:
+# - Replace API/OTA secrets or move them to secrets.yaml
+# - Make sure your display + touch wiring matches the SPI pins below
+# - Touch calibration values are device-specific (you may need to adjust)
+# - IMPORTANT: touchscreen.transform must match display.transform exactly
+############################################################
+
 esphome:
   name: smartdisplay
   friendly_name: SmartDisplay
+  # Trigger an initial UI sync shortly after boot
+  on_boot:
+    priority: 600
+    then:
+      - script.execute: ui_refresh
 
 esp32:
   board: esp32dev
   framework:
     type: arduino
 
+# Enable logs over serial / network (useful for debugging)
 logger:
 
+# Home Assistant native API (encrypted)
 api:
   encryption:
-    key: "XXXXXXXXXXXXXXXXXXXXX"
+    key: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
+# OTA firmware updates
 ota:
   - platform: esphome
-    password: "XXXXXXXXXXXXXXXXXXXXX"
+    password: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  # Fallback hotspot if WiFi can't connect (lets you reconfigure)
   ap:
     ssid: "Smartdisplay Fallback Hotspot"
-    password: "XXXXXXXXXXXXXXXXXXXXX"
+    password: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 captive_portal:
 
 time:
+  # Pull time from Home Assistant (used for clock/date labels)
   - platform: homeassistant
     id: homeassistant_time
     on_time:
+      # Refresh UI every minute (at second 0) to keep time/date accurate
       - seconds: 0
-        minutes: /1 # Update every minute
+        minutes: /1
         then:
-          - component.update: my_display    
+          - script.execute: ui_refresh
 
-font: 
-
-  # gfonts://family[@weight]
+font:
+  # Large font for the clock
   - file: "gfonts://Roboto@500"
     id: big_text
     size: 60
     bpp: 4
-    glyphs:
-      ['&', '@', '!', ',', '.', '?', '"', '%', '(', ')', '+', '-', '_', ':', '°', '0',
-       '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E',
-       'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
-       'T', 'U', 'V', 'W', 'X', 'Y', 'Z', ' ', 'a', 'b', 'c', 'd', 'e', 'f',
-       'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-       'u', 'v', 'w', 'x', 'y', 'z','å', 'Ä', 'ä', 'Ö', 'ö', 'Ü', 'ü', '/']
+    # Limit glyphs to reduce flash/RAM usage
+    glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°','0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','å','Ä','ä','Ö','ö','Ü','ü','/']
 
-  # gfonts://family[@weight]
+  # Smaller font for the date line
   - file: "gfonts://Roboto@300"
     id: notice_text
     size: 16
     bpp: 4
-    glyphs:
-      ['&', '@', '!', ',', '.', '?', '"', '%', '(', ')', '+', '-', '_', ':', '°', '0',
-       '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E',
-       'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
-       'T', 'U', 'V', 'W', 'X', 'Y', 'Z', ' ', 'a', 'b', 'c', 'd', 'e', 'f',
-       'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-       'u', 'v', 'w', 'x', 'y', 'z','å', 'Ä', 'ä', 'Ö', 'ö', 'Ü', 'ü', '/']     
+    glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°','0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','å','Ä','ä','Ö','ö','Ü','ü','/']
 
-  # gfonts://family[@weight]
+  # Small font for the button captions
   - file: "gfonts://Roboto@400"
     id: label
     size: 13
     bpp: 4
-    glyphs:
-      ['&', '@', '!', ',', '.', '?', '"', '%', '(', ')', '+', '-', '_', ':', '°', '0',
-       '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E',
-       'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
-       'T', 'U', 'V', 'W', 'X', 'Y', 'Z', ' ', 'a', 'b', 'c', 'd', 'e', 'f',
-       'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-       'u', 'v', 'w', 'x', 'y', 'z','å', 'Ä', 'ä', 'Ö', 'ö', 'Ü', 'ü', '/']            
+    glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°','0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','å','Ä','ä','Ö','ö','Ü','ü','/']
 
-  - file: 'fonts/materialdesignicons-webfont.ttf' # Get them from https://github.com/Templarian/MaterialDesign-Webfont/blob/master/fonts/materialdesignicons-webfont.ttf and copy to a folder /fonts
+  # Material Design Icons (MDI) font file must exist in your ESPHome config folder
+  # Download: https://github.com/Templarian/MaterialDesign-Webfont
+  - file: 'fonts/materialdesignicons-webfont.ttf'
     id: materialdesign_icons
     size: 35
-    glyphs: ["\U000F095F", "\U000F0769", "\U000F08DD","\U000F1051"]
+    # Only include the icons you use to keep the font small
+    glyphs: ["\U000F095F", "\U000F0769", "\U000F08DD", "\U000F1051"]
 
-# If you want a background image for your screen you can uncomment the next lines. Keep in mind rendering images slows down refresh of the display
-#image:
-#  - file: "images/my_background_image.jpg"
-#    id: background
-#    type: RGB565
-          
 color:
+  # Used for icon highlight color
   - id: ACTIVE
-    hex: "FEC600"  
+    hex: "FEC600"
+  # Used for default button background color (unchecked state)
   - id: INACTIVE
-    hex: "808080"  
+    hex: "808080"
 
 sensor:
   - platform: wifi_signal
     name: "Wifi Signal"
-    update_interval: 600s  
+    update_interval: 600s
+
   - platform: uptime
     name: "Uptime"
     id: uptime_s
-    update_interval: 15s       
+    update_interval: 15s
 
 binary_sensor:
-# Adjust touchscreen touch areas if needed
-# To trigger button actions use HA and just create an automation that uses the exposed buttons as triggers on change
   - platform: status
     name: "Node Status"
     id: system_status
-  - platform: touchscreen
-    name: Button 1  # exposes a button to HA
-    x_min: 53
-    x_max: 131    
-    y_min: 18
-    y_max: 63
-  - platform: touchscreen
-    name: Button 2  # exposes a button to HA
-    x_min: 53
-    x_max: 131  
-    y_min: 72
-    y_max: 115    
-  - platform: touchscreen
-    name: Button 3  # exposes a button to HA
-    x_min: 53
-    x_max: 131   
-    y_min: 126
-    y_max: 169
-  - platform: touchscreen
-    name: Button 4  # exposes a button to HA
-    x_min: 53
-    x_max: 131     
-    y_min: 178
-    y_max: 224    
-  
+
+  # Home Assistant entities mirrored as binary_sensors
+  # Whenever a state changes, we refresh the UI so the button states match HA.
+  - platform: homeassistant
+    id: light_tisch
+    entity_id: light.buero_schreibtisch
+    on_state:
+      then:
+        - script.execute: ui_refresh
+
+  - platform: homeassistant
+    id: light_decke
+    entity_id: light.buro_decke
+    on_state:
+      then:
+        - script.execute: ui_refresh
+
+  - platform: homeassistant
+    id: light_kugel
+    entity_id: light.buero_kugel
+    on_state:
+      then:
+        - script.execute: ui_refresh
+
+  - platform: homeassistant
+    id: light_ambient
+    entity_id: light.buro_schreibtisch_ambient_2
+    on_state:
+      then:
+        - script.execute: ui_refresh
+
 text_sensor:
+  # Human-readable uptime string (d/h/m/s)
   - platform: template
     name: "Uptime (formatted)"
     lambda: |-
-      uint32_t dur = id(uptime_s).state;
+      uint32_t dur = (uint32_t) id(uptime_s).state;
       int dys = 0;
       int hrs = 0;
       int mnts = 0;
-      if (dur > 86399) {
-        dys = trunc(dur / 86400);
-        dur = dur - (dys * 86400);
-      }
-      if (dur > 3599) {
-        hrs = trunc(dur / 3600);
-        dur = dur - (hrs * 3600);
-      }
-      if (dur > 59) {
-        mnts = trunc(dur / 60);
-        dur = dur - (mnts * 60);
-      }
-      char buffer[17];
+      if (dur > 86399) { dys = trunc(dur / 86400); dur = dur - (dys * 86400); }
+      if (dur > 3599)  { hrs = trunc(dur / 3600);  dur = dur - (hrs * 3600); }
+      if (dur > 59)    { mnts = trunc(dur / 60);   dur = dur - (mnts * 60); }
+      static char buffer[17];
       sprintf(buffer, "%ud %02uh %02um %02us", dys, hrs, mnts, dur);
       return {buffer};
     icon: mdi:clock-start
-    update_interval: 60s    
-
-    # Import HA entities
-    # Adjust to your needs. I used the entities to change the background color of the button depending on the state
-    # There is for sure a better solution but feel free to adjust. 
-  - platform: homeassistant
-    id: button1
-    entity_id: light.buero_schreibtisch
-    on_value:
-      then:
-        - component.update: my_display
-  - platform: homeassistant
-    id: button2
-    entity_id: light.buro_decke  
-    on_value:
-      then:
-        - component.update: my_display
-  - platform: homeassistant
-    id: button3
-    entity_id: light.buero_kugel      
-    on_value:
-      then:
-        - component.update: my_display
-  - platform: homeassistant
-    id: button4
-    entity_id: light.buro_schreibtisch_ambient_2      
-    on_value:
-      then:
-        - component.update: my_display        
+    update_interval: 60s
 
 switch:
+  # Expose a restart switch in Home Assistant
   - platform: restart
-    name: "Restart"  
+    name: "Restart"
 
 spi:
+  # SPI bus for the TFT display
   - id: lcd
     clk_pin: GPIO14
     mosi_pin: GPIO13
     miso_pin: GPIO12
+
+  # Separate SPI bus for the touchscreen controller
   - id: my_touchscreen
     clk_pin: GPIO25
     mosi_pin: GPIO32
-    miso_pin: GPIO39  
+    miso_pin: GPIO39
 
 output:
+  # PWM output for TFT backlight brightness
   - platform: ledc
     pin: GPIO21
     id: gpio_backlight_pwm
+
+  # RGB LED channels (inverted = common-anode / active-low wiring)
   - platform: ledc
     id: output_red
     pin: GPIO4
     inverted: true
+
   - platform: ledc
     id: output_green
     pin: GPIO16
     inverted: true
+
   - platform: ledc
     id: output_blue
     pin: GPIO17
-    inverted: true    
+    inverted: true
 
 light:
+  # Backlight as a monochromatic light entity (PWM)
   - platform: monochromatic
     output: gpio_backlight_pwm
     name: "Power Display Backlight"
     id: back_light
-    restore_mode: ALWAYS_ON        
+    restore_mode: ALWAYS_ON
+
+  # On-board / external RGB LED as a light entity
   - platform: rgb
     name: LED
     red: output_red
     id: led
     green: output_green
     blue: output_blue
-    restore_mode: ALWAYS_OFF    
+    restore_mode: ALWAYS_OFF
 
 touchscreen:
+  # XPT2046 resistive touch controller
   platform: xpt2046
+  id: ts_touch
   spi_id: my_touchscreen
   cs_pin: 33
   interrupt_pin: 36
   update_interval: 50ms
   threshold: 400
-  on_touch:
-    - lambda: |-
-          ESP_LOGI("cal", "x=%d, y=%d, x_raw=%d, y_raw=%0d",
-              touch.x,
-              touch.y,
-              touch.x_raw,
-              touch.y_raw
-              );
+
+  # Touch calibration: adjust these values for your specific panel/controller
   calibration:
     x_min: 280
     x_max: 3860
     y_min: 340
     y_max: 3860
+
+  # IMPORTANT: must match the display transform so touch coordinates align
   transform:
-    mirror_x: true
-    mirror_y: false     
+    swap_xy: true
+    mirror_x: false
+    mirror_y: false
 
 display:
   - platform: ili9xxx
@@ -264,99 +252,232 @@ display:
     color_palette: 8BIT
     cs_pin: 15
     dc_pin: 2
-    #reset_pin: 16
-    rotation: 90
     invert_colors: false
-    update_interval: never   
+    # LVGL drives rendering, so we disable ESPHome's periodic display refresh
+    update_interval: never
+    auto_clear_enabled: false
 
-    # # If you want to use a background image uncomment these lines.
-    #color_palette: IMAGE_ADAPTIVE
-    #color_palette_images:
-    #  - "images/smartpanel/smartpanel_bg.jpg"   
+    # Do not set "rotation" when using "transform"
+    transform:
+      swap_xy: true
+      mirror_x: false
+      mirror_y: false
 
-    pages:      
-      - id: lockscreen_page
-        lambda: |-
-          std::map<std::uint8_t, std::string> day_map
-          {
-            {2, "Montag"},
-            {3, "Dienstag"},
-            {4, "Mittwoch"},
-            {5, "Donnerstag"},
-            {6, "Freitag"},
-            {7, "Samstag"},
-            {1, "Sonntag"}
-          };
+    # Required when swap_xy is true (width/height swap)
+    dimensions:
+      width: 320
+      height: 240
 
-          std::map<std::uint8_t, std::string> month_map
-          {
-            {1, "Januar"},
-            {2, "Februar"},
-            {3, "März"},
-            {4, "April"},
-            {5, "Mai"},
-            {6, "Juni"},
-            {7, "Juli"},
-            {8, "August"},
-            {9, "September"},
-            {10, "Oktober"},
-            {11, "November"},
-            {12, "Dezember"}
-          };
+# --- LVGL UI (replaces a classic display lambda completely) ---
+lvgl:
+  # Bind LVGL to the configured display
+  displays:
+    - my_display
+  # Bind LVGL to the configured touchscreen
+  touchscreens:
+    - touchscreen_id: ts_touch
 
-            //it.image(0, 0, id(background));
+  # Minimal theme: black background, rounded toggle buttons
+  theme:
+    obj:
+      bg_color: 0x000000
+      bg_opa: COVER
 
-            
-            auto white = Color(255, 255, 255);
-            
-            int b_pos_y = 170;
+    # Rounded buttons: unchecked = INACTIVE gray, checked = white
+    button:
+      radius: 30
+      width: 60
+      height: 60
+      border_width: 0
+      shadow_width: 0
+      bg_color: !lambda return id(INACTIVE);
+      bg_opa: COVER
+      checked:
+        bg_color: 0xFFFFFF
+        bg_opa: COVER
 
-            // Button 1
-            int b1_pos_x = (it.get_width()/2) - 105;
-            if (id(button1).state == "off") {
-              it.filled_circle(b1_pos_x, b_pos_y, 30, id(INACTIVE));
-            } else {
-              it.filled_circle(b1_pos_x, b_pos_y, 30, white);
-            }
-            it.printf(b1_pos_x, b_pos_y, id(materialdesign_icons),id(ACTIVE), TextAlign::CENTER, "\U000F095F");             
-            it.printf(b1_pos_x, b_pos_y + 45, id(label),id(Color::WHITE), TextAlign::CENTER, "Tisch");   
+  pages:
+    - id: lockscreen_page
+      bg_color: 0x000000
+      bg_opa: COVER
+      widgets:
+        # Date label (centered)
+        - label:
+            id: lbl_date
+            x: 0
+            y: 30
+            width: 320
+            text_align: CENTER
+            text_font: notice_text
+            text_color: 0xFFFFFF
+            text: ""
 
-            // Button 2
-            int b2_pos_x = (it.get_width()/2) - 35;
-            if (id(button2).state == "off") {
-              it.filled_circle(b2_pos_x, b_pos_y, 30, id(INACTIVE));
-            } else {
-              it.filled_circle(b2_pos_x, b_pos_y, 30, white);
-            }
-            it.printf(b2_pos_x, b_pos_y, id(materialdesign_icons),id(ACTIVE), TextAlign::CENTER, "\U000F0769");  
-            it.printf(b2_pos_x, b_pos_y + 45, id(label),id(Color::WHITE), TextAlign::CENTER, "Decke");   
+        # Time label (centered, large)
+        - label:
+            id: lbl_time
+            x: 0
+            y: 55
+            width: 320
+            text_align: CENTER
+            text_font: big_text
+            text_color: 0xFFFFFF
+            text: ""
 
-            // Button 3
-            int b3_pos_x = (it.get_width()/2) + 35;
-            if (id(button3).state == "off") {
-              it.filled_circle(b3_pos_x, b_pos_y, 30, id(INACTIVE));
-            } else {
-              it.filled_circle(b3_pos_x, b_pos_y, 30, white);
-            }
-            it.printf(b3_pos_x, b_pos_y, id(materialdesign_icons),id(ACTIVE), TextAlign::CENTER, "\U000F08DD");  
-            it.printf(b3_pos_x, b_pos_y + 45, id(label),id(Color::WHITE), TextAlign::CENTER, "Kugel");  
+        # Button 1: "Tisch" light
+        - button:
+            id: btn_tisch
+            x: 25
+            y: 140
+            checkable: true
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: materialdesign_icons
+                  text_color: !lambda return id(ACTIVE);
+                  text: "\U000F095F"
+            # Trigger HA service call on tap
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.buero_schreibtisch
 
-            // Button 4
-            int b4_pos_x = (it.get_width()/2) + 105;
-            if (id(button4).state == "off") {
-              it.filled_circle(b4_pos_x, b_pos_y, 30, id(INACTIVE));
-            } else {
-              it.filled_circle(b4_pos_x, b_pos_y, 30, white);
-            }
-            it.printf(b4_pos_x, b_pos_y, id(materialdesign_icons),id(ACTIVE), TextAlign::CENTER, "\U000F1051");  
-            it.printf(b4_pos_x, b_pos_y + 45, id(label),id(Color::WHITE), TextAlign::CENTER, "Ambient");                                      
+        - label:
+            x: 25
+            y: 205
+            width: 60
+            text_align: CENTER
+            text_font: label
+            text_color: 0xFFFFFF
+            text: "Tisch"
 
+        # Button 2: "Decke" light
+        - button:
+            id: btn_decke
+            x: 95
+            y: 140
+            checkable: true
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: materialdesign_icons
+                  text_color: !lambda return id(ACTIVE);
+                  text: "\U000F0769"
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.buro_decke
 
-            // Date Time
-            std::string day_of_week = day_map[id(homeassistant_time).now().day_of_week];    
-            int day_of_month = id(homeassistant_time).now().day_of_month;    
-            std::string month = month_map[id(homeassistant_time).now().month];    
-            it.printf(it.get_width()/2, it.get_height()/2 - 90, id(notice_text),id(Color::WHITE), TextAlign::CENTER, "%s, %d. %s", day_of_week.c_str(),day_of_month,month.c_str());  
-            it.strftime(it.get_width()/2, it.get_height()/2 - 45, id(big_text),id(Color::WHITE), TextAlign::CENTER, "%H:%M", id(homeassistant_time).now());  
+        - label:
+            x: 95
+            y: 205
+            width: 60
+            text_align: CENTER
+            text_font: label
+            text_color: 0xFFFFFF
+            text: "Decke"
 
-           
+        # Button 3: "Kugel" light
+        - button:
+            id: btn_kugel
+            x: 165
+            y: 140
+            checkable: true
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: materialdesign_icons
+                  text_color: !lambda return id(ACTIVE);
+                  text: "\U000F08DD"
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.buero_kugel
+
+        - label:
+            x: 165
+            y: 205
+            width: 60
+            text_align: CENTER
+            text_font: label
+            text_color: 0xFFFFFF
+            text: "Kugel"
+
+        # Button 4: "Ambient" light
+        - button:
+            id: btn_ambient
+            x: 235
+            y: 140
+            checkable: true
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: materialdesign_icons
+                  text_color: !lambda return id(ACTIVE);
+                  text: "\U000F1051"
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.buro_schreibtisch_ambient_2
+
+        - label:
+            x: 235
+            y: 205
+            width: 60
+            text_align: CENTER
+            text_font: label
+            text_color: 0xFFFFFF
+            text: "Ambient"
+
+script:
+  # Central UI update routine:
+  # - sets LVGL button checked state from HA light states
+  # - updates time label
+  # - updates date label
+  - id: ui_refresh
+    mode: queued
+    then:
+      # Update toggle button states (checked/un-checked)
+      - lvgl.widget.update:
+          id: btn_tisch
+          state:
+            checked: !lambda return id(light_tisch).state;
+
+      - lvgl.widget.update:
+          id: btn_decke
+          state:
+            checked: !lambda return id(light_decke).state;
+
+      - lvgl.widget.update:
+          id: btn_kugel
+          state:
+            checked: !lambda return id(light_kugel).state;
+
+      - lvgl.widget.update:
+          id: btn_ambient
+          state:
+            checked: !lambda return id(light_ambient).state;
+
+      # Update time (HH:MM)
+      - lvgl.label.update:
+          id: lbl_time
+          text: !lambda |-
+            auto now = id(homeassistant_time).now();
+            static char buf[6];
+            snprintf(buf, sizeof(buf), "%02d:%02d", now.hour, now.minute);
+            return std::string(buf);
+
+      # Update date (German example: "Montag, 1. Januar")
+      # Tip: If you want English, replace the arrays below.
+      - lvgl.label.update:
+          id: lbl_date
+          text: !lambda |-
+            static const char* days[]   = {"", "Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"};
+            static const char* months[] = {"","Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"};
+            auto now = id(homeassistant_time).now();
+            static char buf[40];
+            snprintf(buf, sizeof(buf), "%s, %d. %s", days[now.day_of_week], now.day_of_month, months[now.month]);
+            return std::string(buf);
