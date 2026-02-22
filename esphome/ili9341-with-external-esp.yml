@@ -1,95 +1,147 @@
 ############################################################
 # SmartDisplay (External ESP wiring variant) – ESPHome + LVGL lockscreen UI
 #
-# What this config does:
-# - ESP32 drives an ILI9341 (320x240) TFT and an XPT2046 touchscreen
-# - LVGL renders a simple "lockscreen" UI (time/date + 4 toggle buttons)
-# - Buttons call Home Assistant services (light.toggle)
-# - UI is refreshed on boot, every minute, and whenever HA light states change
+# Target hardware
+# - Any ESP32 + external ILI9341 (320x240) display + XPT2046 touchscreen
+# - This file uses a specific “external ESP” pinout (see wiring below).
 #
-# Hardware / wiring (IMPORTANT):
-# - This variant keeps the PINOUT from the external-ESP YAML:
-#   - Display SPI: CLK=GPIO18, MOSI=GPIO23, MISO=GPIO19
-#   - Touch SPI:   CLK=GPIO25, MOSI=GPIO32, MISO=GPIO35
-#   - Display: CS=GPIO27, DC=GPIO26, RESET=GPIO16
-#   - Touch:   CS=GPIO33, IRQ=GPIO34
-#   - Backlight PWM: GPIO4
+# Purpose
+# - LVGL renders a simple “lockscreen” UI: time/date + 4 toggle buttons.
 #
-# Notes for GitHub users:
-# - Replace API/OTA secrets or move them to secrets.yaml
-# - Touch calibration values are device-specific (you may need to adjust)
-# - IMPORTANT: touchscreen.transform must match display.transform exactly
+# Touch input → Home Assistant
+# - Every touch publishes an “action” string via a text_sensor:
+#     sensor.smartdisplay_action = "btn1_press" / "btn2_press" / "btn3_press" / "btn4_press"
+# - The sensor is auto-reset to "" after each press so repeated presses trigger reliably.
+#
+# Two supported control modes (choose what fits your setup)
+# 1) Direct control (DEFAULT, simplest)
+#    - DIRECT_ACTIONS: "true" (default)
+#    - Each touch will:
+#        • publish the action string AND
+#        • directly call a Home Assistant service
+#          (default: light.toggle on BTN*_ENTITY)
+#    - Use this if you simply want to toggle lights without creating automations.
+#
+# 2) Automation-only control (custom logic)
+#    - DIRECT_ACTIONS: "false"
+#    - Each touch will ONLY publish the action string.
+#    - You implement the behavior in Home Assistant automations using:
+#        Trigger → State → sensor.smartdisplay_action → To: btn1_press (etc.)
+#
+# If you do NOT want to toggle lights
+# - Either change the homeassistant.action blocks to a different service
+#   (e.g. switch.toggle, script.turn_on, scene.turn_on, ...)
+# - Or set DIRECT_ACTIONS to "false" and handle everything via HA automations.
+#
+# UI updates
+# - On boot, every minute, and whenever the configured HA entities change
+#   (mirrored into ESPHome to keep LVGL button states in sync).
+#
+# Hardware / wiring used by this variant (external ESP pinout)
+# - Display SPI: CLK=GPIO18, MOSI=GPIO23, MISO=GPIO19
+# - Touch SPI:   CLK=GPIO25, MOSI=GPIO32, MISO=GPIO35
+# - Display: CS=GPIO27, DC=GPIO26, RESET=GPIO16
+# - Touch:   CS=GPIO33, IRQ=GPIO34
+# - Backlight PWM: GPIO4
+#
+# What you must adapt before flashing
+# 1) Secrets: api.encryption.key, ota.password, WiFi credentials (prefer secrets.yaml)
+# 2) Wiring: ensure your display + touch wiring matches the pinout above
+# 3) BTN*_ENTITY: Home Assistant entity IDs you want to control/mirror
+# 4) Touch calibration + transform:
+#    - calibration is panel-specific
+#    - touchscreen.transform MUST match display.transform exactly
+#
+# Home Assistant note
+# - In the ESPHome device settings, enable:
+#   “Allow the device to perform Home Assistant actions”
+#   Otherwise homeassistant.action calls are blocked.
 ############################################################
+
+# ==========================================================
+# USER CONFIG (edit this section to match your HA setup)
+#
+# - DIRECT_ACTIONS:
+#     "true"  -> touch publishes action + calls HA service (light.toggle by default)
+#     "false" -> touch only publishes action (all logic handled in HA)
+#
+# - BTN*_ENTITY:
+#     The Home Assistant entity to control and mirror for the button state.
+#     Must exist in Home Assistant.
+#
+# - BTN*_LABEL / BTN*_ICON:
+#     Only affects what is shown on the display.
+# ==========================================================
+substitutions:
+  # Enable/disable direct Home Assistant service calls on touch.
+  # - "true"  -> touching a button also calls light.toggle (plug & play)
+  # - "false" -> touching a button ONLY publishes the action text_sensor
+  DIRECT_ACTIONS: "true"
+
+  # Button 1
+  BTN1_ENTITY: "light.desk_lamp"
+  BTN1_LABEL: "Desk"
+  BTN1_ICON: "\U000F095F"
+
+  # Button 2
+  BTN2_ENTITY: "light.ceiling_light"
+  BTN2_LABEL: "Ceiling"
+  BTN2_ICON: "\U000F0769"
+
+  # Button 3
+  BTN3_ENTITY: "light.globe_lamp"
+  BTN3_LABEL: "Globe"
+  BTN3_ICON: "\U000F08DD"
+
+  # Button 4
+  BTN4_ENTITY: "light.ambient_light"
+  BTN4_LABEL: "Ambient"
+  BTN4_ICON: "\U000F1051"
+# ==========================================================
 
 esphome:
   name: smartdisplay
   friendly_name: SmartDisplay
-  # Trigger an initial UI sync shortly after boot
   on_boot:
     priority: 600
     then:
       - script.execute: ui_refresh
 
-############################################################
-# ESP32 Configuration
-############################################################
 esp32:
   board: esp32dev
   framework:
     type: arduino
 
-# Enable logs over serial / network (useful for debugging)
 logger:
 
-############################################################
-# Home Assistant API (encrypted)
-############################################################
 api:
   encryption:
     key: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
-############################################################
-# OTA firmware updates
-############################################################
 ota:
   - platform: esphome
     password: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
-############################################################
-# WiFi Configuration
-############################################################
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-  # Fallback hotspot if WiFi can't connect (lets you reconfigure)
   ap:
     ssid: "Smartdisplay Fallback Hotspot"
     password: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 captive_portal:
 
-############################################################
-# Time from Home Assistant
-# Used for clock + date display
-############################################################
+# Use Home Assistant time so the display always matches your HA timezone.
 time:
   - platform: homeassistant
     id: homeassistant_time
     on_time:
-      # Refresh UI every minute (at second 0) to keep time/date accurate
       - seconds: 0
         minutes: /1
         then:
           - script.execute: ui_refresh
 
-############################################################
-# Fonts
-# Notes:
-# - Using explicit glyph lists keeps font memory usage low.
-# - MDI font must be placed in the ESPHome config directory (see link).
-############################################################
 font:
-  # Large font for the clock
   - file: "gfonts://Roboto@500"
     id: big_text
     size: 60
@@ -102,7 +154,6 @@ font:
        'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
        'u', 'v', 'w', 'x', 'y', 'z','å', 'Ä', 'ä', 'Ö', 'ö', 'Ü', 'ü', '/']
 
-  # Smaller font for the date line
   - file: "gfonts://Roboto@300"
     id: notice_text
     size: 16
@@ -115,7 +166,6 @@ font:
        'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
        'u', 'v', 'w', 'x', 'y', 'z','å', 'Ä', 'ä', 'Ö', 'ö', 'Ü', 'ü', '/']
 
-  # Small font for the button captions
   - file: "gfonts://Roboto@400"
     id: label
     size: 13
@@ -128,29 +178,18 @@ font:
        'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
        'u', 'v', 'w', 'x', 'y', 'z','å', 'Ä', 'ä', 'Ö', 'ö', 'Ü', 'ü', '/']
 
-  # Material Design Icons (MDI)
-  # Download the font file and place it at: fonts/materialdesignicons-webfont.ttf
-  # Source: https://github.com/Templarian/MaterialDesign-Webfont
+  # Material Design Icons font (bundle the TTF in /config/esphome/fonts/)
   - file: 'fonts/materialdesignicons-webfont.ttf'
     id: materialdesign_icons
     size: 35
-    # Only include the icons you use to keep the font small
-    glyphs: ["\U000F095F", "\U000F0769", "\U000F08DD","\U000F1051"] # Download: https://github.com/Templarian/MaterialDesign-Webfont
+    glyphs: ["\U000F095F", "\U000F0769", "\U000F08DD", "\U000F1051"]
 
-############################################################
-# UI Colors
-############################################################
 color:
-  # Used for icon highlight color
   - id: ACTIVE
     hex: "FEC600"
-  # Used for default button background color (unchecked state)
   - id: INACTIVE
     hex: "808080"
 
-############################################################
-# System Sensors
-############################################################
 sensor:
   - platform: wifi_signal
     name: "Wifi Signal"
@@ -161,51 +200,59 @@ sensor:
     id: uptime_s
     update_interval: 15s
 
-############################################################
-# Binary Sensors
-# - status: device online status
-# - homeassistant: mirror HA entities to drive LVGL button states
-############################################################
 binary_sensor:
   - platform: status
     name: "Node Status"
     id: system_status
 
-  # Mirror HA entities as binary sensors so we can update LVGL "checked" state.
-  # Whenever a state changes, we refresh the UI so the button states match HA.
+  # Mirror HA entities (used to render the "checked" state of each LVGL button)
+  # These are read-only "views" of HA state for UI sync.
   - platform: homeassistant
     id: light_tisch
-    entity_id: light.buero_schreibtisch
+    entity_id: ${BTN1_ENTITY}
     on_state:
       then:
         - script.execute: ui_refresh
 
   - platform: homeassistant
     id: light_decke
-    entity_id: light.buro_decke
+    entity_id: ${BTN2_ENTITY}
     on_state:
       then:
         - script.execute: ui_refresh
 
   - platform: homeassistant
     id: light_kugel
-    entity_id: light.buero_kugel
+    entity_id: ${BTN3_ENTITY}
     on_state:
       then:
         - script.execute: ui_refresh
 
   - platform: homeassistant
     id: light_ambient
-    entity_id: light.buro_schreibtisch_ambient_2
+    entity_id: ${BTN4_ENTITY}
     on_state:
       then:
         - script.execute: ui_refresh
 
-############################################################
-# Text Sensors
-############################################################
 text_sensor:
-  # Human-readable uptime string (d/h/m/s)
+  # ----------------------------------------------------------
+  # SmartDisplay Action (Hue/Zigbee2MQTT-like)
+  #
+  # This is the main "touch trigger" exported to Home Assistant:
+  # - On touch, we publish one of:
+  #     btn1_press / btn2_press / btn3_press / btn4_press
+  # - Then we auto-reset to "" so repeated presses still trigger.
+  #
+  # In HA automations, use a simple state trigger:
+  # - Entity: sensor.smartdisplay_action
+  # - To: btn1_press (etc.)
+  # ----------------------------------------------------------
+  - platform: template
+    id: smartdisplay_action
+    name: "SmartDisplay Action"
+    icon: mdi:gesture-tap-button
+
   - platform: template
     name: "Uptime (formatted)"
     lambda: |-
@@ -222,50 +269,36 @@ text_sensor:
     icon: mdi:clock-start
     update_interval: 60s
 
-############################################################
-# Convenience Switches
-############################################################
 switch:
-  # Expose a restart switch in Home Assistant
   - platform: restart
     name: "Restart"
 
-############################################################
-# SPI Buses (External ESP pinout)
-############################################################
+# Two SPI buses:
+# - lcd: display
+# - my_touchscreen: touch controller
 spi:
-  # Display SPI (external-ESP variant pinout)
   - id: lcd
     clk_pin: 18
     mosi_pin: 23
     miso_pin: 19
 
-  # Touch SPI (external-ESP variant pinout)
   - id: my_touchscreen
     clk_pin: 25
     mosi_pin: 32
     miso_pin: 35
 
-############################################################
-# Outputs / Backlight
-############################################################
 output:
-  # Backlight PWM (external-ESP variant pinout)
   - platform: ledc
     pin: 4
     id: gpio_backlight_pwm
 
 light:
-  # Backlight as a monochromatic light entity (PWM)
   - platform: monochromatic
     output: gpio_backlight_pwm
     name: "Power Display Backlight"
     id: back_light
     restore_mode: ALWAYS_ON
 
-############################################################
-# Touchscreen (XPT2046)
-############################################################
 touchscreen:
   platform: xpt2046
   id: ts_touch
@@ -275,23 +308,17 @@ touchscreen:
   update_interval: 50ms
   threshold: 400
 
-  # Touch calibration: adjust these values for your specific panel/controller
   calibration:
     x_min: 280
     x_max: 3860
     y_min: 340
     y_max: 3860
 
-  # IMPORTANT: match the display transform exactly
-  # If touch coordinates are mirrored/rotated, change BOTH transforms together.
   transform:
     swap_xy: true
     mirror_x: false
     mirror_y: false
 
-############################################################
-# Display (ILI9341)
-############################################################
 display:
   - platform: ili9xxx
     id: my_display
@@ -302,38 +329,28 @@ display:
     dc_pin: 26
     reset_pin: 16
     invert_colors: false
-    # LVGL drives rendering, so we disable ESPHome's periodic display refresh
     update_interval: never
     auto_clear_enabled: false
 
-    # Legacy file used rotation: 90.
-    # In the LVGL version we use transform (and avoid rotation).
     transform:
       swap_xy: true
       mirror_x: false
       mirror_y: false
 
-    # Required when swap_xy is true (width/height swap)
     dimensions:
       width: 320
       height: 240
 
-# --- LVGL UI (replaces the legacy display lambda) ---
 lvgl:
-  # Bind LVGL to the configured display
   displays:
     - my_display
-  # Bind LVGL to the configured touchscreen
   touchscreens:
     - touchscreen_id: ts_touch
 
-  # Minimal theme: black background, rounded toggle buttons
   theme:
     obj:
       bg_color: 0x000000
       bg_opa: COVER
-
-    # Rounded buttons: unchecked = INACTIVE gray, checked = white
     button:
       radius: 30
       width: 60
@@ -351,7 +368,6 @@ lvgl:
       bg_color: 0x000000
       bg_opa: COVER
       widgets:
-        # Date label (centered)
         - label:
             id: lbl_date
             x: 0
@@ -362,7 +378,6 @@ lvgl:
             text_color: 0xFFFFFF
             text: ""
 
-        # Time label (centered, large)
         - label:
             id: lbl_time
             x: 0
@@ -373,7 +388,11 @@ lvgl:
             text_color: 0xFFFFFF
             text: ""
 
-        # Button 1: "Tisch" light
+        # ---------------------------------------------------
+        # LVGL Button 1
+        # - ALWAYS publishes a HA-friendly action: btn1_press
+        # - Optional direct action: light.toggle for BTN1_ENTITY
+        # ---------------------------------------------------
         - button:
             id: btn_tisch
             x: 25
@@ -384,13 +403,23 @@ lvgl:
                   align: CENTER
                   text_font: materialdesign_icons
                   text_color: !lambda return id(ACTIVE);
-                  text: "\U000F095F"
-            # Trigger HA service call on tap
+                  text: "${BTN1_ICON}"
             on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: light.buero_schreibtisch
+              # ALWAYS: publish action to Home Assistant (state trigger friendly)
+              - script.execute:
+                  id: publish_action
+                  action: "btn1_press"
+
+              # OPTIONAL: direct HA service call (plug & play)
+              - if:
+                  condition:
+                    lambda: |-
+                      return std::string("${DIRECT_ACTIONS}") == "true";
+                  then:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data:
+                          entity_id: ${BTN1_ENTITY}
 
         - label:
             x: 25
@@ -399,9 +428,12 @@ lvgl:
             text_align: CENTER
             text_font: label
             text_color: 0xFFFFFF
-            text: "Tisch"
+            text: "${BTN1_LABEL}"
 
-        # Button 2: "Decke" light
+        # ---------------------------------------------------
+        # LVGL Button 2
+        # - ALWAYS publishes a HA-friendly action: btn2_press
+        # ---------------------------------------------------
         - button:
             id: btn_decke
             x: 95
@@ -412,12 +444,20 @@ lvgl:
                   align: CENTER
                   text_font: materialdesign_icons
                   text_color: !lambda return id(ACTIVE);
-                  text: "\U000F0769"
+                  text: "${BTN2_ICON}"
             on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: light.buro_decke
+              - script.execute:
+                  id: publish_action
+                  action: "btn2_press"
+              - if:
+                  condition:
+                    lambda: |-
+                      return std::string("${DIRECT_ACTIONS}") == "true";
+                  then:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data:
+                          entity_id: ${BTN2_ENTITY}
 
         - label:
             x: 95
@@ -426,9 +466,12 @@ lvgl:
             text_align: CENTER
             text_font: label
             text_color: 0xFFFFFF
-            text: "Decke"
+            text: "${BTN2_LABEL}"
 
-        # Button 3: "Kugel" light
+        # ---------------------------------------------------
+        # LVGL Button 3
+        # - ALWAYS publishes a HA-friendly action: btn3_press
+        # ---------------------------------------------------
         - button:
             id: btn_kugel
             x: 165
@@ -439,12 +482,20 @@ lvgl:
                   align: CENTER
                   text_font: materialdesign_icons
                   text_color: !lambda return id(ACTIVE);
-                  text: "\U000F08DD"
+                  text: "${BTN3_ICON}"
             on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: light.buero_kugel
+              - script.execute:
+                  id: publish_action
+                  action: "btn3_press"
+              - if:
+                  condition:
+                    lambda: |-
+                      return std::string("${DIRECT_ACTIONS}") == "true";
+                  then:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data:
+                          entity_id: ${BTN3_ENTITY}
 
         - label:
             x: 165
@@ -453,9 +504,12 @@ lvgl:
             text_align: CENTER
             text_font: label
             text_color: 0xFFFFFF
-            text: "Kugel"
+            text: "${BTN3_LABEL}"
 
-        # Button 4: "Ambient" light
+        # ---------------------------------------------------
+        # LVGL Button 4
+        # - ALWAYS publishes a HA-friendly action: btn4_press
+        # ---------------------------------------------------
         - button:
             id: btn_ambient
             x: 235
@@ -466,12 +520,20 @@ lvgl:
                   align: CENTER
                   text_font: materialdesign_icons
                   text_color: !lambda return id(ACTIVE);
-                  text: "\U000F1051"
+                  text: "${BTN4_ICON}"
             on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: light.buro_schreibtisch_ambient_2
+              - script.execute:
+                  id: publish_action
+                  action: "btn4_press"
+              - if:
+                  condition:
+                    lambda: |-
+                      return std::string("${DIRECT_ACTIONS}") == "true";
+                  then:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data:
+                          entity_id: ${BTN4_ENTITY}
 
         - label:
             x: 235
@@ -480,17 +542,33 @@ lvgl:
             text_align: CENTER
             text_font: label
             text_color: 0xFFFFFF
-            text: "Ambient"
+            text: "${BTN4_LABEL}"
 
-############################################################
-# UI Refresh Script
-# Keeps buttons, time and date in sync with Home Assistant
-############################################################
 script:
+  # ----------------------------------------------------------
+  # publish_action
+  #
+  # Publishes a string to the "SmartDisplay Action" text_sensor and
+  # then clears it again.
+  # ----------------------------------------------------------
+  - id: publish_action
+    mode: queued
+    parameters:
+      action: string
+    then:
+      - text_sensor.template.publish:
+          id: smartdisplay_action
+          state: !lambda |-
+            return action;
+      - delay: 200ms
+      - text_sensor.template.publish:
+          id: smartdisplay_action
+          state: ""
+
   - id: ui_refresh
     mode: queued
     then:
-      # Update toggle button states (checked/un-checked)
+      # Sync LVGL "checked" state with the mirrored HA entity states
       - lvgl.widget.update:
           id: btn_tisch
           state:
@@ -511,7 +589,7 @@ script:
           state:
             checked: !lambda return id(light_ambient).state;
 
-      # Update time (HH:MM)
+      # Render current time (HH:MM)
       - lvgl.label.update:
           id: lbl_time
           text: !lambda |-
@@ -520,8 +598,7 @@ script:
             snprintf(buf, sizeof(buf), "%02d:%02d", now.hour, now.minute);
             return std::string(buf);
 
-      # Update date (German example: "Montag, 1. Januar")
-      # Tip: If you want English, replace the arrays below.
+      # Render localized date in German (adjust to your language if needed)
       - lvgl.label.update:
           id: lbl_date
           text: !lambda |-

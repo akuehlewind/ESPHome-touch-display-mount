@@ -1,80 +1,87 @@
-# 2.8" ILI9341 Touch Display Enclosure for ESP32 with Home Assistant Integration
+# ESP32 Cheap Yellow Display (ESP32-2432S028) Under-Desk Home Assistant Touch Panel – LVGL UI + 3D Printed Tilt Mount
 ![ESPHome](https://img.shields.io/badge/ESPHome-Compatible-blue)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Integrated-orange)
 ![LVGL](https://img.shields.io/badge/LVGL-UI-green)
 ![Cheap Yellow Display](https://img.shields.io/badge/CYD-Supported-yellow)
 
-An LVGL-powered ESPHome control panel for Home Assistant, built for the Cheap Yellow Display (CYD) and standalone ESP32 setups.
+A 3D-printable under-desk mount with adjustable tilt for an ESP32 2.8" ILI9341 touchscreen, powered by ESPHome + LVGL and integrated with Home Assistant.  
+Includes ready-to-flash YAML configs for the ESP32-2432S028 (Cheap Yellow Display) and a standalone ILI9341 + external ESP32 wiring variant.
+The enclosure is optimized for under-desk mounting but can also be used as a compact Home Assistant wall panel or desktop dashboard.
 
 ------------------------------------------------------------------------
 
-This project provides complete ESPHome configurations and 3D-printable
-enclosure files for a 2.8" ILI9341 touch display powered by an ESP32.
+The ESP32-2432S028 Cheap Yellow Display is transformed into a tiltable under-desk Home Assistant control panel powered by ESPHome and LVGL.
 
-The goal of this project is to create a clean, wall- or desk-mounted
-smart control panel that integrates seamlessly with Home Assistant.
-It features a modern LVGL-based UI, real-time state synchronization, and
-direct Home Assistant service calls --- all without requiring additional
-automations.
+The goal of this project is to create a clean, wall- or desk-mounted smart control panel that integrates seamlessly with Home Assistant.  
+It features a modern LVGL-based UI, real-time state synchronization, and optional direct Home Assistant service calls.
 
 The enclosure is designed for:
 
--   Clean cable routing
--   Adjustable viewing angle (±35° tilt)
--   Minimal footprint
--   Professional, integrated appearance
+- Clean cable routing  
+- Adjustable viewing angle (±35° tilt)  
+- Minimal footprint  
+- Professional, integrated appearance  
 
 Two hardware variants are supported:
 
--   ✅ **ESP32-2432S028 (also known as the "Cheap Yellow Display
-    Board")**
--   ✅ **Standalone ILI9341 + External ESP32 wiring variant**
+- ✅ **ESP32-2432S028 (Cheap Yellow Display / CYD)**
+- ✅ **Standalone ILI9341 + External ESP32 wiring variant**
 
-The ESP32-2432S028 is commonly referred to as the **Cheap Yellow Display
-(CYD)** board in the maker community.
-It integrates the ESP32, ILI9341 display, touchscreen controller, and
-backlight circuitry on a single board, making it the easiest and
-cleanest option for this project.
+The ESP32-2432S028 integrates the ESP32, ILI9341 display, touchscreen controller, and backlight circuitry on a single board.  
+It is commonly known as the **Cheap Yellow Display (CYD)** in the maker community and is the easiest option for this project.
 
 <img src="images/fusion1.jpg" width="40%">
 <img src="images/buttons.jpeg" width="40%">
 <img src="images/tilt.jpeg" width="40%">
 <img src="images/side.jpeg" width="40%">
 
-------------------------------------------------------------------------
+---
 
-# 🆕 New Architecture (LVGL-Based UI)
+# 🆕 Architecture Overview (LVGL-Based UI)
 
-This project now uses ESPHome LVGL instead of a classic display lambda
-approach.
+This project uses ESPHome LVGL instead of a classic display lambda approach.
 
-### What changed?
+### Core Concepts
 
--   The UI is rendered fully using LVGL widgets
--   Buttons directly call Home Assistant services (homeassistant.action)
--   Button states are mirrored from Home Assistant entities
--   A centralized ui_refresh script keeps everything synchronized
--   UI updates are triggered:
-    -   On boot
-    -   Every minute (for clock updates)
-    -   On Home Assistant state changes
+- UI rendered fully using LVGL widgets
+- 4 configurable touch buttons
+- Real-time state mirroring from Home Assistant
+- Central `ui_refresh` script keeps UI synchronized
+- Optional direct Home Assistant service calls
+- Action sensor for automation-based control
 
-This makes the system:
+### Two Control Modes
 
--   Cleaner
--   More responsive
--   Easier to extend
--   More maintainable
+#### 1️⃣ Direct Mode (Default – Plug & Play)
 
-No Home Assistant automations are required anymore.
+If `DIRECT_ACTIONS` is set to `"true"` (default):
 
-> 💡 Tip: If touch input is mirrored or rotated, adjust BOTH
-> `display.transform` and `touchscreen.transform` — they must always match.
+- Touch publishes an action string
+- AND directly calls a Home Assistant service  
+  (default: `light.toggle`)
+
+No Home Assistant automations required.
+
+#### 2️⃣ Automation Mode
+
+If `DIRECT_ACTIONS` is set to `"false"`:
+
+- Touch ONLY publishes an action string
+- You implement behavior in Home Assistant automations
+
+Trigger example:
+```
+Entity: sensor.smartdisplay_action
+To: btn1_press
+```
+
 
 # ⚙️ Requirements
 
 - Home Assistant installed
 - ESPHome Add-on installed
+- ESPHome 2026.2+
+- Home Assistant 2026.2+
 - Basic ESPHome knowledge
 - 3D printer access (optional)
 
@@ -89,50 +96,40 @@ This project was tested using:
 - ESP32-2432S028 (Cheap Yellow Display / CYD)
 - ILI9341 + XPT2046 standalone wiring variant
 
-LVGL and `homeassistant.action` require relatively recent ESPHome versions.
-If you are using an older version, please update before opening an issue.
-
 # ⚠️ IMPORTANT -- Enable "Actions" in Home Assistant
 
 Because this project uses:
 
 homeassistant.action → light.toggle
 
-You must allow the ESPHome device to perform Home Assistant service
-calls.
+You must allow the ESPHome device to perform Home Assistant service calls.
 
 ### How to enable:
 
-1.  Open Home Assistant
+1. Open Home Assistant  
+2. Go to **Settings**  
+3. Click **Devices & Services**  
+4. Open the **ESPHome integration**  
+5. Select your device  
+6. Enable:
 
-2.  Go to Settings
+> "Allow the device to perform Home Assistant actions"
 
-3.  Click Devices & Services
+Without this setting, direct control will not work.
 
-4.  Open the ESPHome integration
-
-5.  Select your device
-
-6.  Ensure:
-
-    "Allow the device to perform Home Assistant actions" is enabled
-
-Without this setting enabled, button presses will not trigger service
-calls.
-
-------------------------------------------------------------------------
+---
 
 # ✨ Features
 
--   LVGL-based lockscreen UI
--   Live time & date (via Home Assistant time)
--   4 configurable touch buttons
--   Direct Home Assistant service calls
--   Real-time state synchronization
--   Adjustable 3D-printed enclosure
--   Hidden cable routing
--   Works with Cheap Yellow Display (ESP32-2432S028) or external ESP32
-    wiring
+- LVGL-based lockscreen UI
+- Live time & date (via Home Assistant time)
+- 4 configurable touch buttons
+- Direct Home Assistant service calls (optional)
+- Automation-based mode supported
+- Real-time state synchronization
+- Adjustable 3D-printed enclosure
+- Hidden cable routing
+- Works with CYD or external ESP32 wiring
 
 ------------------------------------------------------------------------
 
@@ -217,8 +214,8 @@ Use the wiring table below, which shows how to put everything together.
 
 Available YAML variants:
 
--   esp32-2432s028.yml
--   ili9341-with-external-esp.yml
+-   esp32-2432s028.yml. (Cheap Yellow Display)
+-   ili9341-with-external-esp.yml (external ESP32 + display)
 
 Choose the one matching your hardware.
 
@@ -244,17 +241,25 @@ so ESPHome includes the new icon in the font.
 
 ------------------------------------------------------------------------
 
-# 🧠 System Logic Overview
+# 🧠 System Flow
 
-### Button Flow
+### Direct Mode
 
-1.  LVGL button is pressed
-2.  ESPHome calls Home Assistant service (light.toggle)
-3.  Home Assistant updates entity state
-4.  ESPHome mirrors the entity as binary_sensor
-5.  ui_refresh updates the button checked state
+1. Button pressed  
+2. Action string published  
+3. Home Assistant service called  
+4. Entity state updated  
+5. Mirrored back into ESPHome  
+6. UI refreshed  
 
-This guarantees full synchronization between UI and Home Assistant.
+### Automation Mode
+
+1. Button pressed  
+2. Action string published  
+3. Home Assistant automation triggers  
+4. Automation controls device  
+5. State mirrored back  
+
 
 ------------------------------------------------------------------------
 
@@ -278,7 +283,7 @@ are **identical** (they must always match).
 
 # 🖨 3D Printing
 
-See /3d_print folder for STL files and Fusion360 source.
+See the `/3d_print` folder for STL files and Fusion 360 source files for the adjustable under-desk tilt mount.
 
 Designed for:
 
