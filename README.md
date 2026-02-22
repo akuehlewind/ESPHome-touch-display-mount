@@ -84,8 +84,8 @@ No Home Assistant automations are required anymore.
 
 This project was tested using:
 
-- **ESPHome 2025.2+**
-- **Home Assistant 2025.2+**
+- **ESPHome 2026.2+**
+- **Home Assistant 2026.2+**
 - ESP32-2432S028 (Cheap Yellow Display / CYD)
 - ILI9341 + XPT2046 standalone wiring variant
 
@@ -211,8 +211,9 @@ Use the wiring table below, which shows how to put everything together.
 1.  Open ESPHome in Home Assistant
 2.  Create a new device
 3.  Copy the appropriate YAML file
-4.  Adjust WiFi credentials
-5.  Flash the device
+4.  Edit the **USER CONFIG / substitutions** section at the top of the YAML (entities, labels, icons)
+5.  Adjust WiFi credentials
+6.  Flash the device
 
 Available YAML variants:
 
@@ -220,6 +221,26 @@ Available YAML variants:
 -   ili9341-with-external-esp.yml
 
 Choose the one matching your hardware.
+
+------------------------------------------------------------------------
+
+# ⚙️ Button Mapping (USER CONFIG)
+
+Both YAML variants include a **USER CONFIG / substitutions** section at the top of the file.
+This is the intended place to customize the 4 buttons without touching the LVGL layout.
+
+You can change per button:
+
+- Entity ID (e.g. `light.kitchen`)
+- Label text (caption under the icon)
+- Icon code (MDI glyph)
+
+⚠️ **Default action:** All buttons currently call `homeassistant.action -> light.toggle`.  
+If you want a different service (e.g. `switch.toggle`, `scene.turn_on`, `script.turn_on`, etc.),
+you must edit the `homeassistant.action` block inside each button.
+
+💡 If you change the icon glyph, also update the **MDI font glyph list** in the YAML
+so ESPHome includes the new icon in the font.
 
 ------------------------------------------------------------------------
 
@@ -239,21 +260,19 @@ This guarantees full synchronization between UI and Home Assistant.
 
 # 🔧 Customization
 
-You can easily:
+For most setups, you only need to edit the **USER CONFIG / substitutions** section in the YAML.
 
--   Add more buttons
--   Change service calls
--   Modify fonts
--   Adjust colors
+You can also:
+
+-   Add more buttons / pages
+-   Change service calls (the default is `light.toggle`)
+-   Modify fonts and icon glyphs
+-   Adjust colors / theme
 -   Change date language
 -   Adjust transforms for your panel
 
-If touch alignment is wrong, ensure:
-
-display.transform
-touchscreen.transform
-
-are identical.
+If touch alignment is wrong, ensure `display.transform` and `touchscreen.transform`
+are **identical** (they must always match).
 
 ------------------------------------------------------------------------
 

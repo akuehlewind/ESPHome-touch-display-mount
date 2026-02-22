@@ -14,6 +14,39 @@
 # - IMPORTANT: touchscreen.transform must match display.transform exactly
 ############################################################
 
+# ==========================================================
+# USER CONFIG (edit this section to match your HA setup)
+#
+# IMPORTANT:
+# - All buttons currently use the Home Assistant service:
+#     light.toggle
+# - If you want to call a different service (e.g. switch.toggle,
+#   script.turn_on, scene.turn_on, etc.), you must manually change
+#   the "homeassistant.action" block inside each button below.
+# - Only the entity IDs, labels and icons can be changed here.
+# ==========================================================
+substitutions:
+  # Button 1
+  BTN1_ENTITY: "light.buero_schreibtisch"
+  BTN1_LABEL: "Tisch"
+  BTN1_ICON: "\U000F095F"
+
+  # Button 2
+  BTN2_ENTITY: "light.buro_decke"
+  BTN2_LABEL: "Decke"
+  BTN2_ICON: "\U000F0769"
+
+  # Button 3
+  BTN3_ENTITY: "light.buero_kugel"
+  BTN3_LABEL: "Kugel"
+  BTN3_ICON: "\U000F08DD"
+
+  # Button 4
+  BTN4_ENTITY: "light.buro_schreibtisch_ambient_2"
+  BTN4_LABEL: "Ambient"
+  BTN4_ICON: "\U000F1051"
+# ==========================================================
+
 esphome:
   name: smartdisplay
   friendly_name: SmartDisplay
@@ -120,28 +153,28 @@ binary_sensor:
   # Whenever a state changes, we refresh the UI so the button states match HA.
   - platform: homeassistant
     id: light_tisch
-    entity_id: light.buero_schreibtisch
+    entity_id: ${BTN1_ENTITY}
     on_state:
       then:
         - script.execute: ui_refresh
 
   - platform: homeassistant
     id: light_decke
-    entity_id: light.buro_decke
+    entity_id: ${BTN2_ENTITY}
     on_state:
       then:
         - script.execute: ui_refresh
 
   - platform: homeassistant
     id: light_kugel
-    entity_id: light.buero_kugel
+    entity_id: ${BTN3_ENTITY}
     on_state:
       then:
         - script.execute: ui_refresh
 
   - platform: homeassistant
     id: light_ambient
-    entity_id: light.buro_schreibtisch_ambient_2
+    entity_id: ${BTN4_ENTITY}
     on_state:
       then:
         - script.execute: ui_refresh
@@ -268,7 +301,7 @@ display:
       width: 320
       height: 240
 
-# --- LVGL UI (replaces a classic display lambda completely) ---
+# --- LVGL UI ---
 lvgl:
   # Bind LVGL to the configured display
   displays:
@@ -323,7 +356,7 @@ lvgl:
             text_color: 0xFFFFFF
             text: ""
 
-        # Button 1: "Tisch" light
+        # Button 1: "${BTN1_LABEL}"
         - button:
             id: btn_tisch
             x: 25
@@ -334,13 +367,13 @@ lvgl:
                   align: CENTER
                   text_font: materialdesign_icons
                   text_color: !lambda return id(ACTIVE);
-                  text: "\U000F095F"
+                  text: "${BTN1_ICON}"
             # Trigger HA service call on tap
             on_click:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.buero_schreibtisch
+                    entity_id: ${BTN1_ENTITY}
 
         - label:
             x: 25
@@ -349,9 +382,9 @@ lvgl:
             text_align: CENTER
             text_font: label
             text_color: 0xFFFFFF
-            text: "Tisch"
+            text: "${BTN1_LABEL}"
 
-        # Button 2: "Decke" light
+        # Button 2: "${BTN2_LABEL}"
         - button:
             id: btn_decke
             x: 95
@@ -362,12 +395,12 @@ lvgl:
                   align: CENTER
                   text_font: materialdesign_icons
                   text_color: !lambda return id(ACTIVE);
-                  text: "\U000F0769"
+                  text: "${BTN2_ICON}"
             on_click:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.buro_decke
+                    entity_id: ${BTN2_ENTITY}
 
         - label:
             x: 95
@@ -376,9 +409,9 @@ lvgl:
             text_align: CENTER
             text_font: label
             text_color: 0xFFFFFF
-            text: "Decke"
+            text: "${BTN2_LABEL}"
 
-        # Button 3: "Kugel" light
+        # Button 3: "${BTN3_LABEL}"
         - button:
             id: btn_kugel
             x: 165
@@ -389,12 +422,12 @@ lvgl:
                   align: CENTER
                   text_font: materialdesign_icons
                   text_color: !lambda return id(ACTIVE);
-                  text: "\U000F08DD"
+                  text: "${BTN3_ICON}"
             on_click:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.buero_kugel
+                    entity_id: ${BTN3_ENTITY}
 
         - label:
             x: 165
@@ -403,9 +436,9 @@ lvgl:
             text_align: CENTER
             text_font: label
             text_color: 0xFFFFFF
-            text: "Kugel"
+            text: "${BTN3_LABEL}"
 
-        # Button 4: "Ambient" light
+        # Button 4: "${BTN4_LABEL}"
         - button:
             id: btn_ambient
             x: 235
@@ -416,12 +449,12 @@ lvgl:
                   align: CENTER
                   text_font: materialdesign_icons
                   text_color: !lambda return id(ACTIVE);
-                  text: "\U000F1051"
+                  text: "${BTN4_ICON}"
             on_click:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.buro_schreibtisch_ambient_2
+                    entity_id: ${BTN4_ENTITY}
 
         - label:
             x: 235
@@ -430,7 +463,7 @@ lvgl:
             text_align: CENTER
             text_font: label
             text_color: 0xFFFFFF
-            text: "Ambient"
+            text: "${BTN4_LABEL}"
 
 script:
   # Central UI update routine:
