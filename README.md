@@ -30,8 +30,9 @@ Two hardware variants are supported:
 The ESP32-2432S028 integrates the ESP32, ILI9341 display, touchscreen controller, and backlight circuitry on a single board.  
 It is commonly known as the **Cheap Yellow Display (CYD)** in the maker community and is the easiest option for this project.
 
+<img src="images/display-home-like.png" width="40%">
+<img src="images/display-buttons.png" width="40%">
 <img src="images/fusion1.jpg" width="40%">
-<img src="images/buttons.jpeg" width="40%">
 <img src="images/tilt.jpeg" width="40%">
 <img src="images/side.jpeg" width="40%">
 
@@ -100,7 +101,9 @@ This project was tested using:
 
 Because this project uses:
 
+```
 homeassistant.action → light.toggle
+```
 
 You must allow the ESPHome device to perform Home Assistant service calls.
 
@@ -121,7 +124,7 @@ Without this setting, direct control will not work.
 
 # ✨ Features
 
-- LVGL-based lockscreen UI
+- LVGL-based UI (lockscreen or tile layout depending on configuration)
 - Live time & date (via Home Assistant time)
 - 4 configurable touch buttons
 - Direct Home Assistant service calls (optional)
@@ -212,32 +215,48 @@ Use the wiring table below, which shows how to put everything together.
 5.  Adjust WiFi credentials
 6.  Flash the device
 
-Available YAML variants:
+Available YAML variants (pick **one UI** for your **hardware**):
 
--   esp32-2432s028.yml. (Cheap Yellow Display)
--   ili9341-with-external-esp.yml (external ESP32 + display)
+### Cheap Yellow Display (ESP32-2432S028 / CYD)
+- `esphome/cyd-2432s028/buttons.yaml` – lockscreen with 4 round buttons (good for quick toggles)
+- `esphome/cyd-2432s028/home-like.yml` – 2x3 “tiles” UI (wallpaper + tiles)
 
-Choose the one matching your hardware.
+### External display wiring (any ESP32 + ILI9341 + XPT2046)
+- `esphome/ili9341-external-esp32/buttons.yaml` – lockscreen with 4 round buttons
+- `esphome/ili9341-external-esp32/home-like.yml` – 2x3 “tiles” UI (wallpaper + tiles)
+
+> Tip: Both `home-like.yml` files share a single background image located at `esphome/images/smartdisplay_background.png`.
+> Because the YAML files live in subfolders, reference it as `../images/smartdisplay_background.png` in the `image:` section.
+
 
 ------------------------------------------------------------------------
 
-# ⚙️ Button Mapping (USER CONFIG)
+### Assets (required for the UI)
+- **Material Design Icons font**: place `materialdesignicons-webfont.ttf` at `esphome/fonts/materialdesignicons-webfont.ttf`.
+  - You can get it from the MaterialDesignIcons project (TTF release) or your local install.
+  - If you change icons in the YAML, ensure the glyph list contains them.
+- **Background image (home-like UI)**:
+  - Default file: `esphome/images/smartdisplay_background.png` (included in this repo).
+  - In `home-like.yml`, reference it as `/images/smartdisplay_background.png` (relative to the YAML file).
+# ⚙️ UI mapping (USER CONFIG)
 
-Both YAML variants include a **USER CONFIG / substitutions** section at the top of the file.
-This is the intended place to customize the 4 buttons without touching the LVGL layout.
+Your config choice defines the UI style:
 
-You can change per button:
+## `buttons.yaml` (lockscreen like buttons)
+- Buttons: BTN1..BTN4
+- Action strings: `btn1_press` .. `btn4_press`
+- Default direct action (if `DIRECT_ACTIONS: "true"`): `light.toggle` on `BTN*_ENTITY`
 
-- Entity ID (e.g. `light.kitchen`)
-- Label text (caption under the icon)
-- Icon code (MDI glyph)
+<img src="images/display-buttons.png" width="20%">
 
-⚠️ **Default action:** All buttons currently call `homeassistant.action -> light.toggle`.  
-If you want a different service (e.g. `switch.toggle`, `scene.turn_on`, `script.turn_on`, etc.),
-you must edit the `homeassistant.action` block inside each button.
 
-💡 If you change the icon glyph, also update the **MDI font glyph list** in the YAML
-so ESPHome includes the new icon in the font.
+## `home-like.yml` (tiles)
+- Tiles: TILE1..TILE6
+- Action strings: `tile1_press` .. `tile6_press`
+- Each tile can optionally call a Home Assistant service directly (toggle/scene/script/fan preset/light brightness).
+- Per-tile OFF label is configurable via `TILE*_LABEL_OFF` (e.g. "Off" / "Aus").
+
+<img src="images/display-home-like.png" width="20%">
 
 ------------------------------------------------------------------------
 
@@ -273,7 +292,7 @@ You can also:
 -   Change service calls (the default is `light.toggle`)
 -   Modify fonts and icon glyphs
 -   Adjust colors / theme
--   Change date language
+-   Date localization can be adjusted in the ui_refresh script (days[] / months[] arrays).
 -   Adjust transforms for your panel
 
 If touch alignment is wrong, ensure `display.transform` and `touchscreen.transform`

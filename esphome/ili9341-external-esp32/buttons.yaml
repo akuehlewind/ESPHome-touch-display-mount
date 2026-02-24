@@ -237,7 +237,7 @@ binary_sensor:
 
 text_sensor:
   # ----------------------------------------------------------
-  # SmartDisplay Action (Hue/Zigbee2MQTT-like)
+  # SmartDisplay Action
   #
   # This is the main "touch trigger" exported to Home Assistant:
   # - On touch, we publish one of:

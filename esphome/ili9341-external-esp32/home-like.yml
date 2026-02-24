@@ -1,0 +1,1122 @@
+############################################################
+# SmartDisplay2 – iOS Home app–inspired Tiles UI (ILI9341 + XPT2046)
+# Resolution: 320x240
+#
+# Target hardware
+# - Any ESP32 + external ILI9341 (320x240) display + XPT2046 touchscreen
+# - This file uses a specific “external ESP” pinout (see wiring below).
+#
+# What this config does
+# - Renders a wallpaper background + a 2x3 grid of “tiles” (LVGL).
+# - Each tile shows: icon (MDI font), title, and a value line.
+# - Tile taps publish a short-lived text_sensor event (smartdisplay_action)
+#   so you can build Home Assistant automations on top.
+# - Optional: the device can also call Home Assistant services directly
+#   (toggle lights/switches/fans, run scenes/scripts, set fan preset, set light brightness).
+#
+# The layout is inspired by common modern smart home UIs.
+#
+# How to customize
+# 1) Edit the TILE1..TILE6 blocks below (entity/title/icon/action/colors).
+# 2) If you change icons, ensure those glyphs are included in the MDI font glyph list.
+# 3) Provide your own background image at: images/home-background.png
+#
+# Action kinds (TILE*_ACTION_KIND)
+# - toggle              -> calls TILE*_SERVICE with entity_id (e.g. light.toggle / switch.toggle / fan.toggle)
+# - scene               -> scene.turn_on with entity_id
+# - script              -> script.turn_on with entity_id
+# - fan_preset          -> fan.set_preset_mode (TILE*_PARAM_VAL is preset name)
+# - light_brightness    -> light.turn_on with brightness_pct (TILE*_PARAM_VAL is 0..100)
+# - fan_toggle_preset   -> special: if fan was OFF, turn_on then set preset after 150ms;
+#                          if fan was ON, turn_off (keeps your original tile6 behavior)
+#
+# Notes
+# - DIRECT_ACTIONS="true" enables direct HA service calls from the device.
+#   If "false", only the smartdisplay_action event is emitted.
+# - Brightness percentage (tiles 1..5 by default) is derived from HA attribute
+#   brightness (0..255) -> shown as 0..100%. If brightness is missing, “100 %” is shown.
+#
+# Hardware / wiring used by this variant (external ESP pinout)
+# - Display SPI: CLK=GPIO18, MOSI=GPIO23, MISO=GPIO19
+# - Touch SPI:   CLK=GPIO25, MOSI=GPIO32, MISO=GPIO35
+# - Display: CS=GPIO27, DC=GPIO26, RESET=GPIO16
+# - Touch:   CS=GPIO33, IRQ=GPIO34
+# - Backlight PWM: GPIO4
+#
+# What you must adapt before flashing
+# 1) Secrets: api.encryption.key, ota.password, WiFi credentials (prefer secrets.yaml)
+# 2) Wiring: ensure your display + touch wiring matches the pinout above
+# 3) TILE*_ENTITY: Home Assistant entity IDs you want to control/mirror
+# 4) Touch calibration + transform:
+#    - calibration is panel-specific
+#    - touchscreen.transform MUST match display.transform exactly
+############################################################
+
+substitutions:
+  DIRECT_ACTIONS: "true"
+  ROOM_NAME: "Office"
+
+  # ================= TILE 1 =================
+  TILE1_ENTITY: "light.ceiling"       # HA Entity (e.g. light.ceiling, switch.coffee_machine, fan.living_room)
+  TILE1_TITLE: "Ceiling"
+  TILE1_ICON: "\U000F0769"
+  TILE1_ACTION_KIND: "toggle"         # toggle | scene | script | fan_preset | light_brightness | fan_toggle_preset
+  TILE1_SERVICE: "light.toggle"       # used for kind: toggle (any *.toggle)
+  TILE1_PARAM_KEY: ""                 # preset_mode | brightness_pct | (empty)
+  TILE1_PARAM_VAL: ""                 # e.g. "Auto" or "60"
+  TILE1_CIRCLE_ACTIVE_COLOR: "0xFEC600"
+  TILE1_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
+  TILE1_ICON_ACTIVE_COLOR: "0xFFFFFF"
+  TILE1_ICON_DISABLED_COLOR: "0xFEC600"
+  TILE1_BG_ACTIVE_COLOR: "0xFFFFFF"
+  TILE1_BG_DISABLED_COLOR: "0x939391"
+  TILE1_TITLE_ACTIVE_COLOR: "0x000000"
+  TILE1_TITLE_DISABLED_COLOR: "0xFFFFFF"
+  TILE1_VALUE_ACTIVE_COLOR: "0x7A7A7C"
+  TILE1_VALUE_DISABLED_COLOR: "0xD9D9D9"
+  TILE1_LABEL_OFF: "Off"
+
+  # ================= TILE 2 =================
+  TILE2_ENTITY: "light.desk"
+  TILE2_TITLE: "Desk"
+  TILE2_ICON: "\U000F095F"
+  TILE2_ACTION_KIND: "toggle"
+  TILE2_SERVICE: "light.toggle"
+  TILE2_PARAM_KEY: ""
+  TILE2_PARAM_VAL: ""
+  TILE2_CIRCLE_ACTIVE_COLOR: "0xFEC600"
+  TILE2_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
+  TILE2_ICON_ACTIVE_COLOR: "0xFFFFFF"
+  TILE2_ICON_DISABLED_COLOR: "0xFEC600"
+  TILE2_BG_ACTIVE_COLOR: "0xFFFFFF"
+  TILE2_BG_DISABLED_COLOR: "0x939391"
+  TILE2_TITLE_ACTIVE_COLOR: "0x000000"
+  TILE2_TITLE_DISABLED_COLOR: "0xFFFFFF"
+  TILE2_VALUE_ACTIVE_COLOR: "0x7A7A7C"
+  TILE2_VALUE_DISABLED_COLOR: "0xD9D9D9"
+  TILE2_LABEL_OFF: "Off"
+
+  # ================= TILE 3 =================
+  TILE3_ENTITY: "light.floor_lamp"
+  TILE3_TITLE: "Floor lamp"
+  TILE3_ICON: "\U000F08DD"
+  TILE3_ACTION_KIND: "toggle"
+  TILE3_SERVICE: "light.toggle"
+  TILE3_PARAM_KEY: ""
+  TILE3_PARAM_VAL: ""
+  TILE3_CIRCLE_ACTIVE_COLOR: "0xFEC600"
+  TILE3_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
+  TILE3_ICON_ACTIVE_COLOR: "0xFFFFFF"
+  TILE3_ICON_DISABLED_COLOR: "0xFEC600"
+  TILE3_BG_ACTIVE_COLOR: "0xFFFFFF"
+  TILE3_BG_DISABLED_COLOR: "0x939391"
+  TILE3_TITLE_ACTIVE_COLOR: "0x000000"
+  TILE3_TITLE_DISABLED_COLOR: "0xFFFFFF"
+  TILE3_VALUE_ACTIVE_COLOR: "0x7A7A7C"
+  TILE3_VALUE_DISABLED_COLOR: "0xD9D9D9"
+  TILE3_LABEL_OFF: "Off"
+
+  # ================= TILE 4 =================
+  TILE4_ENTITY: "light.desk_ambient"
+  TILE4_TITLE: "Ambient"
+  TILE4_ICON: "\U000F1051"
+  TILE4_ACTION_KIND: "toggle"
+  TILE4_SERVICE: "light.toggle"
+  TILE4_PARAM_KEY: ""
+  TILE4_PARAM_VAL: ""
+  TILE4_CIRCLE_ACTIVE_COLOR: "0xFEC600"
+  TILE4_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
+  TILE4_ICON_ACTIVE_COLOR: "0xFFFFFF"
+  TILE4_ICON_DISABLED_COLOR: "0xFEC600"
+  TILE4_BG_ACTIVE_COLOR: "0xFFFFFF"
+  TILE4_BG_DISABLED_COLOR: "0x939391"
+  TILE4_TITLE_ACTIVE_COLOR: "0x000000"
+  TILE4_TITLE_DISABLED_COLOR: "0xFFFFFF"
+  TILE4_VALUE_ACTIVE_COLOR: "0x7A7A7C"
+  TILE4_VALUE_DISABLED_COLOR: "0xD9D9D9"
+  TILE4_LABEL_OFF: "Off"
+
+  # ================= TILE 5 =================
+  TILE5_ENTITY: "light.shelf"
+  TILE5_TITLE: "Shelf"
+  TILE5_ICON: "\U000F0335"
+  TILE5_ACTION_KIND: "toggle"
+  TILE5_SERVICE: "light.toggle"
+  TILE5_PARAM_KEY: ""
+  TILE5_PARAM_VAL: ""
+  TILE5_CIRCLE_ACTIVE_COLOR: "0xFEC600"
+  TILE5_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
+  TILE5_ICON_ACTIVE_COLOR: "0xFFFFFF"
+  TILE5_ICON_DISABLED_COLOR: "0xFEC600"
+  TILE5_BG_ACTIVE_COLOR: "0xFFFFFF"
+  TILE5_BG_DISABLED_COLOR: "0x939391"
+  TILE5_TITLE_ACTIVE_COLOR: "0x000000"
+  TILE5_TITLE_DISABLED_COLOR: "0xFFFFFF"
+  TILE5_VALUE_ACTIVE_COLOR: "0x7A7A7C"
+  TILE5_VALUE_DISABLED_COLOR: "0xD9D9D9"
+  TILE5_LABEL_OFF: "Off"
+
+  # ================= TILE 6 (FAN) =================
+  TILE6_ENTITY: "fan.air_purifier"
+  TILE6_TITLE: "Purifier"
+  TILE6_ICON: "\U000F0D43"
+  TILE6_ACTION_KIND: "fan_toggle_preset"
+  TILE6_SERVICE: "fan.toggle"
+  TILE6_PARAM_KEY: "preset_mode"
+  TILE6_PARAM_VAL: "Auto"
+  TILE6_CIRCLE_ACTIVE_COLOR: "0x00C5EC"
+  TILE6_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
+  TILE6_ICON_ACTIVE_COLOR: "0xFFFFFF"
+  TILE6_ICON_DISABLED_COLOR: "0x00C5EC"
+  TILE6_BG_ACTIVE_COLOR: "0xFFFFFF"
+  TILE6_BG_DISABLED_COLOR: "0x939391"
+  TILE6_TITLE_ACTIVE_COLOR: "0x000000"
+  TILE6_TITLE_DISABLED_COLOR: "0xFFFFFF"
+  TILE6_VALUE_ACTIVE_COLOR: "0x7A7A7C"
+  TILE6_VALUE_DISABLED_COLOR: "0xD9D9D9"
+  TILE6_LABEL_OFF: "Off"
+
+esphome:
+  name: smartdisplay
+  friendly_name: SmartDisplay
+  on_boot:
+    priority: 600
+    then:
+      - script.execute: ui_refresh
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+api:
+  encryption:
+    key: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+ota:
+  - platform: esphome
+    password: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Smartdisplay Fallback Hotspot"
+    password: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+captive_portal:
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    on_time:
+      - seconds: 0
+        minutes: /1
+        then:
+          - script.execute: ui_refresh
+
+font:
+  - file: "gfonts://Roboto@500"
+    id: time_label
+    size: 18
+    bpp: 4
+    glyphs: ['0','1','2','3','4','5','6','7','8','9',':',' ']
+
+  - file: "gfonts://Roboto@500"
+    id: headline
+    size: 18
+    bpp: 4
+    glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°',
+             '0','1','2','3','4','5','6','7','8','9',
+             'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+             ' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+             'ä','ö','ü','Ä','Ö','Ü','ß','/']
+
+  - file: "gfonts://Roboto@700"
+    id: label
+    size: 11
+    bpp: 4
+    glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°',
+             '0','1','2','3','4','5','6','7','8','9',
+             'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+             ' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+             'ä','ö','ü','Ä','Ö','Ü','ß','/']
+
+  - file: "gfonts://Roboto@400"
+    id: sublabel
+    size: 11
+    bpp: 4
+    glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°',
+             '0','1','2','3','4','5','6','7','8','9',
+             'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+             ' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+             'ä','ö','ü','Ä','Ö','Ü','ß','/','…']
+
+  # Material Design Icons (MDI)
+  # Download the font file and place it at: fonts/materialdesignicons-webfont.ttf
+  # Source: https://github.com/Templarian/MaterialDesign-Webfont
+  - file: 'fonts/materialdesignicons-webfont.ttf'
+    id: materialdesign_icons
+    size: 28
+    glyphs:
+      - "${TILE1_ICON}"
+      - "${TILE2_ICON}"
+      - "${TILE3_ICON}"
+      - "${TILE4_ICON}"
+      - "${TILE5_ICON}"
+      - "${TILE6_ICON}"
+
+image:
+  - file: "images/smartdisplay_background.png"
+    id: bg_home
+    type: RGB565
+
+sensor:
+  - platform: wifi_signal
+    name: "Wifi Signal"
+    update_interval: 600s
+
+  - platform: uptime
+    name: "Uptime"
+    id: uptime_s
+    update_interval: 15s
+
+  - platform: homeassistant
+    id: br_tile1
+    entity_id: ${TILE1_ENTITY}
+    attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: br_tile2
+    entity_id: ${TILE2_ENTITY}
+    attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: br_tile3
+    entity_id: ${TILE3_ENTITY}
+    attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: br_tile4
+    entity_id: ${TILE4_ENTITY}
+    attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: br_tile5
+    entity_id: ${TILE5_ENTITY}
+    attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+binary_sensor:
+  - platform: status
+    name: "Node Status"
+    id: system_status
+
+  - platform: homeassistant
+    id: ha_state_tile1
+    entity_id: ${TILE1_ENTITY}
+    on_state: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_state_tile2
+    entity_id: ${TILE2_ENTITY}
+    on_state: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_state_tile3
+    entity_id: ${TILE3_ENTITY}
+    on_state: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_state_tile4
+    entity_id: ${TILE4_ENTITY}
+    on_state: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_state_tile5
+    entity_id: ${TILE5_ENTITY}
+    on_state: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_state_tile6
+    entity_id: ${TILE6_ENTITY}
+    on_state: { then: [ script.execute: ui_refresh ] }
+
+  # ----------------------------------------------------------
+  # SmartDisplay Action
+  #
+  # This is the main "touch trigger" exported to Home Assistant:
+  # - On touch, we publish one of:
+  #     tile1_press / tile2_press / tile3_press / tile4_press / tile5_press / tile6_press
+  #
+  # ----------------------------------------------------------
+text_sensor:
+  - platform: template
+    id: smartdisplay_action
+    name: "SmartDisplay Action"
+    icon: mdi:gesture-tap-button
+
+  - platform: homeassistant
+    id: tile6_preset
+    entity_id: ${TILE6_ENTITY}
+    attribute: preset_mode
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+switch:
+  - platform: restart
+    name: "Restart"
+
+
+# Two SPI buses:
+# - lcd: display
+# - my_touchscreen: touch controller
+spi:
+  - id: lcd
+    clk_pin: 18
+    mosi_pin: 23
+    miso_pin: 19
+
+  - id: my_touchscreen
+    clk_pin: 25
+    mosi_pin: 32
+    miso_pin: 35
+
+output:
+  - platform: ledc
+    pin: 4
+    id: gpio_backlight_pwm
+
+light:
+  - platform: monochromatic
+    output: gpio_backlight_pwm
+    name: "Power Display Backlight"
+    id: back_light
+    restore_mode: ALWAYS_ON
+
+# Touchscreen configuration (XPT2046)
+# IMPORTANT:
+# - calibration values are device-specific
+# - touchscreen.transform must match display.transform exactly
+touchscreen:
+  platform: xpt2046
+  id: ts_touch
+  spi_id: my_touchscreen
+  cs_pin: 33
+  interrupt_pin: 34
+  update_interval: 50ms
+  threshold: 400
+
+  calibration:
+    x_min: 280
+    x_max: 3860
+    y_min: 340
+    y_max: 3860
+
+  transform:
+    swap_xy: true
+    mirror_x: false
+    mirror_y: false
+
+# Display configuration (ILI9341)
+display:
+  - platform: ili9xxx
+    id: my_display
+    spi_id: lcd
+    model: ILI9341
+    color_palette: 8BIT
+    cs_pin: 27
+    dc_pin: 26
+    reset_pin: 16
+    invert_colors: false
+    update_interval: never
+    auto_clear_enabled: false
+
+    transform:
+      swap_xy: true
+      mirror_x: false
+      mirror_y: false
+
+    dimensions:
+      width: 320
+      height: 240
+
+lvgl:
+  displays:
+    - my_display
+  touchscreens:
+    - touchscreen_id: ts_touch
+
+  style_definitions:
+    - id: style_tile
+      bg_color: 0xFFFFFF
+      bg_opa: 95%
+      radius: 18
+      border_width: 0
+      pad_left: 8
+      pad_right: 8
+      pad_top: 8
+      pad_bottom: 8
+      shadow_width: 0
+      shadow_opa: 40%
+
+    - id: style_tile_disabled
+      bg_color: 0x939391
+      bg_opa: 95%
+      radius: 18
+      border_width: 0
+      pad_left: 8
+      pad_right: 8
+      pad_top: 8
+      pad_bottom: 8
+      shadow_width: 0
+      shadow_opa: 25%
+
+    - id: style_icon_circle
+      bg_color: 0xFEC600
+      bg_opa: COVER
+      radius: 999
+      border_width: 0
+
+    - id: style_icon_circle_fan
+      bg_color: 0x00C5EC
+      bg_opa: COVER
+      radius: 999
+      border_width: 0
+
+    - id: style_icon_circle_disabled
+      bg_color: 0x7B7B6F
+      bg_opa: 95%
+      radius: 999
+      border_width: 0
+
+    - id: style_room
+      text_font: headline
+      text_color: 0xFFFFFF
+      text_opa: 100%
+
+    - id: style_time
+      text_font: time_label
+      text_color: 0xFFFFFF
+      text_opa: 100%
+
+    - id: style_title
+      text_font: label
+      text_color: 0x000000
+      text_opa: 100%
+
+    - id: style_value
+      text_font: sublabel
+      text_color: 0x7A7A7C
+      text_opa: 100%
+
+    - id: style_title_disabled
+      text_font: label
+      text_color: 0xFFFFFF
+      text_opa: 100%
+
+    - id: style_value_disabled
+      text_font: sublabel
+      text_color: 0xD9D9D9
+      text_opa: 100%
+
+  pages:
+    - id: home_page
+      bg_color: 0x000000
+      bg_opa: COVER
+      scrollable: false
+      scrollbar_mode: 'OFF'
+      widgets:
+        - image:
+            id: bg
+            src: bg_home
+            x: 0
+            y: 0
+
+        - label:
+            id: lbl_room
+            x: 11
+            y: 14
+            text: "${ROOM_NAME}"
+            styles: style_room
+
+        - label:
+            id: lbl_time
+            align: TOP_RIGHT
+            x: -11
+            y: 14
+            text: ""
+            styles: style_time
+
+        # ---------- TILE 1 ----------
+        - obj:
+            id: tile1
+            x: 9
+            y: 54
+            width: 147
+            height: 52
+            styles: style_tile
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            widgets:
+              - obj:
+                  id: tile1_icon_circle
+                  x: 0
+                  y: 0
+                  width: 36
+                  height: 36
+                  styles: style_icon_circle
+                  clickable: false
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  widgets:
+                    - label:
+                        id: tile1_icon_lbl
+                        align: CENTER
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE1_ICON}"
+                        clickable: false
+              - label:
+                  id: t1_title
+                  x: 48
+                  y: 4
+                  text: "${TILE1_TITLE}"
+                  styles: style_title
+                  clickable: false
+              - label:
+                  id: t1_value
+                  x: 48
+                  y: 18
+                  text: "—"
+                  styles: style_value
+                  clickable: false
+            on_click:
+              - script.execute: { id: publish_action, action: "tile1_press" }
+              - script.execute:
+                  id: do_tile_action
+                  kind: "${TILE1_ACTION_KIND}"
+                  service: "${TILE1_SERVICE}"
+                  entity_id: "${TILE1_ENTITY}"
+                  param_key: "${TILE1_PARAM_KEY}"
+                  param_val: "${TILE1_PARAM_VAL}"
+                  was_on: !lambda "return id(ha_state_tile1).state;"
+
+        # ---------- TILE 2 ----------
+        - obj:
+            id: tile2
+            x: 164
+            y: 54
+            width: 147
+            height: 52
+            styles: style_tile
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            widgets:
+              - obj:
+                  id: tile2_icon_circle
+                  x: 0
+                  y: 0
+                  width: 36
+                  height: 36
+                  styles: style_icon_circle
+                  clickable: false
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  widgets:
+                    - label:
+                        id: tile2_icon_lbl
+                        align: CENTER
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE2_ICON}"
+                        clickable: false
+              - label:
+                  id: t2_title
+                  x: 48
+                  y: 4
+                  text: "${TILE2_TITLE}"
+                  styles: style_title
+                  clickable: false
+              - label:
+                  id: t2_value
+                  x: 48
+                  y: 18
+                  text: "—"
+                  styles: style_value
+                  clickable: false
+            on_click:
+              - script.execute: { id: publish_action, action: "tile2_press" }
+              - script.execute:
+                  id: do_tile_action
+                  kind: "${TILE2_ACTION_KIND}"
+                  service: "${TILE2_SERVICE}"
+                  entity_id: "${TILE2_ENTITY}"
+                  param_key: "${TILE2_PARAM_KEY}"
+                  param_val: "${TILE2_PARAM_VAL}"
+                  was_on: !lambda "return id(ha_state_tile2).state;"
+
+        # ---------- TILE 3 ----------
+        - obj:
+            id: tile3
+            x: 9
+            y: 114
+            width: 147
+            height: 52
+            styles: style_tile
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            widgets:
+              - obj:
+                  id: tile3_icon_circle
+                  x: 0
+                  y: 0
+                  width: 36
+                  height: 36
+                  styles: style_icon_circle
+                  clickable: false
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  widgets:
+                    - label:
+                        id: tile3_icon_lbl
+                        align: CENTER
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE3_ICON}"
+                        clickable: false
+              - label:
+                  id: t3_title
+                  x: 48
+                  y: 4
+                  text: "${TILE3_TITLE}"
+                  styles: style_title
+                  clickable: false
+              - label:
+                  id: t3_value
+                  x: 48
+                  y: 18
+                  text: "—"
+                  styles: style_value
+                  clickable: false
+            on_click:
+              - script.execute: { id: publish_action, action: "tile3_press" }
+              - script.execute:
+                  id: do_tile_action
+                  kind: "${TILE3_ACTION_KIND}"
+                  service: "${TILE3_SERVICE}"
+                  entity_id: "${TILE3_ENTITY}"
+                  param_key: "${TILE3_PARAM_KEY}"
+                  param_val: "${TILE3_PARAM_VAL}"
+                  was_on: !lambda "return id(ha_state_tile3).state;"
+
+        # ---------- TILE 4 ----------
+        - obj:
+            id: tile4
+            x: 164
+            y: 114
+            width: 147
+            height: 52
+            styles: style_tile
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            widgets:
+              - obj:
+                  id: tile4_icon_circle
+                  x: 0
+                  y: 0
+                  width: 36
+                  height: 36
+                  styles: style_icon_circle
+                  clickable: false
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  widgets:
+                    - label:
+                        id: tile4_icon_lbl
+                        align: CENTER
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE4_ICON}"
+                        clickable: false
+              - label:
+                  id: t4_title
+                  x: 48
+                  y: 4
+                  text: "${TILE4_TITLE}"
+                  styles: style_title
+                  clickable: false
+              - label:
+                  id: t4_value
+                  x: 48
+                  y: 18
+                  text: "—"
+                  styles: style_value
+                  clickable: false
+            on_click:
+              - script.execute: { id: publish_action, action: "tile4_press" }
+              - script.execute:
+                  id: do_tile_action
+                  kind: "${TILE4_ACTION_KIND}"
+                  service: "${TILE4_SERVICE}"
+                  entity_id: "${TILE4_ENTITY}"
+                  param_key: "${TILE4_PARAM_KEY}"
+                  param_val: "${TILE4_PARAM_VAL}"
+                  was_on: !lambda "return id(ha_state_tile4).state;"
+
+        # ---------- TILE 5 ----------
+        - obj:
+            id: tile5
+            x: 9
+            y: 174
+            width: 147
+            height: 52
+            styles: style_tile
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            widgets:
+              - obj:
+                  id: tile5_icon_circle
+                  x: 0
+                  y: 0
+                  width: 36
+                  height: 36
+                  styles: style_icon_circle
+                  clickable: false
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  widgets:
+                    - label:
+                        id: tile5_icon_lbl
+                        align: CENTER
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE5_ICON}"
+                        clickable: false
+              - label:
+                  id: t5_title
+                  x: 48
+                  y: 4
+                  text: "${TILE5_TITLE}"
+                  styles: style_title
+                  clickable: false
+              - label:
+                  id: t5_value
+                  x: 48
+                  y: 18
+                  text: "—"
+                  styles: style_value
+                  clickable: false
+            on_click:
+              - script.execute: { id: publish_action, action: "tile5_press" }
+              - script.execute:
+                  id: do_tile_action
+                  kind: "${TILE5_ACTION_KIND}"
+                  service: "${TILE5_SERVICE}"
+                  entity_id: "${TILE5_ENTITY}"
+                  param_key: "${TILE5_PARAM_KEY}"
+                  param_val: "${TILE5_PARAM_VAL}"
+                  was_on: !lambda "return id(ha_state_tile5).state;"
+
+        # ---------- TILE 6 (FAN) ----------
+        - obj:
+            id: tile6
+            x: 164
+            y: 174
+            width: 147
+            height: 52
+            styles: style_tile
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            widgets:
+              - obj:
+                  id: tile6_icon_circle
+                  x: 0
+                  y: 0
+                  width: 36
+                  height: 36
+                  styles: style_icon_circle_fan
+                  clickable: false
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  widgets:
+                    - label:
+                        id: tile6_icon_lbl
+                        align: CENTER
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE6_ICON}"
+                        clickable: false
+              - label:
+                  id: t6_title
+                  x: 48
+                  y: 4
+                  text: "${TILE6_TITLE}"
+                  styles: style_title
+                  clickable: false
+              - label:
+                  id: t6_value
+                  x: 48
+                  y: 18
+                  text: "—"
+                  styles: style_value
+                  clickable: false
+            on_click:
+              - script.execute: { id: publish_action, action: "tile6_press" }
+              - script.execute:
+                  id: do_tile_action
+                  kind: "${TILE6_ACTION_KIND}"
+                  service: "${TILE6_SERVICE}"
+                  entity_id: "${TILE6_ENTITY}"
+                  param_key: "${TILE6_PARAM_KEY}"
+                  param_val: "${TILE6_PARAM_VAL}"
+                  was_on: !lambda "return id(ha_state_tile6).state;"
+
+script:
+  # Publish tap action for HA automations
+  - id: publish_action
+    mode: queued
+    parameters:
+      action: string
+    then:
+      - text_sensor.template.publish:
+          id: smartdisplay_action
+          state: !lambda 'return action;'
+      - delay: 200ms
+      - text_sensor.template.publish:
+          id: smartdisplay_action
+          state: ""
+
+  # Centralized "do something in HA" handler
+  #
+  # Supported:
+  # - *.toggle (light/switch/fan) via kind: toggle, service: "<domain>.toggle"
+  # - scene.turn_on via kind: scene (entity_id = scene.xyz)
+  # - script.turn_on via kind: script (entity_id = script.xyz)
+  # - fan.set_preset_mode via kind: fan_preset (param_val="Auto")
+  # - light.turn_on + brightness_pct via kind: light_brightness (param_val="60")
+  # - fan_toggle_preset: toggle off/on and when turning on set preset after delay (preserves your old tile6 logic)
+  - id: do_tile_action
+    mode: queued
+    parameters:
+      kind: string
+      service: string
+      entity_id: string
+      param_key: string
+      param_val: string
+      was_on: bool
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return std::string("${DIRECT_ACTIONS}") == "true";
+          then:
+            - lambda: |-
+                ESP_LOGD("tile", "do_tile_action kind=%s service=%s entity=%s key=%s val=%s was_on=%d",
+                         kind.c_str(), service.c_str(), entity_id.c_str(),
+                         param_key.c_str(), param_val.c_str(), (int)was_on);
+
+            - if:
+                condition:
+                  lambda: |-
+                    return kind == "fan_toggle_preset";
+                then:
+                  - if:
+                      condition:
+                        lambda: |-
+                          return was_on;
+                      then:
+                        - homeassistant.action:
+                            action: fan.turn_off
+                            data:
+                              entity_id: !lambda 'return entity_id;'
+                      else:
+                        - homeassistant.action:
+                            action: fan.turn_on
+                            data:
+                              entity_id: !lambda 'return entity_id;'
+                        - delay: 150ms
+                        - homeassistant.action:
+                            action: fan.set_preset_mode
+                            data:
+                              entity_id: !lambda 'return entity_id;'
+                              preset_mode: !lambda 'return param_val;'
+                else:
+                  - if:
+                      condition:
+                        lambda: |-
+                          return kind == "toggle";
+                      then:
+                        - homeassistant.action:
+                            action: !lambda 'return service;'
+                            data:
+                              entity_id: !lambda 'return entity_id;'
+                      else:
+                        - if:
+                            condition:
+                              lambda: |-
+                                return kind == "scene";
+                            then:
+                              - homeassistant.action:
+                                  action: scene.turn_on
+                                  data:
+                                    entity_id: !lambda 'return entity_id;'
+                            else:
+                              - if:
+                                  condition:
+                                    lambda: |-
+                                      return kind == "script";
+                                  then:
+                                    - homeassistant.action:
+                                        action: script.turn_on
+                                        data:
+                                          entity_id: !lambda 'return entity_id;'
+                                  else:
+                                    - if:
+                                        condition:
+                                          lambda: |-
+                                            return kind == "fan_preset";
+                                        then:
+                                          - homeassistant.action:
+                                              action: fan.set_preset_mode
+                                              data:
+                                                entity_id: !lambda 'return entity_id;'
+                                                preset_mode: !lambda 'return param_val;'
+                                        else:
+                                          - if:
+                                              condition:
+                                                lambda: |-
+                                                  return kind == "light_brightness";
+                                              then:
+                                                - homeassistant.action:
+                                                    action: light.turn_on
+                                                    data:
+                                                      entity_id: !lambda 'return entity_id;'
+                                                      brightness_pct: !lambda 'return atoi(param_val.c_str());'
+                                              else:
+                                                - homeassistant.action:
+                                                    action: !lambda 'return service;'
+                                                    data:
+                                                      entity_id: !lambda 'return entity_id;'
+
+  # UI refresh (values + time + styles) + render
+  - id: ui_refresh
+    mode: queued
+    then:
+      - lambda: |-
+          auto pct_text = [](bool on, float br, const char* off_label) -> std::string {
+            if (!on) return std::string(off_label);
+            if (isnan(br)) return std::string("100 %");
+            int pct = (int) lround((br / 255.0f) * 100.0f);
+            char buf[8];
+            snprintf(buf, sizeof(buf), "%d %%", pct);
+            return std::string(buf);
+          };
+
+          auto set_lbl = [](lv_obj_t* lbl, const std::string& s) {
+            if (lbl) lv_label_set_text(lbl, s.c_str());
+          };
+
+          // Values (tiles 1..5)
+          set_lbl(id(t1_value), pct_text(id(ha_state_tile1).state, id(br_tile1).state, "${TILE1_LABEL_OFF}"));
+          set_lbl(id(t2_value), pct_text(id(ha_state_tile2).state, id(br_tile2).state, "${TILE2_LABEL_OFF}"));
+          set_lbl(id(t3_value), pct_text(id(ha_state_tile3).state, id(br_tile3).state, "${TILE3_LABEL_OFF}"));
+          set_lbl(id(t4_value), pct_text(id(ha_state_tile4).state, id(br_tile4).state, "${TILE4_LABEL_OFF}"));
+          set_lbl(id(t5_value), pct_text(id(ha_state_tile5).state, id(br_tile5).state, "${TILE5_LABEL_OFF}"));
+
+          // Tile 6 value: OFF -> TILE6_LABEL_OFF, ON -> preset_mode (fallback TILE6_PARAM_VAL)
+          if (!id(ha_state_tile6).state) {
+            set_lbl(id(t6_value), std::string("${TILE6_LABEL_OFF}"));
+          } else {
+            std::string pm = id(tile6_preset).state.c_str();
+            if (pm.size() == 0) pm = std::string("${TILE6_PARAM_VAL}");
+            set_lbl(id(t6_value), pm);
+          }
+
+          // Time (HH:MM)
+          {
+            auto now = id(homeassistant_time).now();
+            char buf[6];
+            snprintf(buf, sizeof(buf), "%02d:%02d", now.hour, now.minute);
+            set_lbl(id(lbl_time), std::string(buf));
+          }
+
+          // Color apply (per tile)
+          auto apply_tile = [&](bool active,
+                                lv_obj_t* tile,
+                                lv_obj_t* circle,
+                                lv_obj_t* title,
+                                lv_obj_t* value,
+                                lv_obj_t* icon_lbl,
+                                uint32_t circle_active,
+                                uint32_t circle_disabled,
+                                uint32_t icon_active,
+                                uint32_t icon_disabled,
+                                uint32_t bg_active,
+                                uint32_t bg_disabled,
+                                uint32_t title_active,
+                                uint32_t title_disabled,
+                                uint32_t value_active,
+                                uint32_t value_disabled)
+          {
+            lv_obj_set_style_bg_color(tile, lv_color_hex(active ? bg_active : bg_disabled), 0);
+            lv_obj_set_style_bg_color(circle, lv_color_hex(active ? circle_active : circle_disabled), 0);
+            lv_obj_set_style_text_color(icon_lbl, lv_color_hex(active ? icon_active : icon_disabled), 0);
+            lv_obj_set_style_text_color(title, lv_color_hex(active ? title_active : title_disabled), 0);
+            lv_obj_set_style_text_color(value, lv_color_hex(active ? value_active : value_disabled), 0);
+          };
+
+          apply_tile(id(ha_state_tile1).state,
+                    id(tile1), id(tile1_icon_circle), id(t1_title), id(t1_value), id(tile1_icon_lbl),
+                    ${TILE1_CIRCLE_ACTIVE_COLOR}, ${TILE1_CIRCLE_DISABLED_COLOR},
+                    ${TILE1_ICON_ACTIVE_COLOR}, ${TILE1_ICON_DISABLED_COLOR},
+                    ${TILE1_BG_ACTIVE_COLOR}, ${TILE1_BG_DISABLED_COLOR},
+                    ${TILE1_TITLE_ACTIVE_COLOR}, ${TILE1_TITLE_DISABLED_COLOR},
+                    ${TILE1_VALUE_ACTIVE_COLOR}, ${TILE1_VALUE_DISABLED_COLOR});
+
+          apply_tile(id(ha_state_tile2).state,
+                    id(tile2), id(tile2_icon_circle), id(t2_title), id(t2_value), id(tile2_icon_lbl),
+                    ${TILE2_CIRCLE_ACTIVE_COLOR}, ${TILE2_CIRCLE_DISABLED_COLOR},
+                    ${TILE2_ICON_ACTIVE_COLOR}, ${TILE2_ICON_DISABLED_COLOR},
+                    ${TILE2_BG_ACTIVE_COLOR}, ${TILE2_BG_DISABLED_COLOR},
+                    ${TILE2_TITLE_ACTIVE_COLOR}, ${TILE2_TITLE_DISABLED_COLOR},
+                    ${TILE2_VALUE_ACTIVE_COLOR}, ${TILE2_VALUE_DISABLED_COLOR});
+
+          apply_tile(id(ha_state_tile3).state,
+                    id(tile3), id(tile3_icon_circle), id(t3_title), id(t3_value), id(tile3_icon_lbl),
+                    ${TILE3_CIRCLE_ACTIVE_COLOR}, ${TILE3_CIRCLE_DISABLED_COLOR},
+                    ${TILE3_ICON_ACTIVE_COLOR}, ${TILE3_ICON_DISABLED_COLOR},
+                    ${TILE3_BG_ACTIVE_COLOR}, ${TILE3_BG_DISABLED_COLOR},
+                    ${TILE3_TITLE_ACTIVE_COLOR}, ${TILE3_TITLE_DISABLED_COLOR},
+                    ${TILE3_VALUE_ACTIVE_COLOR}, ${TILE3_VALUE_DISABLED_COLOR});
+
+          apply_tile(id(ha_state_tile4).state,
+                    id(tile4), id(tile4_icon_circle), id(t4_title), id(t4_value), id(tile4_icon_lbl),
+                    ${TILE4_CIRCLE_ACTIVE_COLOR}, ${TILE4_CIRCLE_DISABLED_COLOR},
+                    ${TILE4_ICON_ACTIVE_COLOR}, ${TILE4_ICON_DISABLED_COLOR},
+                    ${TILE4_BG_ACTIVE_COLOR}, ${TILE4_BG_DISABLED_COLOR},
+                    ${TILE4_TITLE_ACTIVE_COLOR}, ${TILE4_TITLE_DISABLED_COLOR},
+                    ${TILE4_VALUE_ACTIVE_COLOR}, ${TILE4_VALUE_DISABLED_COLOR});
+
+          apply_tile(id(ha_state_tile5).state,
+                    id(tile5), id(tile5_icon_circle), id(t5_title), id(t5_value), id(tile5_icon_lbl),
+                    ${TILE5_CIRCLE_ACTIVE_COLOR}, ${TILE5_CIRCLE_DISABLED_COLOR},
+                    ${TILE5_ICON_ACTIVE_COLOR}, ${TILE5_ICON_DISABLED_COLOR},
+                    ${TILE5_BG_ACTIVE_COLOR}, ${TILE5_BG_DISABLED_COLOR},
+                    ${TILE5_TITLE_ACTIVE_COLOR}, ${TILE5_TITLE_DISABLED_COLOR},
+                    ${TILE5_VALUE_ACTIVE_COLOR}, ${TILE5_VALUE_DISABLED_COLOR});
+
+          apply_tile(id(ha_state_tile6).state,
+                    id(tile6), id(tile6_icon_circle), id(t6_title), id(t6_value), id(tile6_icon_lbl),
+                    ${TILE6_CIRCLE_ACTIVE_COLOR}, ${TILE6_CIRCLE_DISABLED_COLOR},
+                    ${TILE6_ICON_ACTIVE_COLOR}, ${TILE6_ICON_DISABLED_COLOR},
+                    ${TILE6_BG_ACTIVE_COLOR}, ${TILE6_BG_DISABLED_COLOR},
+                    ${TILE6_TITLE_ACTIVE_COLOR}, ${TILE6_TITLE_DISABLED_COLOR},
+                    ${TILE6_VALUE_ACTIVE_COLOR}, ${TILE6_VALUE_DISABLED_COLOR});
+
+      - component.update: my_display
