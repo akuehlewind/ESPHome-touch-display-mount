@@ -31,10 +31,11 @@ The ESP32-2432S028 integrates the ESP32, ILI9341 display, touchscreen controller
 It is commonly known as the **Cheap Yellow Display (CYD)** in the maker community and is the easiest option for this project.
 
 <img src="images/display-home-like.png" width="100%">
+<img src="images/display-home-like2.png" width="50%">
 <img src="images/display-buttons.png" width="50%">
-<img src="images/fusion1.jpg" width="40%">
-<img src="images/tilt.jpeg" width="40%">
-<img src="images/side.jpeg" width="40%">
+<img src="images/fusion1.jpg" width="50%">
+<img src="images/tilt.jpeg" width="50%">
+<img src="images/side.jpeg" width="50%">
 
 ---
 
@@ -247,7 +248,7 @@ Your config choice defines the UI style:
 - Action strings: `btn1_press` .. `btn4_press`
 - Default direct action (if `DIRECT_ACTIONS: "true"`): `light.toggle` on `BTN*_ENTITY`
 
-<img src="images/display-buttons.png" width="20%">
+<img src="images/display-buttons.png" width="50%">
 
 
 ## `home-like.yml` (tiles)
@@ -256,7 +257,7 @@ Your config choice defines the UI style:
 - Each tile can optionally call a Home Assistant service directly (toggle/scene/script/fan preset/light brightness).
 - Per-tile OFF label is configurable via `TILE*_LABEL_OFF` (e.g. "Off" / "Aus").
 
-<img src="images/display-home-like.png" width="20%">
+<img src="images/display-home-like.png" width="50%">
 
 ------------------------------------------------------------------------
 
@@ -320,10 +321,10 @@ This is a hobby project and considered work-in-progress.
 Feel free to fork, remix and improve it.
 
 # Other
-<img src="images/display.jpeg" width="40%">
-<img src="images/standalone-display.jpeg" width="40%">
-<img src="images/fusion2.jpg" width="40%">
-<img src="images/integrated-display-back.jpeg" width="40%">
+<img src="images/display.jpeg" width="50%">
+<img src="images/standalone-display.jpeg" width="50%">
+<img src="images/fusion2.jpg" width="50%">
+<img src="images/integrated-display-back.jpeg" width="50%">
 
 
 
