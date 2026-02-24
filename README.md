@@ -30,8 +30,8 @@ Two hardware variants are supported:
 The ESP32-2432S028 integrates the ESP32, ILI9341 display, touchscreen controller, and backlight circuitry on a single board.  
 It is commonly known as the **Cheap Yellow Display (CYD)** in the maker community and is the easiest option for this project.
 
-<img src="images/display-home-like.png" width="40%">
-<img src="images/display-buttons.png" width="40%">
+<img src="images/display-home-like.png" width="100%">
+<img src="images/display-buttons.png" width="50%">
 <img src="images/fusion1.jpg" width="40%">
 <img src="images/tilt.jpeg" width="40%">
 <img src="images/side.jpeg" width="40%">
