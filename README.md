@@ -1,16 +1,24 @@
-# ESP32 Cheap Yellow Display (ESP32-2432S028) Under-Desk Home Assistant Touch Panel – LVGL UI + 3D Printed Tilt Mount
+# ESP32 Cheap Yellow Display (ESP32-2432S028) Home Assistant Touch Panel – LVGL UI + 3D Printed Desk / Under-Desk Tilt Mount
 ![ESPHome](https://img.shields.io/badge/ESPHome-Compatible-blue)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Integrated-orange)
 ![LVGL](https://img.shields.io/badge/LVGL-UI-green)
 ![Cheap Yellow Display](https://img.shields.io/badge/CYD-Supported-yellow)
 
-A 3D-printable under-desk mount with adjustable tilt for an ESP32 2.8" ILI9341 touchscreen, powered by ESPHome + LVGL and integrated with Home Assistant.  
+ESPHome powered Home Assistant control panel using the popular Cheap Yellow Display (ESP32-2432S028).
+
+A 3D-printable enclosure with adjustable tilt for an ESP32 2.8" ILI9341 touchscreen, powered by ESPHome + LVGL and integrated with Home Assistant.  
 Includes ready-to-flash YAML configs for the ESP32-2432S028 (Cheap Yellow Display) and a standalone ILI9341 + external ESP32 wiring variant.
-The enclosure is optimized for under-desk mounting but can also be used as a compact Home Assistant wall panel or desktop dashboard.
+
+Two mounting options are supported:
+
+• Desk Mount – for tabletop installation  
+• Under-Desk Mount – for installation underneath a desk or shelf  
+
+The enclosure can therefore be used as a compact Home Assistant control panel for desks, walls, or mounted under a desk.
 
 ------------------------------------------------------------------------
 
-The ESP32-2432S028 Cheap Yellow Display is transformed into a tiltable under-desk Home Assistant control panel powered by ESPHome and LVGL.
+The ESP32-2432S028 Cheap Yellow Display is transformed into a tiltable Home Assistant control panel powered by ESPHome and LVGL.
 
 The goal of this project is to create a clean, wall- or desk-mounted smart control panel that integrates seamlessly with Home Assistant.  
 It features a modern LVGL-based UI, real-time state synchronization, and optional direct Home Assistant service calls.
@@ -31,9 +39,10 @@ The ESP32-2432S028 integrates the ESP32, ILI9341 display, touchscreen controller
 It is commonly known as the **Cheap Yellow Display (CYD)** in the maker community and is the easiest option for this project.
 
 <img src="images/display-home-like.png" width="100%">
-<img src="images/display-home-like2.png" width="50%">
+
 <img src="images/display-buttons.png" width="50%">
-<img src="images/fusion1.jpg" width="50%">
+<img src="images/desk-mount.jpeg" width="50%">
+
 <img src="images/tilt.jpeg" width="50%">
 <img src="images/side.jpeg" width="50%">
 
@@ -132,6 +141,7 @@ Without this setting, direct control will not work.
 - Automation-based mode supported
 - Real-time state synchronization
 - Adjustable 3D-printed enclosure
+- Desk mount or under-desk mount options
 - Hidden cable routing
 - Works with CYD or external ESP32 wiring
 
@@ -303,14 +313,23 @@ are **identical** (they must always match).
 
 # 🖨 3D Printing
 
-See the `/3d_print` folder for STL files and Fusion 360 source files for the adjustable under-desk tilt mount.
+See the `/3d_print` folder for STL files and Fusion 360 source files.
+
+Two mount options are available:
+
+• **Desk Mount** – for tabletop installation  
+• **Under-Desk Mount** – for installation underneath a desk or shelf  
+
+Both mounts use the same enclosure parts and adjustable tilt mechanism.  
+Print the main enclosure parts and choose one mount type depending on your setup.
 
 Designed for:
 
--   Under-desk mounting
--   Wall mounting
--   Adjustable viewing angle
--   Hidden cable routing
+- Desk mounting
+- Under-desk mounting
+- Wall mounting
+- Adjustable viewing angle
+- Hidden cable routing
 
 ------------------------------------------------------------------------
 
