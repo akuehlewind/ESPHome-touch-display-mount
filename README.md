@@ -39,6 +39,7 @@ The ESP32-2432S028 integrates the ESP32, ILI9341 display, touchscreen controller
 It is commonly known as the **Cheap Yellow Display (CYD)** in the maker community and is the easiest option for this project.
 
 <img src="images/display-home-like.png" width="100%">
+<img src="images/display-home-like-overlay.png" width="100%">
 
 <img src="images/display-buttons.png" width="50%">
 <img src="images/desk-mount.jpeg" width="50%">
@@ -85,6 +86,19 @@ Trigger example:
 Entity: sensor.smartdisplay_action
 To: btn1_press
 ```
+
+### Overlay Control Layer
+
+The UI contains a secondary overlay layer used for interactive controls.
+
+When a tile is long-pressed:
+
+1. The overlay opens
+2. The control type is determined (brightness / percentage)
+3. Slider interaction updates Home Assistant
+4. Closing the overlay returns to the tile grid
+
+This keeps the tile UI clean while still allowing detailed control.
 
 
 # ⚙️ Requirements
@@ -135,11 +149,11 @@ Without this setting, direct control will not work.
 # ✨ Features
 
 - LVGL-based UI (lockscreen or tile layout depending on configuration)
-- Live time & date (via Home Assistant time)
-- 4 configurable touch buttons
-- Direct Home Assistant service calls (optional)
+- 2×3 configurable tile layout (home-like UI)
+- Long-press control overlay for brightness / fan speed
+- Real-time state synchronization with Home Assistant
+- Optional direct Home Assistant service calls
 - Automation-based mode supported
-- Real-time state synchronization
 - Adjustable 3D-printed enclosure
 - Desk mount or under-desk mount options
 - Hidden cable routing
@@ -267,7 +281,22 @@ Your config choice defines the UI style:
 - Each tile can optionally call a Home Assistant service directly (toggle/scene/script/fan preset/light brightness).
 - Per-tile OFF label is configurable via `TILE*_LABEL_OFF` (e.g. "Off" / "Aus").
 
+### Long-Press Overlay
+
+Tiles can open a control overlay when long-pressed.
+
+Depending on the tile configuration, the overlay provides:
+
+| Tile Type | Overlay Control |
+|-----------|----------------|
+| light     | Brightness slider |
+| fan       | Speed / percentage slider |
+| custom    | Optional custom behavior |
+
+The overlay allows quick adjustments without leaving the tile UI.
+
 <img src="images/display-home-like.png" width="50%">
+<img src="images/display-home-like-overlay.png" width="50%">
 
 ------------------------------------------------------------------------
 

@@ -1,10 +1,12 @@
 ############################################################
-# SmartDisplay2 – iOS Home app–inspired Tiles UI (ILI9341 + XPT2046)
+# SmartDisplay – iOS Home app–inspired Tiles UI
+# Target device: ESP32-2432S028 / Cheap Yellow Display (CYD)
 # Resolution: 320x240
 #
 # Target hardware
-# - Any ESP32 + external ILI9341 (320x240) display + XPT2046 touchscreen
-# - This file uses a specific “external ESP” pinout (see wiring below).
+# - Cheap Yellow Display (ESP32-2432S028 or compatible)
+# - Built-in ILI9341 320x240 display
+# - Built-in XPT2046 touchscreen
 #
 # What this config does
 # - Renders a wallpaper background + a 2x3 grid of “tiles” (LVGL).
@@ -12,162 +14,254 @@
 # - Tile taps publish a short-lived text_sensor event (smartdisplay_action)
 #   so you can build Home Assistant automations on top.
 # - Optional: the device can also call Home Assistant services directly
-#   (toggle lights/switches/fans, run scenes/scripts, set fan preset, set light brightness).
+#   (toggle lights/switches/fans, activate scenes/scripts, set fan preset,
+#   set light brightness, set fan percentage).
 #
 # The layout is inspired by common modern smart home UIs.
 #
 # How to customize
-# 1) Edit the TILE1..TILE6 blocks below (entity/title/icon/action/colors).
+# 1) Edit the TILE1..TILE6 blocks below.
 # 2) If you change icons, ensure those glyphs are included in the MDI font glyph list.
 # 3) Provide your own background image at: images/home-background.png
 #
-# Action kinds (TILE*_ACTION_KIND)
-# - toggle              -> calls TILE*_SERVICE with entity_id (e.g. light.toggle / switch.toggle / fan.toggle)
-# - scene               -> scene.turn_on with entity_id
-# - script              -> script.turn_on with entity_id
-# - fan_preset          -> fan.set_preset_mode (TILE*_PARAM_VAL is preset name)
-# - light_brightness    -> light.turn_on with brightness_pct (TILE*_PARAM_VAL is 0..100)
-# - fan_toggle_preset   -> special: if fan was OFF, turn_on then set preset after 150ms;
-#                          if fan was ON, turn_off (keeps your original tile6 behavior)
+# Tile configuration model
+# - TILE*_TYPE defines the entity kind: light | fan | switch | scene | script
+# - TILE*_TAP_ACTION defines what happens on short tap:
+#   auto | toggle | activate | fan_toggle_preset | custom
+# - TILE*_LONGPRESS defines what happens on long press:
+#   auto | none | brightness | percentage
+# - TILE*_VALUE_MODE defines how the value line is rendered:
+#   auto | brightness | percentage | preset | text
 #
 # Notes
 # - DIRECT_ACTIONS="true" enables direct HA service calls from the device.
 #   If "false", only the smartdisplay_action event is emitted.
-# - Brightness percentage (tiles 1..5 by default) is derived from HA attribute
-#   brightness (0..255) -> shown as 0..100%. If brightness is missing, “100 %” is shown.
+# - In auto mode, values and long-press behavior are derived from TILE*_TYPE:
+#   light -> brightness, fan -> percentage/preset, scene/script -> text
 #
 # What you must adapt before flashing
 # 1) Secrets: api.encryption.key, ota.password, WiFi credentials (prefer secrets.yaml)
-# 2) Wiring: ensure your display + touch wiring matches the pinout above
-# 3) TILE*_ENTITY: Home Assistant entity IDs you want to control/mirror
+# 2) Pins, touch calibration and transform if your CYD variant differs
+# 3) TILE*_ENTITY / TILE*_STATE_ENTITY: Home Assistant entity IDs you want to control/mirror
 # 4) Touch calibration + transform:
-#    - calibration is panel-specific
+#    - calibration is device-specific
 #    - touchscreen.transform MUST match display.transform exactly
 ############################################################
 
 substitutions:
-  DIRECT_ACTIONS: "true"
-  ROOM_NAME: "Office"
 
-  # ================= TILE 1 =================
-  TILE1_ENTITY: "light.ceiling"       # HA Entity (e.g. light.ceiling, switch.coffee_machine, fan.living_room)
-  TILE1_TITLE: "Ceiling"
-  TILE1_ICON: "\U000F0769"
-  TILE1_ACTION_KIND: "toggle"         # toggle | scene | script | fan_preset | light_brightness | fan_toggle_preset
-  TILE1_SERVICE: "light.toggle"       # used for kind: toggle (any *.toggle)
-  TILE1_PARAM_KEY: ""                 # preset_mode | brightness_pct | (empty)
-  TILE1_PARAM_VAL: ""                 # e.g. "Auto" or "60"
-  TILE1_CIRCLE_ACTIVE_COLOR: "0xFEC600"
-  TILE1_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
-  TILE1_ICON_ACTIVE_COLOR: "0xFFFFFF"
-  TILE1_ICON_DISABLED_COLOR: "0xFEC600"
-  TILE1_BG_ACTIVE_COLOR: "0xFFFFFF"
-  TILE1_BG_DISABLED_COLOR: "0x939391"
-  TILE1_TITLE_ACTIVE_COLOR: "0x000000"
-  TILE1_TITLE_DISABLED_COLOR: "0xFFFFFF"
-  TILE1_VALUE_ACTIVE_COLOR: "0x7A7A7C"
-  TILE1_VALUE_DISABLED_COLOR: "0xD9D9D9"
-  TILE1_LABEL_OFF: "Off"
+  DIRECT_ACTIONS: "true"                           # true = call Home Assistant services directly, false = only emit action events
+  ROOM_NAME: "Office"                              # room name shown in the top-left header
 
-  # ================= TILE 2 =================
-  TILE2_ENTITY: "light.desk"
-  TILE2_TITLE: "Desk"
-  TILE2_ICON: "\U000F095F"
-  TILE2_ACTION_KIND: "toggle"
-  TILE2_SERVICE: "light.toggle"
-  TILE2_PARAM_KEY: ""
-  TILE2_PARAM_VAL: ""
-  TILE2_CIRCLE_ACTIVE_COLOR: "0xFEC600"
-  TILE2_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
-  TILE2_ICON_ACTIVE_COLOR: "0xFFFFFF"
-  TILE2_ICON_DISABLED_COLOR: "0xFEC600"
-  TILE2_BG_ACTIVE_COLOR: "0xFFFFFF"
-  TILE2_BG_DISABLED_COLOR: "0x939391"
-  TILE2_TITLE_ACTIVE_COLOR: "0x000000"
-  TILE2_TITLE_DISABLED_COLOR: "0xFFFFFF"
-  TILE2_VALUE_ACTIVE_COLOR: "0x7A7A7C"
-  TILE2_VALUE_DISABLED_COLOR: "0xD9D9D9"
-  TILE2_LABEL_OFF: "Off"
 
-  # ================= TILE 3 =================
-  TILE3_ENTITY: "light.floor_lamp"
-  TILE3_TITLE: "Floor lamp"
-  TILE3_ICON: "\U000F08DD"
-  TILE3_ACTION_KIND: "toggle"
-  TILE3_SERVICE: "light.toggle"
-  TILE3_PARAM_KEY: ""
-  TILE3_PARAM_VAL: ""
-  TILE3_CIRCLE_ACTIVE_COLOR: "0xFEC600"
-  TILE3_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
-  TILE3_ICON_ACTIVE_COLOR: "0xFFFFFF"
-  TILE3_ICON_DISABLED_COLOR: "0xFEC600"
-  TILE3_BG_ACTIVE_COLOR: "0xFFFFFF"
-  TILE3_BG_DISABLED_COLOR: "0x939391"
-  TILE3_TITLE_ACTIVE_COLOR: "0x000000"
-  TILE3_TITLE_DISABLED_COLOR: "0xFFFFFF"
-  TILE3_VALUE_ACTIVE_COLOR: "0x7A7A7C"
-  TILE3_VALUE_DISABLED_COLOR: "0xD9D9D9"
-  TILE3_LABEL_OFF: "Off"
+  # ============================================================
+  # TILE 1
+  # ============================================================
 
-  # ================= TILE 4 =================
-  TILE4_ENTITY: "light.desk_ambient"
-  TILE4_TITLE: "Ambient"
-  TILE4_ICON: "\U000F1051"
-  TILE4_ACTION_KIND: "toggle"
-  TILE4_SERVICE: "light.toggle"
-  TILE4_PARAM_KEY: ""
-  TILE4_PARAM_VAL: ""
-  TILE4_CIRCLE_ACTIVE_COLOR: "0xFEC600"
-  TILE4_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
-  TILE4_ICON_ACTIVE_COLOR: "0xFFFFFF"
-  TILE4_ICON_DISABLED_COLOR: "0xFEC600"
-  TILE4_BG_ACTIVE_COLOR: "0xFFFFFF"
-  TILE4_BG_DISABLED_COLOR: "0x939391"
-  TILE4_TITLE_ACTIVE_COLOR: "0x000000"
-  TILE4_TITLE_DISABLED_COLOR: "0xFFFFFF"
-  TILE4_VALUE_ACTIVE_COLOR: "0x7A7A7C"
-  TILE4_VALUE_DISABLED_COLOR: "0xD9D9D9"
-  TILE4_LABEL_OFF: "Off"
+  # --- basic settings ---
+  TILE1_ENTITY: "light.ceiling"                    # main Home Assistant entity for this tile
+  TILE1_STATE_ENTITY: "light.ceiling"              # entity used for active/inactive state styling
+  TILE1_TITLE: "Ceiling"                           # tile title shown in the UI
+  TILE1_ICON: "\U000F0769"                         # Material Design Icons glyph
+  TILE1_TYPE: "light"                              # tile type: light | fan | switch | scene | script
+  TILE1_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE1_LONGPRESS: "auto"                          # long press: auto | none | brightness | percentage
+  TILE1_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
+  TILE1_LABEL_OFF: "Off"                           # text shown when entity is off
+  TILE1_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
 
-  # ================= TILE 5 =================
-  TILE5_ENTITY: "light.shelf"
-  TILE5_TITLE: "Shelf"
-  TILE5_ICON: "\U000F0335"
-  TILE5_ACTION_KIND: "toggle"
-  TILE5_SERVICE: "light.toggle"
-  TILE5_PARAM_KEY: ""
-  TILE5_PARAM_VAL: ""
-  TILE5_CIRCLE_ACTIVE_COLOR: "0xFEC600"
-  TILE5_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
-  TILE5_ICON_ACTIVE_COLOR: "0xFFFFFF"
-  TILE5_ICON_DISABLED_COLOR: "0xFEC600"
-  TILE5_BG_ACTIVE_COLOR: "0xFFFFFF"
-  TILE5_BG_DISABLED_COLOR: "0x939391"
-  TILE5_TITLE_ACTIVE_COLOR: "0x000000"
-  TILE5_TITLE_DISABLED_COLOR: "0xFFFFFF"
-  TILE5_VALUE_ACTIVE_COLOR: "0x7A7A7C"
-  TILE5_VALUE_DISABLED_COLOR: "0xD9D9D9"
-  TILE5_LABEL_OFF: "Off"
+  # --- colors ---
+  TILE1_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
+  TILE1_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
+  TILE1_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
+  TILE1_ICON_DISABLED_COLOR: "0xFEC600"            # icon color when inactive
+  TILE1_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
+  TILE1_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
+  TILE1_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
+  TILE1_TITLE_DISABLED_COLOR: "0xFFFFFF"           # title color when inactive
+  TILE1_VALUE_ACTIVE_COLOR: "0x7A7A7C"             # value color when active
+  TILE1_VALUE_DISABLED_COLOR: "0xD9D9D9"           # value color when inactive
 
-  # ================= TILE 6 (FAN) =================
-  TILE6_ENTITY: "fan.air_purifier"
-  TILE6_TITLE: "Purifier"
-  TILE6_ICON: "\U000F0D43"
-  TILE6_ACTION_KIND: "fan_toggle_preset"
-  TILE6_SERVICE: "fan.toggle"
-  TILE6_PARAM_KEY: "preset_mode"
-  TILE6_PARAM_VAL: "Auto"
-  TILE6_CIRCLE_ACTIVE_COLOR: "0x00C5EC"
-  TILE6_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
-  TILE6_ICON_ACTIVE_COLOR: "0xFFFFFF"
-  TILE6_ICON_DISABLED_COLOR: "0x00C5EC"
-  TILE6_BG_ACTIVE_COLOR: "0xFFFFFF"
-  TILE6_BG_DISABLED_COLOR: "0x939391"
-  TILE6_TITLE_ACTIVE_COLOR: "0x000000"
-  TILE6_TITLE_DISABLED_COLOR: "0xFFFFFF"
-  TILE6_VALUE_ACTIVE_COLOR: "0x7A7A7C"
-  TILE6_VALUE_DISABLED_COLOR: "0xD9D9D9"
-  TILE6_LABEL_OFF: "Off"
+  # --- advanced settings ---
+  TILE1_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
+  TILE1_TAP_PARAM_KEY: ""                          # optional extra service parameter key
+  TILE1_TAP_PARAM_VAL: ""                          # optional extra service parameter value
+  TILE1_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
+
+
+  # ============================================================
+  # TILE 2
+  # ============================================================
+
+  # --- basic settings ---
+  TILE2_ENTITY: "light.desk"                       # main Home Assistant entity for this tile
+  TILE2_STATE_ENTITY: "light.desk"                 # entity used for active/inactive state styling
+  TILE2_TITLE: "Desk"                              # tile title shown in the UI
+  TILE2_ICON: "\U000F095F"                         # Material Design Icons glyph
+  TILE2_TYPE: "light"                              # tile type: light | fan | switch | scene | script
+  TILE2_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE2_LONGPRESS: "auto"                          # long press: auto | none | brightness | percentage
+  TILE2_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
+  TILE2_LABEL_OFF: "Off"                           # text shown when entity is off
+  TILE2_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+
+  # --- colors ---
+  TILE2_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
+  TILE2_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
+  TILE2_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
+  TILE2_ICON_DISABLED_COLOR: "0xFEC600"            # icon color when inactive
+  TILE2_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
+  TILE2_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
+  TILE2_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
+  TILE2_TITLE_DISABLED_COLOR: "0xFFFFFF"           # title color when inactive
+  TILE2_VALUE_ACTIVE_COLOR: "0x7A7A7C"             # value color when active
+  TILE2_VALUE_DISABLED_COLOR: "0xD9D9D9"           # value color when inactive
+
+  # --- advanced settings ---
+  TILE2_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
+  TILE2_TAP_PARAM_KEY: ""                          # optional extra service parameter key
+  TILE2_TAP_PARAM_VAL: ""                          # optional extra service parameter value
+  TILE2_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
+
+
+  # ============================================================
+  # TILE 3
+  # ============================================================
+
+  # --- basic settings ---
+  TILE3_ENTITY: "light.floor_lamp"                 # main Home Assistant entity for this tile
+  TILE3_STATE_ENTITY: "light.floor_lamp"           # entity used for active/inactive state styling
+  TILE3_TITLE: "Floor lamp"                        # tile title shown in the UI
+  TILE3_ICON: "\U000F08DD"                         # Material Design Icons glyph
+  TILE3_TYPE: "light"                              # tile type: light | fan | switch | scene | script
+  TILE3_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE3_LONGPRESS: "auto"                          # long press: auto | none | brightness | percentage
+  TILE3_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
+  TILE3_LABEL_OFF: "Off"                           # text shown when entity is off
+  TILE3_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+
+  # --- colors ---
+  TILE3_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
+  TILE3_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
+  TILE3_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
+  TILE3_ICON_DISABLED_COLOR: "0xFEC600"            # icon color when inactive
+  TILE3_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
+  TILE3_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
+  TILE3_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
+  TILE3_TITLE_DISABLED_COLOR: "0xFFFFFF"           # title color when inactive
+  TILE3_VALUE_ACTIVE_COLOR: "0x7A7A7C"             # value color when active
+  TILE3_VALUE_DISABLED_COLOR: "0xD9D9D9"           # value color when inactive
+
+  # --- advanced settings ---
+  TILE3_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
+  TILE3_TAP_PARAM_KEY: ""                          # optional extra service parameter key
+  TILE3_TAP_PARAM_VAL: ""                          # optional extra service parameter value
+  TILE3_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
+
+
+  # ============================================================
+  # TILE 4
+  # ============================================================
+
+  # --- basic settings ---
+  TILE4_ENTITY: "light.desk_ambient"               # main Home Assistant entity for this tile
+  TILE4_STATE_ENTITY: "light.desk_ambient"         # entity used for active/inactive state styling  
+  TILE4_TITLE: "Ambient"                           # tile title shown in the UI
+  TILE4_ICON: "\U000F1051"                         # Material Design Icons glyph
+  TILE4_TYPE: "light"                              # tile type: light | fan | switch | scene | script
+  TILE4_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE4_LONGPRESS: "auto"                          # long press: auto | none | brightness | percentage
+  TILE4_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
+  TILE4_LABEL_OFF: "Off"                           # text shown when entity is off
+  TILE4_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+
+  # --- colors ---
+  TILE4_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
+  TILE4_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
+  TILE4_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
+  TILE4_ICON_DISABLED_COLOR: "0xFEC600"            # icon color when inactive
+  TILE4_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
+  TILE4_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
+  TILE4_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
+  TILE4_TITLE_DISABLED_COLOR: "0xFFFFFF"           # title color when inactive
+  TILE4_VALUE_ACTIVE_COLOR: "0x7A7A7C"             # value color when active
+  TILE4_VALUE_DISABLED_COLOR: "0xD9D9D9"           # value color when inactive
+
+  # --- advanced settings ---
+  TILE4_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
+  TILE4_TAP_PARAM_KEY: ""                          # optional extra service parameter key
+  TILE4_TAP_PARAM_VAL: ""                          # optional extra service parameter value
+  TILE4_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
+
+
+  # ============================================================
+  # TILE 5
+  # ============================================================
+
+  # --- basic settings ---
+  TILE5_ENTITY: "light.shelf"                      # main Home Assistant entity for this tile
+  TILE5_STATE_ENTITY: "light.shelf"                # entity used for active/inactive state styling  
+  TILE5_TITLE: "Shelf"                             # tile title shown in the UI
+  TILE5_ICON: "\U000F0335"                         # Material Design Icons glyph
+  TILE5_TYPE: "light"                              # tile type: light | fan | switch | scene | script
+  TILE5_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE5_LONGPRESS: "auto"                          # long press: auto | none | brightness | percentage
+  TILE5_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
+  TILE5_LABEL_OFF: "Off"                           # text shown when entity is off
+  TILE5_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+
+  # --- colors ---
+  TILE5_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
+  TILE5_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
+  TILE5_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
+  TILE5_ICON_DISABLED_COLOR: "0xFEC600"            # icon color when inactive
+  TILE5_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
+  TILE5_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
+  TILE5_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
+  TILE5_TITLE_DISABLED_COLOR: "0xFFFFFF"           # title color when inactive
+  TILE5_VALUE_ACTIVE_COLOR: "0x7A7A7C"             # value color when active
+  TILE5_VALUE_DISABLED_COLOR: "0xD9D9D9"           # value color when inactive
+
+  # --- advanced settings ---
+  TILE5_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
+  TILE5_TAP_PARAM_KEY: ""                          # optional extra service parameter key
+  TILE5_TAP_PARAM_VAL: ""                          # optional extra service parameter value
+  TILE5_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
+
+
+  # ============================================================
+  # TILE 6
+  # ============================================================
+
+  # --- basic settings ---
+  TILE6_ENTITY: "fan.air_purifier"                 # main Home Assistant entity for this tile
+  TILE6_STATE_ENTITY: "fan.air_purifier"           # entity used for active/inactive state styling  
+  TILE6_TITLE: "Purifier"                          # tile title shown in the UI
+  TILE6_ICON: "\U000F0D43"                         # Material Design Icons glyph
+  TILE6_TYPE: "fan"                                # tile type: light | fan | switch | scene | script
+  TILE6_TAP_ACTION: "fan_toggle_preset"            # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE6_LONGPRESS: "auto"                          # long press: auto | none | brightness | percentage
+  TILE6_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
+  TILE6_LABEL_OFF: "Off"                           # text shown when entity is off
+  TILE6_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+
+  # --- colors ---
+  TILE6_CIRCLE_ACTIVE_COLOR: "0x00C5EC"            # icon circle color when active
+  TILE6_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
+  TILE6_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
+  TILE6_ICON_DISABLED_COLOR: "0x00C5EC"            # icon color when inactive
+  TILE6_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
+  TILE6_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
+  TILE6_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
+  TILE6_TITLE_DISABLED_COLOR: "0xFFFFFF"           # title color when inactive
+  TILE6_VALUE_ACTIVE_COLOR: "0x7A7A7C"             # value color when active
+  TILE6_VALUE_DISABLED_COLOR: "0xD9D9D9"           # value color when inactive
+
+  # --- advanced settings ---
+  TILE6_TAP_SERVICE: "fan.toggle"                  # optional service override, e.g. fan.toggle
+  TILE6_TAP_PARAM_KEY: "preset_mode"               # optional extra service parameter key
+  TILE6_TAP_PARAM_VAL: "Auto"                      # optional extra service parameter value
+  TILE6_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
 
 esphome:
   name: smartdisplay
@@ -186,20 +280,27 @@ logger:
 
 api:
   encryption:
-    key: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    key: "CHANGE_ME"   # set your own 32-character encryption key
 
 ota:
   - platform: esphome
-    password: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    password: "CHANGE_ME" # set your own OTA password
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   ap:
     ssid: "Smartdisplay Fallback Hotspot"
-    password: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    password: "CHANGE_ME" # set your own fallback hotspot password
 
 captive_portal:
+
+# ============================================================
+# No need to edit down here
+# Make sure to add the Material Design Icons font file to the path below, otherwise the icons will not render.
+# Download the font file and place it at: fonts/materialdesignicons-webfont.ttf
+# Source: https://github.com/Templarian/MaterialDesign-Webfont
+# ============================================================
 
 time:
   - platform: homeassistant
@@ -209,6 +310,29 @@ time:
         minutes: /1
         then:
           - script.execute: ui_refresh
+
+globals:
+  - id: active_entity
+    type: std::string
+    restore_value: no
+
+  - id: active_control_kind
+    type: std::string
+    restore_value: no
+
+  - id: active_value_suffix
+    type: std::string
+    restore_value: no
+
+  - id: overlay_slider_bg_color
+    type: uint32_t
+    restore_value: no
+    initial_value: '0x939391'
+
+  - id: overlay_slider_fill_color
+    type: uint32_t
+    restore_value: no
+    initial_value: '0xFEC600'
 
 font:
   - file: "gfonts://Roboto@500"
@@ -247,6 +371,16 @@ font:
              ' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
              'ä','ö','ü','Ä','Ö','Ü','ß','/','…']
 
+  - file: "gfonts://Roboto@400"
+    id: sublabel_big
+    size: 14
+    bpp: 4
+    glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°',
+             '0','1','2','3','4','5','6','7','8','9',
+             'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+             ' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+             'ä','ö','ü','Ä','Ö','Ü','ß','/','…']             
+
   # Material Design Icons (MDI)
   # Download the font file and place it at: fonts/materialdesignicons-webfont.ttf
   # Source: https://github.com/Templarian/MaterialDesign-Webfont
@@ -262,7 +396,7 @@ font:
       - "${TILE6_ICON}"
 
 image:
-  - file: "images/smartdisplay_background.png"
+  - file: "images/home-background.png"
     id: bg_home
     type: RGB565
 
@@ -277,33 +411,75 @@ sensor:
     update_interval: 15s
 
   - platform: homeassistant
-    id: br_tile1
+    id: tile1_brightness
     entity_id: ${TILE1_ENTITY}
     attribute: brightness
     on_value: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
-    id: br_tile2
+    id: tile1_percentage
+    entity_id: ${TILE1_ENTITY}
+    attribute: percentage
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_brightness
     entity_id: ${TILE2_ENTITY}
     attribute: brightness
     on_value: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
-    id: br_tile3
+    id: tile2_percentage
+    entity_id: ${TILE2_ENTITY}
+    attribute: percentage
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_brightness
     entity_id: ${TILE3_ENTITY}
     attribute: brightness
     on_value: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
-    id: br_tile4
+    id: tile3_percentage
+    entity_id: ${TILE3_ENTITY}
+    attribute: percentage
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_brightness
     entity_id: ${TILE4_ENTITY}
     attribute: brightness
     on_value: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
-    id: br_tile5
+    id: tile4_percentage
+    entity_id: ${TILE4_ENTITY}
+    attribute: percentage
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_brightness
     entity_id: ${TILE5_ENTITY}
     attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_percentage
+    entity_id: ${TILE5_ENTITY}
+    attribute: percentage
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_brightness
+    entity_id: ${TILE6_ENTITY}
+    attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_percentage
+    entity_id: ${TILE6_ENTITY}
+    attribute: percentage
     on_value: { then: [ script.execute: ui_refresh ] }
 
 binary_sensor:
@@ -313,47 +489,82 @@ binary_sensor:
 
   - platform: homeassistant
     id: ha_state_tile1
-    entity_id: ${TILE1_ENTITY}
+    entity_id: ${TILE1_STATE_ENTITY}
     on_state: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
     id: ha_state_tile2
-    entity_id: ${TILE2_ENTITY}
+    entity_id: ${TILE2_STATE_ENTITY}
     on_state: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
     id: ha_state_tile3
-    entity_id: ${TILE3_ENTITY}
+    entity_id: ${TILE3_STATE_ENTITY}
     on_state: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
     id: ha_state_tile4
-    entity_id: ${TILE4_ENTITY}
+    entity_id: ${TILE4_STATE_ENTITY}
     on_state: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
     id: ha_state_tile5
-    entity_id: ${TILE5_ENTITY}
+    entity_id: ${TILE5_STATE_ENTITY}
     on_state: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
     id: ha_state_tile6
-    entity_id: ${TILE6_ENTITY}
+    entity_id: ${TILE6_STATE_ENTITY}
     on_state: { then: [ script.execute: ui_refresh ] }
 
-  # ----------------------------------------------------------
-  # SmartDisplay Action
-  #
-  # This is the main "touch trigger" exported to Home Assistant:
-  # - On touch, we publish one of:
-  #     tile1_press / tile2_press / tile3_press / tile4_press / tile5_press / tile6_press
-  #
-  # ----------------------------------------------------------
+# ----------------------------------------------------------
+# Text sensors
+#
+# smartdisplay_action:
+# - Main touch event channel exported to Home Assistant
+# - On short tap, publishes one of:
+#     tile1_press / tile2_press / tile3_press / tile4_press / tile5_press / tile6_press
+# - The value is reset shortly after publishing
+#
+# tile*_preset:
+# - Mirrors the Home Assistant preset_mode attribute for each tile entity
+# - Used by the UI to display fan presets when applicable
+# ----------------------------------------------------------
 text_sensor:
   - platform: template
     id: smartdisplay_action
     name: "SmartDisplay Action"
     icon: mdi:gesture-tap-button
+
+  - platform: homeassistant
+    id: tile1_preset
+    entity_id: ${TILE1_ENTITY}
+    attribute: preset_mode
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_preset
+    entity_id: ${TILE2_ENTITY}
+    attribute: preset_mode
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_preset
+    entity_id: ${TILE3_ENTITY}
+    attribute: preset_mode
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_preset
+    entity_id: ${TILE4_ENTITY}
+    attribute: preset_mode
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_preset
+    entity_id: ${TILE5_ENTITY}
+    attribute: preset_mode
+    on_value: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
     id: tile6_preset
@@ -365,10 +576,9 @@ switch:
   - platform: restart
     name: "Restart"
 
-
-# Two SPI buses:
-# - lcd: display
-# - my_touchscreen: touch controller
+# Two SPI buses used by the CYD:
+# - lcd: built-in display
+# - my_touchscreen: built-in touch controller
 spi:
   - id: lcd
     clk_pin: GPIO14
@@ -423,8 +633,8 @@ touchscreen:
   spi_id: my_touchscreen
   cs_pin: 33
   interrupt_pin: 36
-  update_interval: 50ms
-  threshold: 400
+  update_interval: 20ms
+  threshold: 300
 
   calibration:
     x_min: 280
@@ -496,12 +706,6 @@ lvgl:
       radius: 999
       border_width: 0
 
-    - id: style_icon_circle_fan
-      bg_color: 0x00C5EC
-      bg_opa: COVER
-      radius: 999
-      border_width: 0
-
     - id: style_icon_circle_disabled
       bg_color: 0x7B7B6F
       bg_opa: 95%
@@ -527,6 +731,11 @@ lvgl:
       text_font: sublabel
       text_color: 0x7A7A7C
       text_opa: 100%
+
+    - id: style_value_big
+      text_font: sublabel_big
+      text_color: 0xFFFFFF
+      text_opa: 80%
 
     - id: style_title_disabled
       text_font: label
@@ -609,16 +818,41 @@ lvgl:
                   text: "—"
                   styles: style_value
                   clickable: false
-            on_click:
+            on_short_click:
               - script.execute: { id: publish_action, action: "tile1_press" }
               - script.execute:
                   id: do_tile_action
-                  kind: "${TILE1_ACTION_KIND}"
-                  service: "${TILE1_SERVICE}"
+                  tile_type: "${TILE1_TYPE}"
+                  tap_action: "${TILE1_TAP_ACTION}"
+                  service: "${TILE1_TAP_SERVICE}"
                   entity_id: "${TILE1_ENTITY}"
-                  param_key: "${TILE1_PARAM_KEY}"
-                  param_val: "${TILE1_PARAM_VAL}"
+                  param_key: "${TILE1_TAP_PARAM_KEY}"
+                  param_val: "${TILE1_TAP_PARAM_VAL}"
                   was_on: !lambda "return id(ha_state_tile1).state;"
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: |-
+                      std::string lp = "${TILE1_LONGPRESS}";
+                      std::string type = "${TILE1_TYPE}";
+                      if (lp == "none") return false;
+                      if (lp == "auto") return (type == "light" || type == "fan");
+                      return (lp == "brightness" || lp == "percentage");
+                  then:
+                    - script.execute:
+                        id: open_value_overlay
+                        title: "${TILE1_TITLE}"
+                        entity: "${TILE1_ENTITY}"
+                        tile_type: "${TILE1_TYPE}"
+                        longpress_mode: "${TILE1_LONGPRESS}"
+                        was_on: !lambda "return id(ha_state_tile1).state;"
+                        off_value: !lambda "return atoi(\"${TILE1_LONGPRESS_OFF_VALUE}\");"
+                        brightness_value: !lambda "return id(tile1_brightness).state;"
+                        percentage_value: !lambda "return id(tile1_percentage).state;"
+                        icon_text: "${TILE1_ICON}"
+                        slider_bg_color: ${TILE1_BG_DISABLED_COLOR}
+                        slider_fill_color: ${TILE1_CIRCLE_ACTIVE_COLOR}
+                        slider_icon_color: ${TILE1_ICON_ACTIVE_COLOR}
 
         # ---------- TILE 2 ----------
         - obj:
@@ -663,16 +897,41 @@ lvgl:
                   text: "—"
                   styles: style_value
                   clickable: false
-            on_click:
+            on_short_click:
               - script.execute: { id: publish_action, action: "tile2_press" }
               - script.execute:
                   id: do_tile_action
-                  kind: "${TILE2_ACTION_KIND}"
-                  service: "${TILE2_SERVICE}"
+                  tile_type: "${TILE2_TYPE}"
+                  tap_action: "${TILE2_TAP_ACTION}"
+                  service: "${TILE2_TAP_SERVICE}"
                   entity_id: "${TILE2_ENTITY}"
-                  param_key: "${TILE2_PARAM_KEY}"
-                  param_val: "${TILE2_PARAM_VAL}"
+                  param_key: "${TILE2_TAP_PARAM_KEY}"
+                  param_val: "${TILE2_TAP_PARAM_VAL}"
                   was_on: !lambda "return id(ha_state_tile2).state;"
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: |-
+                      std::string lp = "${TILE2_LONGPRESS}";
+                      std::string type = "${TILE2_TYPE}";
+                      if (lp == "none") return false;
+                      if (lp == "auto") return (type == "light" || type == "fan");
+                      return (lp == "brightness" || lp == "percentage");
+                  then:
+                    - script.execute:
+                        id: open_value_overlay
+                        title: "${TILE2_TITLE}"
+                        entity: "${TILE2_ENTITY}"
+                        tile_type: "${TILE2_TYPE}"
+                        longpress_mode: "${TILE2_LONGPRESS}"
+                        was_on: !lambda "return id(ha_state_tile2).state;"
+                        off_value: !lambda "return atoi(\"${TILE2_LONGPRESS_OFF_VALUE}\");"
+                        brightness_value: !lambda "return id(tile2_brightness).state;"
+                        percentage_value: !lambda "return id(tile2_percentage).state;"
+                        icon_text: "${TILE2_ICON}"
+                        slider_bg_color: ${TILE2_BG_DISABLED_COLOR}
+                        slider_fill_color: ${TILE2_CIRCLE_ACTIVE_COLOR}
+                        slider_icon_color: ${TILE2_ICON_ACTIVE_COLOR}
 
         # ---------- TILE 3 ----------
         - obj:
@@ -717,16 +976,41 @@ lvgl:
                   text: "—"
                   styles: style_value
                   clickable: false
-            on_click:
+            on_short_click:
               - script.execute: { id: publish_action, action: "tile3_press" }
               - script.execute:
                   id: do_tile_action
-                  kind: "${TILE3_ACTION_KIND}"
-                  service: "${TILE3_SERVICE}"
+                  tile_type: "${TILE3_TYPE}"
+                  tap_action: "${TILE3_TAP_ACTION}"
+                  service: "${TILE3_TAP_SERVICE}"
                   entity_id: "${TILE3_ENTITY}"
-                  param_key: "${TILE3_PARAM_KEY}"
-                  param_val: "${TILE3_PARAM_VAL}"
+                  param_key: "${TILE3_TAP_PARAM_KEY}"
+                  param_val: "${TILE3_TAP_PARAM_VAL}"
                   was_on: !lambda "return id(ha_state_tile3).state;"
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: |-
+                      std::string lp = "${TILE3_LONGPRESS}";
+                      std::string type = "${TILE3_TYPE}";
+                      if (lp == "none") return false;
+                      if (lp == "auto") return (type == "light" || type == "fan");
+                      return (lp == "brightness" || lp == "percentage");
+                  then:
+                    - script.execute:
+                        id: open_value_overlay
+                        title: "${TILE3_TITLE}"
+                        entity: "${TILE3_ENTITY}"
+                        tile_type: "${TILE3_TYPE}"
+                        longpress_mode: "${TILE3_LONGPRESS}"
+                        was_on: !lambda "return id(ha_state_tile3).state;"
+                        off_value: !lambda "return atoi(\"${TILE3_LONGPRESS_OFF_VALUE}\");"
+                        brightness_value: !lambda "return id(tile3_brightness).state;"
+                        percentage_value: !lambda "return id(tile3_percentage).state;"
+                        icon_text: "${TILE3_ICON}"
+                        slider_bg_color: ${TILE3_BG_DISABLED_COLOR}
+                        slider_fill_color: ${TILE3_CIRCLE_ACTIVE_COLOR}
+                        slider_icon_color: ${TILE3_ICON_ACTIVE_COLOR}
 
         # ---------- TILE 4 ----------
         - obj:
@@ -771,16 +1055,41 @@ lvgl:
                   text: "—"
                   styles: style_value
                   clickable: false
-            on_click:
+            on_short_click:
               - script.execute: { id: publish_action, action: "tile4_press" }
               - script.execute:
                   id: do_tile_action
-                  kind: "${TILE4_ACTION_KIND}"
-                  service: "${TILE4_SERVICE}"
+                  tile_type: "${TILE4_TYPE}"
+                  tap_action: "${TILE4_TAP_ACTION}"
+                  service: "${TILE4_TAP_SERVICE}"
                   entity_id: "${TILE4_ENTITY}"
-                  param_key: "${TILE4_PARAM_KEY}"
-                  param_val: "${TILE4_PARAM_VAL}"
+                  param_key: "${TILE4_TAP_PARAM_KEY}"
+                  param_val: "${TILE4_TAP_PARAM_VAL}"
                   was_on: !lambda "return id(ha_state_tile4).state;"
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: |-
+                      std::string lp = "${TILE4_LONGPRESS}";
+                      std::string type = "${TILE4_TYPE}";
+                      if (lp == "none") return false;
+                      if (lp == "auto") return (type == "light" || type == "fan");
+                      return (lp == "brightness" || lp == "percentage");
+                  then:
+                    - script.execute:
+                        id: open_value_overlay
+                        title: "${TILE4_TITLE}"
+                        entity: "${TILE4_ENTITY}"
+                        tile_type: "${TILE4_TYPE}"
+                        longpress_mode: "${TILE4_LONGPRESS}"
+                        was_on: !lambda "return id(ha_state_tile4).state;"
+                        off_value: !lambda "return atoi(\"${TILE4_LONGPRESS_OFF_VALUE}\");"
+                        brightness_value: !lambda "return id(tile4_brightness).state;"
+                        percentage_value: !lambda "return id(tile4_percentage).state;"
+                        icon_text: "${TILE4_ICON}"
+                        slider_bg_color: ${TILE4_BG_DISABLED_COLOR}
+                        slider_fill_color: ${TILE4_CIRCLE_ACTIVE_COLOR}
+                        slider_icon_color: ${TILE4_ICON_ACTIVE_COLOR}
 
         # ---------- TILE 5 ----------
         - obj:
@@ -825,18 +1134,43 @@ lvgl:
                   text: "—"
                   styles: style_value
                   clickable: false
-            on_click:
+            on_short_click:
               - script.execute: { id: publish_action, action: "tile5_press" }
               - script.execute:
                   id: do_tile_action
-                  kind: "${TILE5_ACTION_KIND}"
-                  service: "${TILE5_SERVICE}"
+                  tile_type: "${TILE5_TYPE}"
+                  tap_action: "${TILE5_TAP_ACTION}"
+                  service: "${TILE5_TAP_SERVICE}"
                   entity_id: "${TILE5_ENTITY}"
-                  param_key: "${TILE5_PARAM_KEY}"
-                  param_val: "${TILE5_PARAM_VAL}"
+                  param_key: "${TILE5_TAP_PARAM_KEY}"
+                  param_val: "${TILE5_TAP_PARAM_VAL}"
                   was_on: !lambda "return id(ha_state_tile5).state;"
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: |-
+                      std::string lp = "${TILE5_LONGPRESS}";
+                      std::string type = "${TILE5_TYPE}";
+                      if (lp == "none") return false;
+                      if (lp == "auto") return (type == "light" || type == "fan");
+                      return (lp == "brightness" || lp == "percentage");
+                  then:
+                    - script.execute:
+                        id: open_value_overlay
+                        title: "${TILE5_TITLE}"
+                        entity: "${TILE5_ENTITY}"
+                        tile_type: "${TILE5_TYPE}"
+                        longpress_mode: "${TILE5_LONGPRESS}"
+                        was_on: !lambda "return id(ha_state_tile5).state;"
+                        off_value: !lambda "return atoi(\"${TILE5_LONGPRESS_OFF_VALUE}\");"
+                        brightness_value: !lambda "return id(tile5_brightness).state;"
+                        percentage_value: !lambda "return id(tile5_percentage).state;"
+                        icon_text: "${TILE5_ICON}"
+                        slider_bg_color: ${TILE5_BG_DISABLED_COLOR}
+                        slider_fill_color: ${TILE5_CIRCLE_ACTIVE_COLOR}
+                        slider_icon_color: ${TILE5_ICON_ACTIVE_COLOR}
 
-        # ---------- TILE 6 (FAN) ----------
+        # ---------- TILE 6 ----------
         - obj:
             id: tile6
             x: 164
@@ -853,7 +1187,7 @@ lvgl:
                   y: 0
                   width: 36
                   height: 36
-                  styles: style_icon_circle_fan
+                  styles: style_icon_circle
                   clickable: false
                   scrollable: false
                   scrollbar_mode: 'OFF'
@@ -879,19 +1213,142 @@ lvgl:
                   text: "—"
                   styles: style_value
                   clickable: false
-            on_click:
+            on_short_click:
               - script.execute: { id: publish_action, action: "tile6_press" }
               - script.execute:
                   id: do_tile_action
-                  kind: "${TILE6_ACTION_KIND}"
-                  service: "${TILE6_SERVICE}"
+                  tile_type: "${TILE6_TYPE}"
+                  tap_action: "${TILE6_TAP_ACTION}"
+                  service: "${TILE6_TAP_SERVICE}"
                   entity_id: "${TILE6_ENTITY}"
-                  param_key: "${TILE6_PARAM_KEY}"
-                  param_val: "${TILE6_PARAM_VAL}"
+                  param_key: "${TILE6_TAP_PARAM_KEY}"
+                  param_val: "${TILE6_TAP_PARAM_VAL}"
                   was_on: !lambda "return id(ha_state_tile6).state;"
+            on_long_press:
+              - if:
+                  condition:
+                    lambda: |-
+                      std::string lp = "${TILE6_LONGPRESS}";
+                      std::string type = "${TILE6_TYPE}";
+                      if (lp == "none") return false;
+                      if (lp == "auto") return (type == "light" || type == "fan");
+                      return (lp == "brightness" || lp == "percentage");
+                  then:
+                    - script.execute:
+                        id: open_value_overlay
+                        title: "${TILE6_TITLE}"
+                        entity: "${TILE6_ENTITY}"
+                        tile_type: "${TILE6_TYPE}"
+                        longpress_mode: "${TILE6_LONGPRESS}"
+                        was_on: !lambda "return id(ha_state_tile6).state;"
+                        off_value: !lambda "return atoi(\"${TILE6_LONGPRESS_OFF_VALUE}\");"
+                        brightness_value: !lambda "return id(tile6_brightness).state;"
+                        percentage_value: !lambda "return id(tile6_percentage).state;"
+                        icon_text: "${TILE6_ICON}"
+                        slider_bg_color: ${TILE6_BG_DISABLED_COLOR}
+                        slider_fill_color: ${TILE6_CIRCLE_ACTIVE_COLOR}
+                        slider_icon_color: ${TILE6_ICON_ACTIVE_COLOR}
+
+        # ---------- VALUE SLIDER OVERLAY ----------
+        - obj:
+            id: brightness_overlay
+            x: 0
+            y: 0
+            width: 320
+            height: 240
+            bg_opa: TRANSP
+            hidden: true
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            pad_left: 0
+            pad_right: 0
+            pad_top: 0
+            pad_bottom: 0
+            border_width: 0
+            widgets:
+              - image:
+                  id: brightness_overlay_bg
+                  src: bg_home
+                  x: 0
+                  y: 0
+                  clickable: true
+                  on_click:
+                    - lvgl.widget.hide: brightness_overlay
+
+              - obj:
+                  id: brightness_overlay_dim
+                  x: 0
+                  y: 0
+                  width: 320
+                  height: 240
+                  bg_color: 0x000000
+                  bg_opa: 18%
+                  border_width: 0
+                  clickable: false
+                  scrollable: false
+
+              - label:
+                  id: overlay_title
+                  align: TOP_MID
+                  y: 10
+                  text: "Light"
+                  styles: style_room
+
+              - label:
+                  id: overlay_value
+                  align: TOP_MID
+                  y: 35
+                  text: "100 %"
+                  styles: style_value_big
+
+              - slider:
+                  id: overlay_slider
+                  align: CENTER
+                  y: 18
+                  width: 96
+                  height: 160
+                  min_value: 0
+                  max_value: 100
+                  value: 100
+                  adv_hittest: false
+
+                  bg_color: 0x939391
+                  bg_opa: 100%
+                  radius: 28
+                  border_width: 0
+
+                  indicator:
+                    bg_color: 0xFEC600
+                    bg_opa: 100%
+                    radius: 28
+
+                  knob:
+                    bg_opa: 0%
+                    border_width: 0
+                    shadow_width: 0
+                    pad_all: 10
+
+                  on_value:
+                    - script.execute:
+                        id: slider_preview
+                        value: !lambda "return x;"
+
+                  on_release:
+                    - script.execute:
+                        id: slider_commit
+                        value: !lambda "return lv_slider_get_value(id(overlay_slider));"
+
+                  widgets:
+                    - label:
+                        id: overlay_icon
+                        align: BOTTOM_MID
+                        y: -10
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE1_ICON}"
+                        clickable: false
 
 script:
-  # Publish tap action for HA automations
   - id: publish_action
     mode: queued
     parameters:
@@ -905,19 +1362,101 @@ script:
           id: smartdisplay_action
           state: ""
 
-  # Centralized "do something in HA" handler
+  - id: slider_preview
+    parameters:
+      value: int
+    then:
+      - lambda: |-
+          char buf[20];
+          snprintf(buf, sizeof(buf), "%d%s", value, id(active_value_suffix).c_str());
+          lv_label_set_text(id(overlay_value), buf);
+
+  - id: slider_commit
+    parameters:
+      value: int
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return id(active_control_kind) == "light_brightness";
+          then:
+            - homeassistant.action:
+                action: light.turn_on
+                data:
+                  entity_id: !lambda "return id(active_entity);"
+                  brightness_pct: !lambda "return value;"
+          else:
+            - if:
+                condition:
+                  lambda: |-
+                    return id(active_control_kind) == "fan_percentage";
+                then:
+                  - if:
+                      condition:
+                        lambda: "return value <= 0;"
+                      then:
+                        - homeassistant.action:
+                            action: fan.turn_off
+                            data:
+                              entity_id: !lambda "return id(active_entity);"
+                      else:
+                        - homeassistant.action:
+                            action: fan.turn_on
+                            data:
+                              entity_id: !lambda "return id(active_entity);"
+                        - delay: 150ms
+                        - homeassistant.action:
+                            action: fan.set_percentage
+                            data:
+                              entity_id: !lambda "return id(active_entity);"
+                              percentage: !lambda "return value;"
+
+  # ----------------------------------------------------------
+  # do_tile_action
   #
-  # Supported:
-  # - *.toggle (light/switch/fan) via kind: toggle, service: "<domain>.toggle"
-  # - scene.turn_on via kind: scene (entity_id = scene.xyz)
-  # - script.turn_on via kind: script (entity_id = script.xyz)
-  # - fan.set_preset_mode via kind: fan_preset (param_val="Auto")
-  # - light.turn_on + brightness_pct via kind: light_brightness (param_val="60")
-  # - fan_toggle_preset: toggle off/on and when turning on set preset after delay (preserves your old tile6 logic)
+  # Centralized handler for executing Home Assistant actions
+  # triggered by tile taps.
+  #
+  # Parameters
+  # - tile_type: light | fan | switch | scene | script
+  # - tap_action: auto | toggle | activate | fan_toggle_preset
+  # - service: optional Home Assistant service override
+  # - entity_id: target entity
+  # - param_key / param_val: optional parameters for custom services
+  # - was_on: previous entity state
+  #
+  # Behavior
+  #
+  # toggle
+  #   -> toggles the entity
+  #   light.toggle / fan.toggle / switch.toggle
+  #
+  # activate
+  #   -> activates entity
+  #   scene.turn_on / script.turn_on / light.turn_on / fan.turn_on
+  #
+  # auto
+  #   -> resolves automatically based on tile_type:
+  #        light/switch/fan -> toggle
+  #        scene/script     -> activate
+  #
+  # fan_toggle_preset
+  #   -> if fan was ON: fan.turn_off
+  #   -> if fan was OFF:
+  #        fan.turn_on
+  #        wait 150ms
+  #        fan.set_preset_mode(param_val)
+  #
+  # Custom service
+  #   If "service" is set, it will be called directly.
+  #   param_key / param_val may be used for parameters
+  #   like preset_mode, brightness_pct, percentage, etc.
+  # ----------------------------------------------------------
   - id: do_tile_action
     mode: queued
     parameters:
-      kind: string
+      tile_type: string
+      tap_action: string
       service: string
       entity_id: string
       param_key: string
@@ -930,14 +1469,14 @@ script:
               return std::string("${DIRECT_ACTIONS}") == "true";
           then:
             - lambda: |-
-                ESP_LOGD("tile", "do_tile_action kind=%s service=%s entity=%s key=%s val=%s was_on=%d",
-                         kind.c_str(), service.c_str(), entity_id.c_str(),
+                ESP_LOGD("tile", "do_tile_action type=%s action=%s service=%s entity=%s key=%s val=%s was_on=%d",
+                         tile_type.c_str(), tap_action.c_str(), service.c_str(), entity_id.c_str(),
                          param_key.c_str(), param_val.c_str(), (int)was_on);
 
             - if:
                 condition:
                   lambda: |-
-                    return kind == "fan_toggle_preset";
+                    return tap_action == "fan_toggle_preset";
                 then:
                   - if:
                       condition:
@@ -959,44 +1498,81 @@ script:
                             data:
                               entity_id: !lambda 'return entity_id;'
                               preset_mode: !lambda 'return param_val;'
+
                 else:
                   - if:
                       condition:
                         lambda: |-
-                          return kind == "toggle";
+                          std::string resolved = tap_action;
+                          if (resolved == "auto") {
+                            if (tile_type == "scene" || tile_type == "script") resolved = "activate";
+                            else resolved = "toggle";
+                          }
+                          return resolved == "toggle";
                       then:
-                        - homeassistant.action:
-                            action: !lambda 'return service;'
-                            data:
-                              entity_id: !lambda 'return entity_id;'
-                      else:
                         - if:
                             condition:
                               lambda: |-
-                                return kind == "scene";
+                                return service.size() > 0;
                             then:
                               - homeassistant.action:
-                                  action: scene.turn_on
+                                  action: !lambda 'return service;'
                                   data:
                                     entity_id: !lambda 'return entity_id;'
                             else:
                               - if:
                                   condition:
                                     lambda: |-
-                                      return kind == "script";
+                                      return tile_type == "light";
                                   then:
                                     - homeassistant.action:
-                                        action: script.turn_on
+                                        action: light.toggle
                                         data:
                                           entity_id: !lambda 'return entity_id;'
                                   else:
                                     - if:
                                         condition:
                                           lambda: |-
-                                            return kind == "fan_preset";
+                                            return tile_type == "fan";
                                         then:
                                           - homeassistant.action:
-                                              action: fan.set_preset_mode
+                                              action: fan.toggle
+                                              data:
+                                                entity_id: !lambda 'return entity_id;'
+                                        else:
+                                          - if:
+                                              condition:
+                                                lambda: |-
+                                                  return tile_type == "switch";
+                                              then:
+                                                - homeassistant.action:
+                                                    action: switch.toggle
+                                                    data:
+                                                      entity_id: !lambda 'return entity_id;'
+
+                      else:
+                        - if:
+                            condition:
+                              lambda: |-
+                                std::string resolved = tap_action;
+                                if (resolved == "auto") {
+                                  if (tile_type == "scene" || tile_type == "script") resolved = "activate";
+                                  else resolved = "toggle";
+                                }
+                                return resolved == "activate";
+                            then:
+                              - if:
+                                  condition:
+                                    lambda: |-
+                                      return service.size() > 0;
+                                  then:
+                                    - if:
+                                        condition:
+                                          lambda: |-
+                                            return param_key == "preset_mode";
+                                        then:
+                                          - homeassistant.action:
+                                              action: !lambda 'return service;'
                                               data:
                                                 entity_id: !lambda 'return entity_id;'
                                                 preset_mode: !lambda 'return param_val;'
@@ -1004,54 +1580,256 @@ script:
                                           - if:
                                               condition:
                                                 lambda: |-
-                                                  return kind == "light_brightness";
+                                                  return param_key == "brightness_pct";
                                               then:
-                                                - homeassistant.action:
-                                                    action: light.turn_on
-                                                    data:
-                                                      entity_id: !lambda 'return entity_id;'
-                                                      brightness_pct: !lambda 'return atoi(param_val.c_str());'
-                                              else:
                                                 - homeassistant.action:
                                                     action: !lambda 'return service;'
                                                     data:
                                                       entity_id: !lambda 'return entity_id;'
+                                                      brightness_pct: !lambda 'return atoi(param_val.c_str());'
+                                              else:
+                                                - if:
+                                                    condition:
+                                                      lambda: |-
+                                                        return param_key == "percentage";
+                                                    then:
+                                                      - homeassistant.action:
+                                                          action: !lambda 'return service;'
+                                                          data:
+                                                            entity_id: !lambda 'return entity_id;'
+                                                            percentage: !lambda 'return atoi(param_val.c_str());'
+                                                    else:
+                                                      - homeassistant.action:
+                                                          action: !lambda 'return service;'
+                                                          data:
+                                                            entity_id: !lambda 'return entity_id;'
+                                  else:
+                                    - if:
+                                        condition:
+                                          lambda: |-
+                                            return tile_type == "scene";
+                                        then:
+                                          - homeassistant.action:
+                                              action: scene.turn_on
+                                              data:
+                                                entity_id: !lambda 'return entity_id;'
+                                        else:
+                                          - if:
+                                              condition:
+                                                lambda: |-
+                                                  return tile_type == "script";
+                                              then:
+                                                - homeassistant.action:
+                                                    action: script.turn_on
+                                                    data:
+                                                      entity_id: !lambda 'return entity_id;'
+                                              else:
+                                                - if:
+                                                    condition:
+                                                      lambda: |-
+                                                        return tile_type == "light";
+                                                    then:
+                                                      - homeassistant.action:
+                                                          action: light.turn_on
+                                                          data:
+                                                            entity_id: !lambda 'return entity_id;'
+                                                    else:
+                                                      - if:
+                                                          condition:
+                                                            lambda: |-
+                                                              return tile_type == "fan";
+                                                          then:
+                                                            - homeassistant.action:
+                                                                action: fan.turn_on
+                                                                data:
+                                                                  entity_id: !lambda 'return entity_id;'
+                                                          else:
+                                                            - if:
+                                                                condition:
+                                                                  lambda: |-
+                                                                    return tile_type == "switch";
+                                                                then:
+                                                                  - homeassistant.action:
+                                                                      action: switch.turn_on
+                                                                      data:
+                                                                        entity_id: !lambda 'return entity_id;'
+
+  - id: open_value_overlay
+    parameters:
+      title: string
+      entity: string
+      tile_type: string
+      longpress_mode: string
+      was_on: bool
+      off_value: int
+      brightness_value: float
+      percentage_value: float
+      icon_text: string
+      slider_bg_color: uint32_t
+      slider_fill_color: uint32_t
+      slider_icon_color: uint32_t
+    then:
+      - lambda: |-
+          std::string mode = longpress_mode;
+          if (mode == "auto") {
+            if (tile_type == "light") mode = "brightness";
+            else if (tile_type == "fan") mode = "percentage";
+            else mode = "none";
+          }
+
+          if (mode == "none") return;
+
+          id(active_entity) = entity;
+          id(active_value_suffix) = " %";
+          id(overlay_slider_bg_color) = slider_bg_color;
+          id(overlay_slider_fill_color) = slider_fill_color;
+
+          int pct = off_value;
+
+          if (mode == "brightness") {
+            id(active_control_kind) = "light_brightness";
+            if (was_on) {
+              if (isnan(brightness_value)) pct = 100;
+              else pct = (int) lround((brightness_value / 255.0f) * 100.0f);
+            }
+          } else if (mode == "percentage") {
+            id(active_control_kind) = "fan_percentage";
+            if (was_on) {
+              if (isnan(percentage_value)) pct = 0;
+              else pct = (int) lround(percentage_value);
+            }
+          } else {
+            return;
+          }
+
+          if (pct < 0) pct = 0;
+          if (pct > 100) pct = 100;
+
+          lv_label_set_text(id(overlay_title), title.c_str());
+          lv_label_set_text(id(overlay_icon), icon_text.c_str());
+          lv_slider_set_value(id(overlay_slider), pct, LV_ANIM_OFF);
+
+          char buf[20];
+          snprintf(buf, sizeof(buf), "%d%s", pct, id(active_value_suffix).c_str());
+          lv_label_set_text(id(overlay_value), buf);
+
+          lv_obj_set_style_bg_color(id(overlay_slider), lv_color_hex(slider_bg_color), LV_PART_MAIN);
+          lv_obj_set_style_bg_opa(id(overlay_slider), LV_OPA_COVER, LV_PART_MAIN);
+
+          lv_obj_set_style_bg_color(id(overlay_slider), lv_color_hex(slider_fill_color), LV_PART_INDICATOR);
+          lv_obj_set_style_bg_opa(id(overlay_slider), LV_OPA_COVER, LV_PART_INDICATOR);
+
+          lv_obj_set_style_text_color(id(overlay_icon), lv_color_hex(slider_icon_color), 0);
+
+      - lvgl.widget.show: brightness_overlay
 
   # UI refresh (values + time + styles) + render
   - id: ui_refresh
     mode: queued
     then:
       - lambda: |-
-          auto pct_text = [](bool on, float br, const char* off_label) -> std::string {
-            if (!on) return std::string(off_label);
-            if (isnan(br)) return std::string("100 %");
-            int pct = (int) lround((br / 255.0f) * 100.0f);
-            char buf[8];
-            snprintf(buf, sizeof(buf), "%d %%", pct);
-            return std::string(buf);
-          };
-
           auto set_lbl = [](lv_obj_t* lbl, const std::string& s) {
             if (lbl) lv_label_set_text(lbl, s.c_str());
           };
 
-          // Values (tiles 1..5)
-          set_lbl(id(t1_value), pct_text(id(ha_state_tile1).state, id(br_tile1).state, "${TILE1_LABEL_OFF}"));
-          set_lbl(id(t2_value), pct_text(id(ha_state_tile2).state, id(br_tile2).state, "${TILE2_LABEL_OFF}"));
-          set_lbl(id(t3_value), pct_text(id(ha_state_tile3).state, id(br_tile3).state, "${TILE3_LABEL_OFF}"));
-          set_lbl(id(t4_value), pct_text(id(ha_state_tile4).state, id(br_tile4).state, "${TILE4_LABEL_OFF}"));
-          set_lbl(id(t5_value), pct_text(id(ha_state_tile5).state, id(br_tile5).state, "${TILE5_LABEL_OFF}"));
+          auto set_value_auto = [&](lv_obj_t* lbl,
+                                    bool on,
+                                    const std::string& tile_type,
+                                    const std::string& value_mode,
+                                    float brightness,
+                                    float percentage,
+                                    const std::string& preset,
+                                    const std::string& label_on,
+                                    const std::string& label_off) {
+            std::string mode = value_mode;
 
-          // Tile 6 value: OFF -> TILE6_LABEL_OFF, ON -> preset_mode (fallback TILE6_PARAM_VAL)
-          if (!id(ha_state_tile6).state) {
-            set_lbl(id(t6_value), std::string("${TILE6_LABEL_OFF}"));
-          } else {
-            std::string pm = id(tile6_preset).state.c_str();
-            if (pm.size() == 0) pm = std::string("${TILE6_PARAM_VAL}");
-            set_lbl(id(t6_value), pm);
-          }
+            if (mode == "auto" || mode.empty()) {
+              if (tile_type == "light") {
+                mode = "brightness";
+              } else if (tile_type == "fan") {
+                mode = preset.empty() ? "percentage" : "preset";
+              } else {
+                mode = "text";
+              }
+            }
 
-          // Time (HH:MM)
+            if (mode == "brightness") {
+              if (!on) {
+                set_lbl(lbl, label_off);
+                return;
+              }
+              if (isnan(brightness)) {
+                set_lbl(lbl, "100 %");
+                return;
+              }
+              int pct = (int) lround((brightness / 255.0f) * 100.0f);
+              char buf[8];
+              snprintf(buf, sizeof(buf), "%d %%", pct);
+              set_lbl(lbl, std::string(buf));
+              return;
+            }
+
+            if (mode == "percentage") {
+              if (!on) {
+                set_lbl(lbl, label_off);
+                return;
+              }
+              int pct = isnan(percentage) ? 0 : (int) lround(percentage);
+              char buf[8];
+              snprintf(buf, sizeof(buf), "%d %%", pct);
+              set_lbl(lbl, std::string(buf));
+              return;
+            }
+
+            if (mode == "preset") {
+              if (!on) {
+                set_lbl(lbl, label_off);
+                return;
+              }
+              if (!preset.empty()) {
+                set_lbl(lbl, preset);
+              } else {
+                set_lbl(lbl, label_on);
+              }
+              return;
+            }
+
+            if (mode == "text") {
+              if (tile_type == "scene" || tile_type == "script") {
+                set_lbl(lbl, label_on);
+              } else {
+                set_lbl(lbl, on ? label_on : label_off);
+              }
+              return;
+            }
+
+            set_lbl(lbl, "—");
+          };
+
+          set_value_auto(id(t1_value), id(ha_state_tile1).state, "${TILE1_TYPE}", "${TILE1_VALUE_MODE}",
+                         id(tile1_brightness).state, id(tile1_percentage).state, std::string(id(tile1_preset).state.c_str()),
+                         "${TILE1_LABEL_ON}", "${TILE1_LABEL_OFF}");
+
+          set_value_auto(id(t2_value), id(ha_state_tile2).state, "${TILE2_TYPE}", "${TILE2_VALUE_MODE}",
+                         id(tile2_brightness).state, id(tile2_percentage).state, std::string(id(tile2_preset).state.c_str()),
+                         "${TILE2_LABEL_ON}", "${TILE2_LABEL_OFF}");
+
+          set_value_auto(id(t3_value), id(ha_state_tile3).state, "${TILE3_TYPE}", "${TILE3_VALUE_MODE}",
+                         id(tile3_brightness).state, id(tile3_percentage).state, std::string(id(tile3_preset).state.c_str()),
+                         "${TILE3_LABEL_ON}", "${TILE3_LABEL_OFF}");
+
+          set_value_auto(id(t4_value), id(ha_state_tile4).state, "${TILE4_TYPE}", "${TILE4_VALUE_MODE}",
+                         id(tile4_brightness).state, id(tile4_percentage).state, std::string(id(tile4_preset).state.c_str()),
+                         "${TILE4_LABEL_ON}", "${TILE4_LABEL_OFF}");
+
+          set_value_auto(id(t5_value), id(ha_state_tile5).state, "${TILE5_TYPE}", "${TILE5_VALUE_MODE}",
+                         id(tile5_brightness).state, id(tile5_percentage).state, std::string(id(tile5_preset).state.c_str()),
+                         "${TILE5_LABEL_ON}", "${TILE5_LABEL_OFF}");
+
+          set_value_auto(id(t6_value), id(ha_state_tile6).state, "${TILE6_TYPE}", "${TILE6_VALUE_MODE}",
+                         id(tile6_brightness).state, id(tile6_percentage).state, std::string(id(tile6_preset).state.c_str()),
+                         "${TILE6_LABEL_ON}", "${TILE6_LABEL_OFF}");
+
           {
             auto now = id(homeassistant_time).now();
             char buf[6];
@@ -1059,7 +1837,6 @@ script:
             set_lbl(id(lbl_time), std::string(buf));
           }
 
-          // Color apply (per tile)
           auto apply_tile = [&](bool active,
                                 lv_obj_t* tile,
                                 lv_obj_t* circle,
