@@ -339,6 +339,59 @@ If touch alignment is wrong, ensure `display.transform` and `touchscreen.transfo
 are **identical** (they must always match).
 
 ------------------------------------------------------------------------
+# Troubleshooting
+
+### Corrupted / garbled display output
+
+If the display shows **corrupted graphics, horizontal lines, or random pixels**, the most common cause is a **different display controller on your Cheap Yellow Display**.
+
+Most CYD boards use **ILI9341**, but some variants ship with **ST7789** or **ILI9342**.  
+If the driver in ESPHome does not match the controller, the display output may look broken.
+
+Try changing the display model in the YAML:
+
+```yaml
+display:
+  - platform: ili9xxx
+    model: ILI9341
+```
+
+Alternative models that may work depending on your board:
+
+```yaml
+model: ST7789V
+```
+
+or
+
+```yaml
+model: ILI9342
+```
+
+Flashing with a different model is usually the fastest way to identify the correct controller.
+
+---
+
+### Display rotated / mirrored
+
+If the UI appears **rotated, mirrored, or upside down**, adjust the `transform`
+settings.
+
+Both the **display** and the **touchscreen** configuration must match,
+otherwise touch input will be misaligned.
+
+Common parameters:
+
+```yaml
+transform:
+  swap_xy: true
+  mirror_x: true
+  mirror_y: true
+```
+Depending on the board variant, you may need to experiment with these values until the orientation matches your screen.
+Make sure the display.transform and touchscreen.transform settings use the same orientation.
+
+------------------------------------------------------------------------
 
 # 🖨 3D Printing
 
