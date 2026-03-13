@@ -59,7 +59,7 @@ substitutions:
 
   DIRECT_ACTIONS: "true"                           # true = call Home Assistant services directly, false = only emit action events
   ROOM_NAME: "Office"                              # room name shown in the top-left header
-
+  TIME_24H: "true"                                 # true = 24h format, false = 12h format
 
   # ============================================================
   # TILE 1
@@ -346,7 +346,7 @@ font:
     id: time_label
     size: 18
     bpp: 4
-    glyphs: ['0','1','2','3','4','5','6','7','8','9',':',' ']
+    glyphs: ['0','1','2','3','4','5','6','7','8','9',':',' ', 'A', 'M', 'P']
 
   - file: "gfonts://Roboto@500"
     id: headline
@@ -1819,8 +1819,16 @@ script:
 
           {
             auto now = id(homeassistant_time).now();
-            char buf[6];
-            snprintf(buf, sizeof(buf), "%02d:%02d", now.hour, now.minute);
+            char buf[10];
+
+            if (std::string("${TIME_24H}") == "true") {
+              snprintf(buf, sizeof(buf), "%02d:%02d", now.hour, now.minute);
+            } else {
+              int hour12 = now.hour % 12;
+              if (hour12 == 0) hour12 = 12;
+              snprintf(buf, sizeof(buf), "%d:%02d %s", hour12, now.minute, now.hour >= 12 ? "PM" : "AM");
+            }
+
             set_lbl(id(lbl_time), std::string(buf));
           }
 
