@@ -47,6 +47,11 @@ It is commonly known as the **Cheap Yellow Display (CYD)** in the maker communit
 <img src="images/tilt.jpeg" width="50%">
 <img src="images/side.jpeg" width="50%">
 
+## Demo
+Full video: [demo.mp4](images/demo.mp4)
+
+Note: The video quality looks worse than in real life because the display refresh rate interferes with the camera frame rate when filming the screen. In reality the UI looks much smoother and cleaner.
+
 ---
 
 # 🆕 Architecture Overview (LVGL-Based UI)
