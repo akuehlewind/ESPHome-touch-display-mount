@@ -9,12 +9,13 @@ ESPHome powered Home Assistant control panel using the popular Cheap Yellow Disp
 A 3D-printable enclosure with adjustable tilt for an ESP32 2.8" ILI9341 touchscreen, powered by ESPHome + LVGL and integrated with Home Assistant.  
 Includes ready-to-flash YAML configs for the ESP32-2432S028 (Cheap Yellow Display) and a standalone ILI9341 + external ESP32 wiring variant.
 
-Two mounting options are supported:
+Three mounting options are supported:
 
 • Desk Mount – for tabletop installation  
 • Under-Desk Mount – for installation underneath a desk or shelf  
+• Wall Mount – for wall installation (CYD version only)
 
-The enclosure can therefore be used as a compact Home Assistant control panel for desks, walls, or mounted under a desk.
+The enclosure can therefore be used as a compact Home Assistant control panel for desks, walls, or mounted underneath desk or furniture.
 
 ------------------------------------------------------------------------
 
@@ -402,12 +403,13 @@ Make sure the display.transform and touchscreen.transform settings use the same 
 
 See the `/3d_print` folder for STL files and Fusion 360 source files.
 
-Two mount options are available:
+Three mount options are available:
 
 • **Desk Mount** – for tabletop installation  
 • **Under-Desk Mount** – for installation underneath a desk or shelf  
+• **Wall Mount** – for wall installation (CYD version)
 
-Both mounts use the same enclosure parts and adjustable tilt mechanism.  
+Desk mount and Under-Desk mount use the same enclosure parts and adjustable tilt mechanism.  
 Print the main enclosure parts and choose one mount type depending on your setup.
 
 Designed for:
