@@ -203,6 +203,26 @@ Advantages:
 
 ------------------------------------------------------------------------
 
+### Power connection (CYD)
+
+For the mount enclosure the side USB connector of the CYD is **not used**.
+
+Instead the included power cable can be used.  
+The **red and black wires provide 5V and GND** and can easily be connected to an old USB-A cable.
+
+Typical setup:
+
+1. Cut an old USB cable
+2. Connect **5V (red)** and **GND (black)** to the CYD power cable
+3. Route the cable through the enclosure
+4. Solder or use small wire connectors
+
+This keeps the enclosure compact and avoids having a visible or protruding USB connector on the side.
+
+If the USB port was used directly, the enclosure would need to be wider or the connector would remain visible.
+
+<img src="images/power-connect.jpeg" width="40%">
+
 ## Option B -- Standalone Display + ESP32
 
 | Part                         | Price   | Comment                                         |
