@@ -397,7 +397,7 @@ font:
       - "${TILE6_ICON}"
 
 image:
-  - file: "images/home-background.png"
+  - file: "images/smartdisplay_background.png"
     id: bg_home
     type: RGB565
 
