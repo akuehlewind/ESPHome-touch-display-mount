@@ -221,6 +221,8 @@ This keeps the enclosure compact and avoids having a visible or protruding USB c
 
 If the USB port was used directly, the enclosure would need to be wider or the connector would remain visible.
 
+⚠️ Important: The CYD often has multiple identical JST connectors, but they do not share the same pinout. Make sure to use the connector labeled VIN / 5V. Other connectors may be labeled 3.3V, and connecting 5V there can damage the board.
+
 <img src="images/power-connect.jpeg" width="40%">
 
 ## Option B -- Standalone Display + ESP32
