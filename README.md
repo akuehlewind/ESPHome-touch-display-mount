@@ -1,4 +1,4 @@
-# ESP32 Cheap Yellow Display (ESP32-2432S028) Home Assistant Touch Panel – LVGL UI + 3D Printed Desk / Under-Desk Tilt Mount
+# ESP32 Cheap Yellow Display (ESP32-2432S028) Home Assistant Touch Panel – LVGL UI + 3D Printed Desk / Under Desk / Wall / Flush Mounts
 ![ESPHome](https://img.shields.io/badge/ESPHome-Compatible-blue)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Integrated-orange)
 ![LVGL](https://img.shields.io/badge/LVGL-UI-green)
@@ -9,13 +9,14 @@ ESPHome powered Home Assistant control panel using the popular Cheap Yellow Disp
 A 3D-printable enclosure with adjustable tilt for an ESP32 2.8" ILI9341 touchscreen, powered by ESPHome + LVGL and integrated with Home Assistant.  
 Includes ready-to-flash YAML configs for the ESP32-2432S028 (Cheap Yellow Display) and a standalone ILI9341 + external ESP32 wiring variant.
 
-Three mounting options are supported:
+Multiple mounting options are supported:
 
 • Desk Mount – for tabletop installation  
 • Under-Desk Mount – for installation underneath a desk or shelf  
 • Wall Mount – for wall installation (CYD version only)
+• Flush Mount – for in-wall installation (EU electrical box compatible)
 
-The enclosure can therefore be used as a compact Home Assistant control panel for desks, walls, or mounted underneath desk or furniture.
+The enclosure can therefore be used as a compact Home Assistant control panel for desks, walls, or mounted underneath furniture.
 
 ------------------------------------------------------------------------
 
@@ -43,10 +44,15 @@ It is commonly known as the **Cheap Yellow Display (CYD)** in the maker communit
 <img src="images/display-home-like-overlay.png" width="100%">
 
 <img src="images/display-buttons.png" width="50%">
-<img src="images/desk-mount.jpeg" width="50%">
+<img src="images/desk-mount2.jpeg" width="50%">
 
 <img src="images/tilt.jpeg" width="50%">
 <img src="images/side.jpeg" width="50%">
+
+<img src="images/wide-body-flush-mount.jpeg" width="50%">
+<img src="images/flush-mount.jpeg" width="50%">
+
+<img src="images/wall-mount.jpeg" width="50%">
 
 ## Demo
 https://github.com/user-attachments/assets/68709d8e-21ec-4851-bf73-70f583027390
@@ -161,7 +167,7 @@ Without this setting, direct control will not work.
 - Optional direct Home Assistant service calls
 - Automation-based mode supported
 - Adjustable 3D-printed enclosure
-- Desk mount or under-desk mount options
+- Multiple mounting options: desk mount, under-desk mount, wall mount, and flush mount
 - Hidden cable routing
 - Works with CYD or external ESP32 wiring
 
@@ -425,11 +431,12 @@ Make sure the display.transform and touchscreen.transform settings use the same 
 
 See the `/3d_print` folder for STL files and Fusion 360 source files.
 
-Three mount options are available:
+Multiple mount options are available:
 
 • **Desk Mount** – for tabletop installation  
 • **Under-Desk Mount** – for installation underneath a desk or shelf  
 • **Wall Mount** – for wall installation (CYD version)
+• **Flush Mount** – for in-wall installation (EU electrical box compatible) 
 
 Desk mount and Under-Desk mount use the same enclosure parts and adjustable tilt mechanism.  
 Print the main enclosure parts and choose one mount type depending on your setup.
@@ -439,6 +446,7 @@ Designed for:
 - Desk mounting
 - Under-desk mounting
 - Wall mounting
+- Flush mounting (EU electrical box compatible)
 - Adjustable viewing angle
 - Hidden cable routing
 
