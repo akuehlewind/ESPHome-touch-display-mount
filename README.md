@@ -11,10 +11,10 @@ Includes ready-to-flash YAML configs for the ESP32-2432S028 (Cheap Yellow Displa
 
 Multiple mounting options are supported:
 
-• Desk Mount – for tabletop installation  
-• Under-Desk Mount – for installation underneath a desk or shelf  
-• Wall Mount – for wall installation (CYD version only)
-• Flush Mount – for in-wall installation (EU electrical box compatible)
+- Desk Mount – for tabletop installation
+- Under-Desk Mount – for installation underneath a desk or shelf
+- Wall Mount – for wall installation (CYD version only)
+- Flush Mount – for in-wall installation (EU electrical box compatible)
 
 The enclosure can therefore be used as a compact Home Assistant control panel for desks, walls, or mounted underneath furniture.
 
@@ -432,10 +432,10 @@ See the `/3d_print` folder for STL files and Fusion 360 source files.
 
 Multiple mount options are available:
 
-• **Desk Mount** – for tabletop installation
-• **Under-Desk Mount** – for installation underneath a desk or shelf
-• **Wall Mount** – for wall installation (CYD version only)
-• **Flush Mount** – for in-wall installation (CYD version only, EU electrical box compatible)
+- **Desk Mount** – for tabletop installation
+- **Under-Desk Mount** – for installation underneath a desk or shelf
+- **Wall Mount** – for wall installation (CYD version only)
+- **Flush Mount** – for in-wall installation (CYD version only, EU electrical box compatible)
 
 Desk mount and Under-Desk mount use the same enclosure parts and adjustable tilt mechanism.  
 Print the main enclosure parts and choose one mount type depending on your setup.
