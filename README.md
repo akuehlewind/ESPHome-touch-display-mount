@@ -278,13 +278,13 @@ Available YAML variants (pick **one UI** for your **hardware**):
 
 ### Cheap Yellow Display (ESP32-2432S028 / CYD)
 - `esphome/cyd-2432s028/buttons.yaml` – lockscreen with 4 round buttons (good for quick toggles)
-- `esphome/cyd-2432s028/home-like.yml` – 2x3 “tiles” UI (wallpaper + tiles)
+- `esphome/cyd-2432s028/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles)
 
 ### External display wiring (any ESP32 + ILI9341 + XPT2046)
 - `esphome/ili9341-external-esp32/buttons.yaml` – lockscreen with 4 round buttons
-- `esphome/ili9341-external-esp32/home-like.yml` – 2x3 “tiles” UI (wallpaper + tiles)
+- `esphome/ili9341-external-esp32/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles)
 
-> Tip: Both `home-like.yml` files share a single background image located at `esphome/images/smartdisplay_background.png`.
+> Tip: Both `home-like.yaml` files share a single background image located at `esphome/images/smartdisplay_background.png`.
 > In ESPHome, paths are resolved relative to the config directory, so reference it as `images/smartdisplay_background.png` in the `image:` section.
 
 
@@ -295,7 +295,7 @@ Available YAML variants (pick **one UI** for your **hardware**):
   - If you change icons in the YAML, ensure the glyph list contains them.
 - **Background image (home-like UI)**:
   - Default file: `esphome/images/smartdisplay_background.png` (included in this repo).
-  - In `home-like.yml`, reference it as `images/smartdisplay_background.png` (relative to the ESPHome config directory).
+  - In `home-like.yaml`, reference it as `images/smartdisplay_background.png` (relative to the ESPHome config directory).
 # ⚙️ UI mapping (USER CONFIG)
 
 Your config choice defines the UI style:
@@ -308,7 +308,7 @@ Your config choice defines the UI style:
 <img src="images/display-buttons.png" width="50%">
 
 
-## `home-like.yml` (tiles)
+## `home-like.yaml` (tiles)
 - Tiles: TILE1..TILE6
 - Action strings: `tile1_press` .. `tile6_press`
 - Each tile can optionally call a Home Assistant service directly (toggle/scene/script/fan preset/light brightness).
