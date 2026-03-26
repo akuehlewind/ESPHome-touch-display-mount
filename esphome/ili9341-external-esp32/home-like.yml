@@ -304,8 +304,7 @@ captive_portal:
 
 # ============================================================
 # No need to edit down here
-# Make sure to add the Material Design Icons font file to the path below, otherwise the icons will not render.
-# Download the font file and place it at: fonts/materialdesignicons-webfont.ttf
+# The Material Design Icons font is included at fonts/materialdesignicons-webfont.ttf (Apache 2.0).
 # Source: https://github.com/Templarian/MaterialDesign-Webfont
 # ============================================================
 
@@ -388,8 +387,7 @@ font:
              ' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
              'ä','ö','ü','Ä','Ö','Ü','ß','/','…']             
 
-  # Material Design Icons (MDI)
-  # Download the font file and place it at: fonts/materialdesignicons-webfont.ttf
+  # Material Design Icons (MDI) — included at fonts/materialdesignicons-webfont.ttf (Apache 2.0)
   # Source: https://github.com/Templarian/MaterialDesign-Webfont
   - file: 'fonts/materialdesignicons-webfont.ttf'
     id: materialdesign_icons

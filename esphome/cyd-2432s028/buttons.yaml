@@ -152,8 +152,7 @@ font:
     bpp: 4
     glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°','0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','å','Ä','ä','Ö','ö','Ü','ü','/']
 
-  # Material Design Icons (MDI)
-  # Download the font file and place it at: fonts/materialdesignicons-webfont.ttf
+  # Material Design Icons (MDI) — included at fonts/materialdesignicons-webfont.ttf (Apache 2.0)
   # Source: https://github.com/Templarian/MaterialDesign-Webfont
   - file: 'fonts/materialdesignicons-webfont.ttf'
     id: materialdesign_icons

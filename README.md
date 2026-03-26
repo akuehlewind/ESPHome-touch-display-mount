@@ -285,18 +285,17 @@ Available YAML variants (pick **one UI** for your **hardware**):
 - `esphome/ili9341-external-esp32/home-like.yml` – 2x3 “tiles” UI (wallpaper + tiles)
 
 > Tip: Both `home-like.yml` files share a single background image located at `esphome/images/smartdisplay_background.png`.
-> Because the YAML files live in subfolders, reference it as `../images/smartdisplay_background.png` in the `image:` section.
+> In ESPHome, paths are resolved relative to the config directory, so reference it as `images/smartdisplay_background.png` in the `image:` section.
 
 
 ------------------------------------------------------------------------
 
 ### Assets (required for the UI)
-- **Material Design Icons font**: place `materialdesignicons-webfont.ttf` at `esphome/fonts/materialdesignicons-webfont.ttf`.
-  - You can get it from the MaterialDesignIcons project (TTF release) or your local install.
+- **Material Design Icons font**: the file `materialdesignicons-webfont.ttf` is included at `esphome/fonts/materialdesignicons-webfont.ttf` (Apache 2.0 license, sourced from [Templarian/MaterialDesign-Webfont](https://github.com/Templarian/MaterialDesign-Webfont)).
   - If you change icons in the YAML, ensure the glyph list contains them.
 - **Background image (home-like UI)**:
   - Default file: `esphome/images/smartdisplay_background.png` (included in this repo).
-  - In `home-like.yml`, reference it as `/images/smartdisplay_background.png` (relative to the YAML file).
+  - In `home-like.yml`, reference it as `images/smartdisplay_background.png` (relative to the ESPHome config directory).
 # ⚙️ UI mapping (USER CONFIG)
 
 Your config choice defines the UI style:
@@ -433,10 +432,10 @@ See the `/3d_print` folder for STL files and Fusion 360 source files.
 
 Multiple mount options are available:
 
-• **Desk Mount** – for tabletop installation  
-• **Under-Desk Mount** – for installation underneath a desk or shelf  
-• **Wall Mount** – for wall installation (CYD version)
-• **Flush Mount** – for in-wall installation (EU electrical box compatible) 
+• **Desk Mount** – for tabletop installation
+• **Under-Desk Mount** – for installation underneath a desk or shelf
+• **Wall Mount** – for wall installation (CYD version only)
+• **Flush Mount** – for in-wall installation (CYD version only, EU electrical box compatible)
 
 Desk mount and Under-Desk mount use the same enclosure parts and adjustable tilt mechanism.  
 Print the main enclosure parts and choose one mount type depending on your setup.
