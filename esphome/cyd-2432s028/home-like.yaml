@@ -62,7 +62,7 @@ substitutions:
   NIGHT_MODE: "true"                               # true = use separate dim level at night
   NIGHT_START_HOUR: "22"                           # 0-23
   NIGHT_END_HOUR: "7"                              # 0-23
-  NIGHT_DIM_BRIGHTNESS: "1"                        # backlight brightness in percent at night  
+  NIGHT_DIM_BRIGHTNESS: "18"                       # backlight brightness in percent at night  
 
   # ============================================================
   # TILE 1
@@ -337,6 +337,26 @@ time:
         minutes: /1
         then:
           - script.execute: ui_refresh
+
+      - seconds: 0
+        minutes: 0
+        hours: ${NIGHT_START_HOUR}
+        then:
+          - if:
+              condition:
+                lambda: 'return id(display_dimmed);'
+              then:
+                - script.execute: dim_display
+
+      - seconds: 0
+        minutes: 0
+        hours: ${NIGHT_END_HOUR}
+        then:
+          - if:
+              condition:
+                lambda: 'return id(display_dimmed);'
+              then:
+                - script.execute: dim_display
 
 globals:
   - id: active_entity

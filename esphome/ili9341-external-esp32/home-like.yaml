@@ -48,7 +48,7 @@
 #
 # What you must adapt before flashing
 # 1) Secrets: api.encryption.key, ota.password, WiFi credentials (prefer secrets.yaml)
-#2) SPI pins and control pins if your wiring differs from the example above
+# 2) SPI pins and control pins if your wiring differs from the example above
 # 3) TILE*_ENTITY / TILE*_STATE_ENTITY: Home Assistant entity IDs you want to control/mirror
 # 4) Touch calibration + transform:
 #    - calibration is device-specific
@@ -60,6 +60,16 @@ substitutions:
   DIRECT_ACTIONS: "true"                           # true = call Home Assistant services directly, false = only emit action events
   ROOM_NAME: "Office"                              # room name shown in the top-left header
   TIME_24H: "true"                                 # true = 24h format, false = 12h format
+
+  ## DIM settings
+  AUTO_DIM: "true"                                 # true = enable auto dimming
+  AUTO_DIM_TIMEOUT: "10"                           # seconds after last touch
+  MAX_BRIGHTNESS: "100"                            # backlight brightness in percent
+  DIM_BRIGHTNESS: "40"                             # dimmed backlight brightness in percent
+  NIGHT_MODE: "true"                               # true = use separate dim level at night
+  NIGHT_START_HOUR: "22"                           # 0-23
+  NIGHT_END_HOUR: "7"                              # 0-23
+  NIGHT_DIM_BRIGHTNESS: "18"                       # backlight brightness in percent at night
 
   # ============================================================
   # TILE 1
@@ -276,6 +286,12 @@ esphome:
   on_boot:
     priority: 600
     then:
+      - lambda: |-
+          id(last_touch_ms) = millis();
+          id(display_dimmed) = false;
+      - light.turn_on:
+          id: back_light
+          brightness: !lambda "return atoi(\"${MAX_BRIGHTNESS}\") / 100.0f;"
       - script.execute: ui_refresh
 
 esp32:
@@ -308,6 +324,18 @@ captive_portal:
 # Source: https://github.com/Templarian/MaterialDesign-Webfont
 # ============================================================
 
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            lambda: |-
+              if (std::string("${AUTO_DIM}") != "true") return false;
+              if (id(display_dimmed)) return false;
+              return (millis() - id(last_touch_ms)) > (atoi("${AUTO_DIM_TIMEOUT}") * 1000UL);
+          then:
+            - script.execute: dim_display
+
 time:
   - platform: homeassistant
     id: homeassistant_time
@@ -316,6 +344,26 @@ time:
         minutes: /1
         then:
           - script.execute: ui_refresh
+
+      - seconds: 0
+        minutes: 0
+        hours: ${NIGHT_START_HOUR}
+        then:
+          - if:
+              condition:
+                lambda: 'return id(display_dimmed);'
+              then:
+                - script.execute: dim_display
+
+      - seconds: 0
+        minutes: 0
+        hours: ${NIGHT_END_HOUR}
+        then:
+          - if:
+              condition:
+                lambda: 'return id(display_dimmed);'
+              then:
+                - script.execute: dim_display
 
 globals:
   - id: active_entity
@@ -339,6 +387,16 @@ globals:
     type: uint32_t
     restore_value: no
     initial_value: '0xFEC600'
+
+  - id: last_touch_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+
+  - id: display_dimmed
+    type: bool
+    restore_value: no
+    initial_value: 'false'
 
 font:
   - file: "gfonts://Roboto@500"
@@ -630,6 +688,10 @@ touchscreen:
     swap_xy: true
     mirror_x: false
     mirror_y: false
+  
+  on_touch:
+    - lambda: |-
+        id(last_touch_ms) = millis();
 
 # Display configuration (ILI9341)
 display:
@@ -1332,8 +1394,71 @@ lvgl:
                         text_color: 0xFFFFFF
                         text: "${TILE1_ICON}"
                         clickable: false
+        # ---------- DIM / WAKE OVERLAY ----------
+        - obj:
+            id: dim_wake_overlay
+            x: 0
+            y: 0
+            width: 320
+            height: 240
+            hidden: true
+            bg_opa: TRANSP
+            border_width: 0
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            clickable: true
+            on_click:
+              - script.execute: wake_display
 
 script:
+  - id: wake_display
+    mode: restart
+    then:
+      - lambda: |-
+          id(last_touch_ms) = millis();
+          id(display_dimmed) = false;
+      - light.turn_on:
+          id: back_light
+          brightness: !lambda "return atoi(\"${MAX_BRIGHTNESS}\") / 100.0f;"
+      - lvgl.widget.hide: dim_wake_overlay
+
+  - id: dim_display
+    mode: restart
+    then:
+      - if:
+          condition:
+            lambda: 'return std::string("${AUTO_DIM}") == "true";'
+          then:
+            - lambda: |-
+                id(display_dimmed) = true;
+            - light.turn_on:
+                id: back_light
+                brightness: !lambda |-
+                  int dim_value = atoi("${DIM_BRIGHTNESS}");
+
+                  if (std::string("${NIGHT_MODE}") == "true") {
+                    auto now = id(homeassistant_time).now();
+                    int hour = now.hour;
+
+                    int start_hour = atoi("${NIGHT_START_HOUR}");
+                    int end_hour = atoi("${NIGHT_END_HOUR}");
+
+                    bool is_night = false;
+
+                    if (start_hour < end_hour) {
+                      is_night = (hour >= start_hour && hour < end_hour);
+                    } else {
+                      is_night = (hour >= start_hour || hour < end_hour);
+                    }
+
+                    if (is_night) {
+                      dim_value = atoi("${NIGHT_DIM_BRIGHTNESS}");
+                    }
+                  }
+
+                  return dim_value / 100.0f;
+            - lvgl.widget.show: dim_wake_overlay
+
   - id: publish_action
     mode: queued
     parameters:
