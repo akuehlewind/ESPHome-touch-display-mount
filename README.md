@@ -106,7 +106,7 @@ The UI contains a secondary overlay layer used for interactive controls.
 When a tile is long-pressed:
 
 1. The overlay opens
-2. The control type is determined (brightness / percentage)
+2. The control type is determined (brightness / percentage / cover position)
 3. Slider interaction updates Home Assistant
 4. Closing the overlay returns to the tile grid
 
@@ -162,7 +162,7 @@ Without this setting, direct control will not work.
 
 - LVGL-based UI (lockscreen or tile layout depending on configuration)
 - 2×3 configurable tile layout (home-like UI)
-- Long-press control overlay for brightness / fan speed
+- Long-press control overlay for brightness, fan speed, and cover position
 - Real-time state synchronization with Home Assistant
 - Optional direct Home Assistant service calls
 - Automation-based mode supported
@@ -311,7 +311,7 @@ Your config choice defines the UI style:
 ## `home-like.yaml` (tiles)
 - Tiles: TILE1..TILE6
 - Action strings: `tile1_press` .. `tile6_press`
-- Each tile can optionally call a Home Assistant service directly (toggle/scene/script/fan preset/light brightness).
+- Each tile can optionally call a Home Assistant service directly (e.g. light toggle, fan preset toggle, cover open/close or cover position).
 - Per-tile OFF label is configurable via `TILE*_LABEL_OFF` (e.g. "Off" / "Aus").
 
 ### Long-Press Overlay
@@ -325,6 +325,7 @@ Depending on the tile configuration, the overlay provides:
 | light     | Brightness slider |
 | fan       | Speed / percentage slider |
 | custom    | Optional custom behavior |
+| cover     | Position slider |
 
 The overlay allows quick adjustments without leaving the tile UI.
 
