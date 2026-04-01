@@ -49,6 +49,9 @@ It is commonly known as the **Cheap Yellow Display (CYD)** in the maker communit
 <img src="images/tilt.jpeg" width="50%">
 <img src="images/side.jpeg" width="50%">
 
+<img src="images/rotated2.jpeg" width="50%">
+<img src="images/rotated3.jpeg" width="50%">
+
 <img src="images/wide-body-flush-mount.jpeg" width="50%">
 <img src="images/flush-mount.jpeg" width="50%">
 
@@ -284,8 +287,12 @@ Available YAML variants (pick **one UI** for your **hardware**):
 - `esphome/ili9341-external-esp32/buttons.yaml` – lockscreen with 4 round buttons
 - `esphome/ili9341-external-esp32/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles)
 
-> Tip: Both `home-like.yaml` files share a single background image located at `esphome/images/smartdisplay_background.png`.
-> In ESPHome, paths are resolved relative to the config directory, so reference it as `images/smartdisplay_background.png` in the `image:` section.
+> Tip: The `home-like.yaml` file uses orientation-specific background images located in `esphome/images/`.
+> Two images are included:
+> - `smartdisplay_background.png` — used for 0° (landscape) and 180° (landscape flipped)
+> - `smartdisplay_background_90.png` — used for 90° (portrait) and 270° (portrait flipped)
+>
+> The active image is selected via the `BG_IMAGE` substitution in the ORIENTATION preset block.
 
 
 ------------------------------------------------------------------------
@@ -293,9 +300,10 @@ Available YAML variants (pick **one UI** for your **hardware**):
 ### Assets (required for the UI)
 - **Material Design Icons font**: the file `materialdesignicons-webfont.ttf` is included at `esphome/fonts/materialdesignicons-webfont.ttf` (Apache 2.0 license, sourced from [Templarian/MaterialDesign-Webfont](https://github.com/Templarian/MaterialDesign-Webfont)).
   - If you change icons in the YAML, ensure the glyph list contains them.
-- **Background image (home-like UI)**:
-  - Default file: `esphome/images/smartdisplay_background.png` (included in this repo).
-  - In `home-like.yaml`, reference it as `images/smartdisplay_background.png` (relative to the ESPHome config directory).
+- **Background images (home-like UI)**:
+  - `esphome/images/smartdisplay_background.png` — landscape (0° and 180°), included.
+  - `esphome/images/smartdisplay_background_90.png` — portrait (90° and 270°), included.
+  - Selected automatically via the `BG_IMAGE` substitution in the ORIENTATION preset block.
 # ⚙️ UI mapping (USER CONFIG)
 
 Your config choice defines the UI style:
@@ -408,13 +416,13 @@ Flashing with a different model is usually the fastest way to identify the corre
 
 ### Display rotated / mirrored
 
-If the UI appears **rotated, mirrored, or upside down**, adjust the `transform`
-settings.
+If the UI appears **rotated, mirrored, or upside down**, use the built-in **ORIENTATION preset block** in the substitutions section at the top of `home-like.yaml`.
 
-Both the **display** and the **touchscreen** configuration must match,
-otherwise touch input will be misaligned.
+Four presets are provided and documented as comments — uncomment the one matching your desired orientation (0°, 90°, 180°, 270°) and comment out the others. Each preset sets the correct `DISPLAY_SWAP_XY`, `DISPLAY_MIRROR_X/Y`, `TOUCH_SWAP_XY`, `TOUCH_MIRROR_X/Y`, grid layout, and background image automatically.
 
-Common parameters:
+> Note: touch calibration values (`TOUCH_CAL_*`) are device-specific. The portrait presets include approximate values that may need tuning after flashing.
+
+If your board behaves differently from the presets, you can tune the transform values manually via the substitutions. The underlying parameters are:
 
 ```yaml
 transform:
@@ -422,8 +430,9 @@ transform:
   mirror_x: true
   mirror_y: true
 ```
+
 Depending on the board variant, you may need to experiment with these values until the orientation matches your screen.
-Make sure the display.transform and touchscreen.transform settings use the same orientation.
+Make sure `display.transform` and `touchscreen.transform` always use the same values, otherwise touch input will be misaligned.
 
 ------------------------------------------------------------------------
 

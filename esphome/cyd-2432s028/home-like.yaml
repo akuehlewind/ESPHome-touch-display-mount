@@ -1,7 +1,7 @@
 ############################################################
 # SmartDisplay – iOS Home app–inspired Tiles UI
 # Target device: ESP32-2432S028 / Cheap Yellow Display (CYD)
-# Resolution: 320x240
+# Resolution: configurable via ORIENTATION substitutions (landscape 320×240 default)
 #
 # Target hardware
 # - Cheap Yellow Display (ESP32-2432S028 or compatible)
@@ -22,7 +22,9 @@
 # How to customize
 # 1) Edit the TILE1..TILE6 blocks below.
 # 2) If you change icons, ensure those glyphs are included in the MDI font glyph list.
-# 3) Provide your own background image at: images/home-background.png
+# 3) Provide background images (see ORIENTATION section for which file each preset uses):
+#    - images/smartdisplay_background.png    (0° and 180°)
+#    - images/smartdisplay_background_90.png (90° and 270°)
 #
 # Tile configuration model
 # - TILE*_TYPE defines the entity kind: light | fan | switch | scene | script | cover
@@ -62,7 +64,7 @@ substitutions:
   NIGHT_MODE: "true"                               # true = use separate dim level at night
   NIGHT_START_HOUR: "22"                           # 0-23
   NIGHT_END_HOUR: "7"                              # 0-23
-  NIGHT_DIM_BRIGHTNESS: "18"                       # backlight brightness in percent at night  
+  NIGHT_DIM_BRIGHTNESS: "18"                       # backlight brightness in percent at night
 
   # ============================================================
   # TILE 1
@@ -273,6 +275,145 @@ substitutions:
   TILE6_TAP_PARAM_VAL: "Auto"                      # optional extra service parameter value
   TILE6_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
 
+  # ============================================================
+  # ORIENTATION / LAYOUT
+  # Uncomment ONE preset block below, comment out the others.
+  # Touch calibration values (TOUCH_CAL_*) are device-specific —
+  # portrait/flipped values are approximate and may need tuning.
+  #
+  # Tile content layout:
+  #   Landscape — icon left, title + value to its right
+  #   Portrait  — icon centered on top, title + value stacked below
+  # ============================================================
+
+  # ----- 0° — Landscape 320×240 (default, USB on right) -----
+  ORIENTATION: "0"
+  DISPLAY_W: "320"
+  DISPLAY_H: "240"
+  DISPLAY_SWAP_XY: "true"
+  DISPLAY_MIRROR_X: "false"
+  DISPLAY_MIRROR_Y: "false"
+  TOUCH_SWAP_XY: "true"
+  TOUCH_MIRROR_X: "false"
+  TOUCH_MIRROR_Y: "false"
+  TOUCH_CAL_X_MIN: "280"
+  TOUCH_CAL_X_MAX: "3860"
+  TOUCH_CAL_Y_MIN: "340"
+  TOUCH_CAL_Y_MAX: "3860"
+  GRID_COL1_X: "9"
+  GRID_COL2_X: "164"
+  GRID_ROW1_Y: "54"
+  GRID_ROW2_Y: "114"
+  GRID_ROW3_Y: "174"
+  TILE_W: "147"
+  TILE_H: "52"
+  HEADER_Y: "14"
+  OVERLAY_SLIDER_W: "96"
+  OVERLAY_SLIDER_H: "160"
+  BG_IMAGE: "images/smartdisplay_background.png"
+  TILE_ICON_X: "0"
+  TILE_ICON_Y: "0"
+  TILE_TITLE_X: "48"
+  TILE_TITLE_Y: "4"
+  TILE_VALUE_X: "48"
+  TILE_VALUE_Y: "18"
+
+  # ----- 90° — Portrait 240×320 (USB on bottom) -----
+  # ORIENTATION: "90"
+  # DISPLAY_W: "240"
+  # DISPLAY_H: "320"
+  # DISPLAY_SWAP_XY: "false"
+  # DISPLAY_MIRROR_X: "false"
+  # DISPLAY_MIRROR_Y: "true"
+  # TOUCH_SWAP_XY: "false"
+  # TOUCH_MIRROR_X: "false"
+  # TOUCH_MIRROR_Y: "true"
+  # TOUCH_CAL_X_MIN: "340"
+  # TOUCH_CAL_X_MAX: "3860"
+  # TOUCH_CAL_Y_MIN: "280"
+  # TOUCH_CAL_Y_MAX: "3860"
+  # GRID_COL1_X: "6"
+  # GRID_COL2_X: "123"
+  # GRID_ROW1_Y: "54"
+  # GRID_ROW2_Y: "142"
+  # GRID_ROW3_Y: "230"
+  # TILE_W: "111"
+  # TILE_H: "80"
+  # HEADER_Y: "14"
+  # OVERLAY_SLIDER_W: "96"
+  # OVERLAY_SLIDER_H: "200"
+  # BG_IMAGE: "images/smartdisplay_background_90.png"
+  # TILE_ICON_X: "0"
+  # TILE_ICON_Y: "0"
+  # TILE_TITLE_X: "4"
+  # TILE_TITLE_Y: "38"
+  # TILE_VALUE_X: "4"
+  # TILE_VALUE_Y: "52"
+
+  # ----- 180° — Landscape flipped 320×240 (USB on left) -----
+  # ORIENTATION: "180"
+  # DISPLAY_W: "320"
+  # DISPLAY_H: "240"
+  # DISPLAY_SWAP_XY: "true"
+  # DISPLAY_MIRROR_X: "true"
+  # DISPLAY_MIRROR_Y: "true"
+  # TOUCH_SWAP_XY: "true"
+  # TOUCH_MIRROR_X: "true"
+  # TOUCH_MIRROR_Y: "true"
+  # TOUCH_CAL_X_MIN: "280"
+  # TOUCH_CAL_X_MAX: "3860"
+  # TOUCH_CAL_Y_MIN: "340"
+  # TOUCH_CAL_Y_MAX: "3860"
+  # GRID_COL1_X: "9"
+  # GRID_COL2_X: "164"
+  # GRID_ROW1_Y: "54"
+  # GRID_ROW2_Y: "114"
+  # GRID_ROW3_Y: "174"
+  # TILE_W: "147"
+  # TILE_H: "52"
+  # HEADER_Y: "14"
+  # OVERLAY_SLIDER_W: "96"
+  # OVERLAY_SLIDER_H: "160"
+  # BG_IMAGE: "images/smartdisplay_background.png"
+  # TILE_ICON_X: "0"
+  # TILE_ICON_Y: "0"
+  # TILE_TITLE_X: "48"
+  # TILE_TITLE_Y: "4"
+  # TILE_VALUE_X: "48"
+  # TILE_VALUE_Y: "18"
+
+  # ----- 270° — Portrait flipped 240×320 (USB on top) -----
+  # ORIENTATION: "270"
+  # DISPLAY_W: "240"
+  # DISPLAY_H: "320"
+  # DISPLAY_SWAP_XY: "false"
+  # DISPLAY_MIRROR_X: "true"
+  # DISPLAY_MIRROR_Y: "false"
+  # TOUCH_SWAP_XY: "false"
+  # TOUCH_MIRROR_X: "true"
+  # TOUCH_MIRROR_Y: "false"
+  # TOUCH_CAL_X_MIN: "340"
+  # TOUCH_CAL_X_MAX: "3860"
+  # TOUCH_CAL_Y_MIN: "280"
+  # TOUCH_CAL_Y_MAX: "3860"
+  # GRID_COL1_X: "6"
+  # GRID_COL2_X: "123"
+  # GRID_ROW1_Y: "54"
+  # GRID_ROW2_Y: "142"
+  # GRID_ROW3_Y: "230"
+  # TILE_W: "111"
+  # TILE_H: "80"
+  # HEADER_Y: "14"
+  # OVERLAY_SLIDER_W: "96"
+  # OVERLAY_SLIDER_H: "200"
+  # BG_IMAGE: "images/smartdisplay_background_90.png"
+  # TILE_ICON_X: "0"
+  # TILE_ICON_Y: "0"
+  # TILE_TITLE_X: "4"
+  # TILE_TITLE_Y: "38"
+  # TILE_VALUE_X: "4"
+  # TILE_VALUE_Y: "52"  
+
 esphome:
   name: smartdisplay
   friendly_name: SmartDisplay
@@ -450,7 +591,7 @@ font:
       - "${TILE6_ICON}"
 
 image:
-  - file: "images/smartdisplay_background.png"
+  - file: "${BG_IMAGE}"
     id: bg_home
     type: RGB565
 
@@ -757,16 +898,16 @@ touchscreen:
   threshold: 300
 
   calibration:
-    x_min: 280
-    x_max: 3860
-    y_min: 340
-    y_max: 3860
+    x_min: ${TOUCH_CAL_X_MIN}
+    x_max: ${TOUCH_CAL_X_MAX}
+    y_min: ${TOUCH_CAL_Y_MIN}
+    y_max: ${TOUCH_CAL_Y_MAX}
 
   transform:
-    swap_xy: true
-    mirror_x: false
-    mirror_y: false
-  
+    swap_xy: ${TOUCH_SWAP_XY}
+    mirror_x: ${TOUCH_MIRROR_X}
+    mirror_y: ${TOUCH_MIRROR_Y}
+
   on_touch:
     - lambda: |-
         id(last_touch_ms) = millis();
@@ -785,13 +926,13 @@ display:
     auto_clear_enabled: false
 
     transform:
-      swap_xy: true
-      mirror_x: false
-      mirror_y: false
+      swap_xy: ${DISPLAY_SWAP_XY}
+      mirror_x: ${DISPLAY_MIRROR_X}
+      mirror_y: ${DISPLAY_MIRROR_Y}
 
     dimensions:
-      width: 320
-      height: 240
+      width: ${DISPLAY_W}
+      height: ${DISPLAY_H}
 
 lvgl:
   displays:
@@ -887,7 +1028,7 @@ lvgl:
         - label:
             id: lbl_room
             x: 11
-            y: 14
+            y: ${HEADER_Y}
             text: "${ROOM_NAME}"
             styles: style_room
 
@@ -895,25 +1036,25 @@ lvgl:
             id: lbl_time
             align: TOP_RIGHT
             x: -11
-            y: 14
+            y: ${HEADER_Y}
             text: ""
             styles: style_time
 
         # ---------- TILE 1 ----------
         - obj:
             id: tile1
-            x: 9
-            y: 54
-            width: 147
-            height: 52
+            x: ${GRID_COL1_X}
+            y: ${GRID_ROW1_Y}
+            width: ${TILE_W}
+            height: ${TILE_H}
             styles: style_tile
             scrollable: false
             scrollbar_mode: 'OFF'
             widgets:
               - obj:
                   id: tile1_icon_circle
-                  x: 0
-                  y: 0
+                  x: ${TILE_ICON_X}
+                  y: ${TILE_ICON_Y}
                   width: 36
                   height: 36
                   styles: style_icon_circle
@@ -930,15 +1071,15 @@ lvgl:
                         clickable: false
               - label:
                   id: t1_title
-                  x: 48
-                  y: 4
+                  x: ${TILE_TITLE_X}
+                  y: ${TILE_TITLE_Y}
                   text: "${TILE1_TITLE}"
                   styles: style_title
                   clickable: false
               - label:
                   id: t1_value
-                  x: 48
-                  y: 18
+                  x: ${TILE_VALUE_X}
+                  y: ${TILE_VALUE_Y}
                   text: "—"
                   styles: style_value
                   clickable: false
@@ -990,18 +1131,18 @@ lvgl:
         # ---------- TILE 2 ----------
         - obj:
             id: tile2
-            x: 164
-            y: 54
-            width: 147
-            height: 52
+            x: ${GRID_COL2_X}
+            y: ${GRID_ROW1_Y}
+            width: ${TILE_W}
+            height: ${TILE_H}
             styles: style_tile
             scrollable: false
             scrollbar_mode: 'OFF'
             widgets:
               - obj:
                   id: tile2_icon_circle
-                  x: 0
-                  y: 0
+                  x: ${TILE_ICON_X}
+                  y: ${TILE_ICON_Y}
                   width: 36
                   height: 36
                   styles: style_icon_circle
@@ -1018,15 +1159,15 @@ lvgl:
                         clickable: false
               - label:
                   id: t2_title
-                  x: 48
-                  y: 4
+                  x: ${TILE_TITLE_X}
+                  y: ${TILE_TITLE_Y}
                   text: "${TILE2_TITLE}"
                   styles: style_title
                   clickable: false
               - label:
                   id: t2_value
-                  x: 48
-                  y: 18
+                  x: ${TILE_VALUE_X}
+                  y: ${TILE_VALUE_Y}
                   text: "—"
                   styles: style_value
                   clickable: false
@@ -1078,18 +1219,18 @@ lvgl:
         # ---------- TILE 3 ----------
         - obj:
             id: tile3
-            x: 9
-            y: 114
-            width: 147
-            height: 52
+            x: ${GRID_COL1_X}
+            y: ${GRID_ROW2_Y}
+            width: ${TILE_W}
+            height: ${TILE_H}
             styles: style_tile
             scrollable: false
             scrollbar_mode: 'OFF'
             widgets:
               - obj:
                   id: tile3_icon_circle
-                  x: 0
-                  y: 0
+                  x: ${TILE_ICON_X}
+                  y: ${TILE_ICON_Y}
                   width: 36
                   height: 36
                   styles: style_icon_circle
@@ -1106,15 +1247,15 @@ lvgl:
                         clickable: false
               - label:
                   id: t3_title
-                  x: 48
-                  y: 4
+                  x: ${TILE_TITLE_X}
+                  y: ${TILE_TITLE_Y}
                   text: "${TILE3_TITLE}"
                   styles: style_title
                   clickable: false
               - label:
                   id: t3_value
-                  x: 48
-                  y: 18
+                  x: ${TILE_VALUE_X}
+                  y: ${TILE_VALUE_Y}
                   text: "—"
                   styles: style_value
                   clickable: false
@@ -1166,18 +1307,18 @@ lvgl:
         # ---------- TILE 4 ----------
         - obj:
             id: tile4
-            x: 164
-            y: 114
-            width: 147
-            height: 52
+            x: ${GRID_COL2_X}
+            y: ${GRID_ROW2_Y}
+            width: ${TILE_W}
+            height: ${TILE_H}
             styles: style_tile
             scrollable: false
             scrollbar_mode: 'OFF'
             widgets:
               - obj:
                   id: tile4_icon_circle
-                  x: 0
-                  y: 0
+                  x: ${TILE_ICON_X}
+                  y: ${TILE_ICON_Y}
                   width: 36
                   height: 36
                   styles: style_icon_circle
@@ -1194,15 +1335,15 @@ lvgl:
                         clickable: false
               - label:
                   id: t4_title
-                  x: 48
-                  y: 4
+                  x: ${TILE_TITLE_X}
+                  y: ${TILE_TITLE_Y}
                   text: "${TILE4_TITLE}"
                   styles: style_title
                   clickable: false
               - label:
                   id: t4_value
-                  x: 48
-                  y: 18
+                  x: ${TILE_VALUE_X}
+                  y: ${TILE_VALUE_Y}
                   text: "—"
                   styles: style_value
                   clickable: false
@@ -1254,18 +1395,18 @@ lvgl:
         # ---------- TILE 5 ----------
         - obj:
             id: tile5
-            x: 9
-            y: 174
-            width: 147
-            height: 52
+            x: ${GRID_COL1_X}
+            y: ${GRID_ROW3_Y}
+            width: ${TILE_W}
+            height: ${TILE_H}
             styles: style_tile
             scrollable: false
             scrollbar_mode: 'OFF'
             widgets:
               - obj:
                   id: tile5_icon_circle
-                  x: 0
-                  y: 0
+                  x: ${TILE_ICON_X}
+                  y: ${TILE_ICON_Y}
                   width: 36
                   height: 36
                   styles: style_icon_circle
@@ -1282,15 +1423,15 @@ lvgl:
                         clickable: false
               - label:
                   id: t5_title
-                  x: 48
-                  y: 4
+                  x: ${TILE_TITLE_X}
+                  y: ${TILE_TITLE_Y}
                   text: "${TILE5_TITLE}"
                   styles: style_title
                   clickable: false
               - label:
                   id: t5_value
-                  x: 48
-                  y: 18
+                  x: ${TILE_VALUE_X}
+                  y: ${TILE_VALUE_Y}
                   text: "—"
                   styles: style_value
                   clickable: false
@@ -1342,18 +1483,18 @@ lvgl:
         # ---------- TILE 6 ----------
         - obj:
             id: tile6
-            x: 164
-            y: 174
-            width: 147
-            height: 52
+            x: ${GRID_COL2_X}
+            y: ${GRID_ROW3_Y}
+            width: ${TILE_W}
+            height: ${TILE_H}
             styles: style_tile
             scrollable: false
             scrollbar_mode: 'OFF'
             widgets:
               - obj:
                   id: tile6_icon_circle
-                  x: 0
-                  y: 0
+                  x: ${TILE_ICON_X}
+                  y: ${TILE_ICON_Y}
                   width: 36
                   height: 36
                   styles: style_icon_circle
@@ -1370,15 +1511,15 @@ lvgl:
                         clickable: false
               - label:
                   id: t6_title
-                  x: 48
-                  y: 4
+                  x: ${TILE_TITLE_X}
+                  y: ${TILE_TITLE_Y}
                   text: "${TILE6_TITLE}"
                   styles: style_title
                   clickable: false
               - label:
                   id: t6_value
-                  x: 48
-                  y: 18
+                  x: ${TILE_VALUE_X}
+                  y: ${TILE_VALUE_Y}
                   text: "—"
                   styles: style_value
                   clickable: false
@@ -1432,8 +1573,8 @@ lvgl:
             id: brightness_overlay
             x: 0
             y: 0
-            width: 320
-            height: 240
+            width: ${DISPLAY_W}
+            height: ${DISPLAY_H}
             bg_opa: TRANSP
             hidden: true
             scrollable: false
@@ -1457,8 +1598,8 @@ lvgl:
                   id: brightness_overlay_dim
                   x: 0
                   y: 0
-                  width: 320
-                  height: 240
+                  width: ${DISPLAY_W}
+                  height: ${DISPLAY_H}
                   bg_color: 0x000000
                   bg_opa: 18%
                   border_width: 0
@@ -1483,8 +1624,8 @@ lvgl:
                   id: overlay_slider
                   align: CENTER
                   y: 18
-                  width: 96
-                  height: 160
+                  width: ${OVERLAY_SLIDER_W}
+                  height: ${OVERLAY_SLIDER_H}
                   min_value: 0
                   max_value: 100
                   value: 100
@@ -1530,8 +1671,8 @@ lvgl:
             id: dim_wake_overlay
             x: 0
             y: 0
-            width: 320
-            height: 240
+            width: ${DISPLAY_W}
+            height: ${DISPLAY_H}
             hidden: true
             bg_opa: TRANSP
             border_width: 0
