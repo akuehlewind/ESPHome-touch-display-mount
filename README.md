@@ -165,7 +165,7 @@ Without this setting, direct control will not work.
 
 - LVGL-based UI (lockscreen or tile layout depending on configuration)
 - 2×3 configurable tile layout (home-like UI)
-- Long-press control overlay for brightness, fan speed, and cover position
+- Long-press per tile: value overlay (brightness / fan speed / cover position) or independent entity action
 - Real-time state synchronization with Home Assistant
 - Optional direct Home Assistant service calls
 - Automation-based mode supported
@@ -280,14 +280,15 @@ Use the wiring table below, which shows how to put everything together.
 Available YAML variants (pick **one UI** for your **hardware**):
 
 ### Cheap Yellow Display (ESP32-2432S028 / CYD)
-- `esphome/cyd-2432s028/buttons.yaml` – lockscreen with 4 round buttons (good for quick toggles)
-- `esphome/cyd-2432s028/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles)
+- `esphome/home-like/cyd-2432s028/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles) — actively maintained
+- `esphome/buttons/cyd-2432s028/buttons.yaml` – lockscreen with 4 round buttons (simple / legacy)
 
 ### External display wiring (any ESP32 + ILI9341 + XPT2046)
-- `esphome/ili9341-external-esp32/buttons.yaml` – lockscreen with 4 round buttons
-- `esphome/ili9341-external-esp32/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles)
+- `esphome/home-like/ili9341-external-esp32/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles) — actively maintained
+- `esphome/buttons/ili9341-external-esp32/buttons.yaml` – lockscreen with 4 round buttons (simple / legacy)
 
-> Tip: The `home-like.yaml` file uses orientation-specific background images located in `esphome/images/`.
+> Tip: The `home-like.yaml` file uses orientation-specific background images located in `esphome/home-like/images/`.
+> For a full reference of all tile substitutions and copy-paste examples, see [`esphome/home-like/TILE_CONFIGURATION.md`](esphome/home-like/TILE_CONFIGURATION.md).
 > Two images are included:
 > - `smartdisplay_background.png` — used for 0° (landscape) and 180° (landscape flipped)
 > - `smartdisplay_background_90.png` — used for 90° (portrait) and 270° (portrait flipped)
@@ -298,11 +299,11 @@ Available YAML variants (pick **one UI** for your **hardware**):
 ------------------------------------------------------------------------
 
 ### Assets (required for the UI)
-- **Material Design Icons font**: the file `materialdesignicons-webfont.ttf` is included at `esphome/fonts/materialdesignicons-webfont.ttf` (Apache 2.0 license, sourced from [Templarian/MaterialDesign-Webfont](https://github.com/Templarian/MaterialDesign-Webfont)).
+- **Material Design Icons font**: `materialdesignicons-webfont.ttf` is included in each UI variant's `fonts/` folder (Apache 2.0 license, sourced from [Templarian/MaterialDesign-Webfont](https://github.com/Templarian/MaterialDesign-Webfont)).
   - If you change icons in the YAML, ensure the glyph list contains them.
 - **Background images (home-like UI)**:
-  - `esphome/images/smartdisplay_background.png` — landscape (0° and 180°), included.
-  - `esphome/images/smartdisplay_background_90.png` — portrait (90° and 270°), included.
+  - `esphome/home-like/images/smartdisplay_background.png` — landscape (0° and 180°), included.
+  - `esphome/home-like/images/smartdisplay_background_90.png` — portrait (90° and 270°), included.
   - Selected automatically via the `BG_IMAGE` substitution in the ORIENTATION preset block.
 # ⚙️ UI mapping (USER CONFIG)
 
@@ -318,24 +319,31 @@ Your config choice defines the UI style:
 
 ## `home-like.yaml` (tiles)
 - Tiles: TILE1..TILE6
-- Action strings: `tile1_press` .. `tile6_press`
+- Action strings: `tile1_press` .. `tile6_press` (short tap), `tile1_long_press` .. `tile6_long_press` (long press)
 - Each tile can optionally call a Home Assistant service directly (e.g. light toggle, fan preset toggle, cover open/close or cover position).
 - Per-tile OFF label is configurable via `TILE*_LABEL_OFF` (e.g. "Off" / "Aus").
 
-### Long-Press Overlay
+### Long-Press Behavior
 
-Tiles can open a control overlay when long-pressed.
+Each tile's long-press mode is configured via `TILE*_LONGPRESS`:
 
-Depending on the tile configuration, the overlay provides:
+| Mode | Behavior |
+|------|----------|
+| `slider` | Opens a value overlay (brightness / fan speed / cover position) |
+| `action` | Fires a different HA entity than the short tap |
+| `none` | Only publishes the `tileN_long_press` event, no direct action |
+
+**Slider mode** — configure with `TILE*_LONGPRESS_SLIDER` and `TILE*_LONGPRESS_OFF_VALUE`:
 
 | Tile Type | Overlay Control |
 |-----------|----------------|
 | light     | Brightness slider |
 | fan       | Speed / percentage slider |
-| custom    | Optional custom behavior |
 | cover     | Position slider |
 
-The overlay allows quick adjustments without leaving the tile UI.
+**Action mode** — configure with `TILE*_LONGPRESS_ACTION`, `TILE*_LONGPRESS_ACTION_TYPE`, and optionally `TILE*_LONGPRESS_ACTION_SERVICE`. The action entity can be a completely different entity than the short tap target — useful for e.g. triggering a scene or script on long press while toggling a light on short press.
+
+In all modes, the `tileN_long_press` event is always published to `sensor.smartdisplay_action` so Home Assistant automations can react to it independently.
 
 <img src="images/display-home-like.png" width="50%">
 <img src="images/display-home-like-overlay.png" width="50%">
