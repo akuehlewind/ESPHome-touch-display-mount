@@ -1,12 +1,12 @@
 ############################################################
 # SmartDisplay – iOS Home app–inspired Tiles UI
-# Target device: ESP32 + external ILI9341 display + XPT2046 touchscreen
-# Resolution: 320x240
+# Target device: ESP32-2432S028 / Cheap Yellow Display (CYD)
+# Resolution: configurable via ORIENTATION substitutions (landscape 320×240 default)
 #
 # Target hardware
-# - Any ESP32 development board
-# - External ILI9341 SPI display (320x240)
-# - External XPT2046 SPI touchscreen controller
+# - Cheap Yellow Display (ESP32-2432S028 or compatible)
+# - Built-in ILI9341 320x240 display
+# - Built-in XPT2046 touchscreen
 #
 # What this config does
 # - Renders a wallpaper background + a 2x3 grid of “tiles” (LVGL).
@@ -30,8 +30,9 @@
 # - TILE*_TYPE defines the entity kind: light | fan | switch | scene | script | cover
 # - TILE*_TAP_ACTION defines what happens on short tap:
 #   auto | toggle | activate | fan_toggle_preset | custom
-# - TILE*_LONGPRESS defines what happens on long press:
-#   auto | none | brightness | percentage
+# - TILE*_LONGPRESS defines the long press mode: none | slider | action
+#   slider: opens a value overlay — configure with TILE*_LONGPRESS_SLIDER + TILE*_LONGPRESS_OFF_VALUE
+#   action: fires a different entity — configure with TILE*_LONGPRESS_ACTION*
 # - TILE*_VALUE_MODE defines how the value line is rendered:
 #   auto | brightness | percentage | preset | text
 #
@@ -41,16 +42,9 @@
 # - In auto mode, values and long-press behavior are derived from TILE*_TYPE:
 #   light -> brightness, fan -> percentage/preset, scene/script -> text
 #
-# Hardware / wiring used by this variant (external ESP pinout)
-# - Display SPI: CLK=GPIO18, MOSI=GPIO23, MISO=GPIO19
-# - Touch SPI:   CLK=GPIO25, MOSI=GPIO32, MISO=GPIO35
-# - Display: CS=GPIO27, DC=GPIO26, RESET=GPIO16
-# - Touch:   CS=GPIO33, IRQ=GPIO34
-# - Backlight PWM: GPIO4
-#
 # What you must adapt before flashing
 # 1) Secrets: api.encryption.key, ota.password, WiFi credentials (prefer secrets.yaml)
-# 2) SPI pins and control pins if your wiring differs from the example above
+# 2) Pins, touch calibration and transform if your CYD variant differs
 # 3) TILE*_ENTITY / TILE*_STATE_ENTITY: Home Assistant entity IDs you want to control/mirror
 # 4) Touch calibration + transform:
 #    - calibration is device-specific
@@ -84,7 +78,7 @@ substitutions:
   TILE1_ICON: "\U000F0769"                         # Material Design Icons glyph
   TILE1_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover
   TILE1_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
-  TILE1_LONGPRESS: "auto"                          # long press: auto | none | brightness | percentage
+  TILE1_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE1_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE1_LABEL_OFF: "Off"                           # text shown when entity is off
   TILE1_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
@@ -105,7 +99,13 @@ substitutions:
   TILE1_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
   TILE1_TAP_PARAM_KEY: ""                          # optional extra service parameter key
   TILE1_TAP_PARAM_VAL: ""                          # optional extra service parameter value
-  TILE1_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
+  # if LONGPRESS = slider:
+  TILE1_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
+  TILE1_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
+  # if LONGPRESS = action:
+  TILE1_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
+  TILE1_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover (empty = same as TILE*_TYPE)
+  TILE1_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
 
 
   # ============================================================
@@ -119,7 +119,7 @@ substitutions:
   TILE2_ICON: "\U000F095F"                         # Material Design Icons glyph
   TILE2_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover
   TILE2_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
-  TILE2_LONGPRESS: "auto"                          # long press: auto | none | brightness | percentage
+  TILE2_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE2_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE2_LABEL_OFF: "Off"                           # text shown when entity is off
   TILE2_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
@@ -140,7 +140,13 @@ substitutions:
   TILE2_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
   TILE2_TAP_PARAM_KEY: ""                          # optional extra service parameter key
   TILE2_TAP_PARAM_VAL: ""                          # optional extra service parameter value
-  TILE2_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
+  # if LONGPRESS = slider:
+  TILE2_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
+  TILE2_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
+  # if LONGPRESS = action:
+  TILE2_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
+  TILE2_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover (empty = same as TILE*_TYPE)
+  TILE2_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
 
 
   # ============================================================
@@ -154,7 +160,7 @@ substitutions:
   TILE3_ICON: "\U000F08DD"                         # Material Design Icons glyph
   TILE3_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover
   TILE3_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
-  TILE3_LONGPRESS: "auto"                          # long press: auto | none | brightness | percentage
+  TILE3_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE3_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE3_LABEL_OFF: "Off"                           # text shown when entity is off
   TILE3_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
@@ -175,7 +181,13 @@ substitutions:
   TILE3_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
   TILE3_TAP_PARAM_KEY: ""                          # optional extra service parameter key
   TILE3_TAP_PARAM_VAL: ""                          # optional extra service parameter value
-  TILE3_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
+  # if LONGPRESS = slider:
+  TILE3_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
+  TILE3_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
+  # if LONGPRESS = action:
+  TILE3_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
+  TILE3_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover (empty = same as TILE*_TYPE)
+  TILE3_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
 
 
   # ============================================================
@@ -189,7 +201,7 @@ substitutions:
   TILE4_ICON: "\U000F1051"                         # Material Design Icons glyph
   TILE4_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover
   TILE4_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
-  TILE4_LONGPRESS: "auto"                          # long press: auto | none | brightness | percentage
+  TILE4_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE4_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE4_LABEL_OFF: "Off"                           # text shown when entity is off
   TILE4_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
@@ -210,7 +222,13 @@ substitutions:
   TILE4_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
   TILE4_TAP_PARAM_KEY: ""                          # optional extra service parameter key
   TILE4_TAP_PARAM_VAL: ""                          # optional extra service parameter value
-  TILE4_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
+  # if LONGPRESS = slider:
+  TILE4_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
+  TILE4_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
+  # if LONGPRESS = action:
+  TILE4_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
+  TILE4_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover (empty = same as TILE*_TYPE)
+  TILE4_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
 
 
   # ============================================================
@@ -224,7 +242,7 @@ substitutions:
   TILE5_ICON: "\U000F111C"                         # Material Design Icons glyph (mdi:blinds)
   TILE5_TYPE: "cover"                              # tile type: light | fan | switch | scene | script | cover
   TILE5_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
-  TILE5_LONGPRESS: "auto"                          # long press: auto | none | brightness | percentage | cover_position
+  TILE5_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE5_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE5_LABEL_OFF: "Closed"                        # text shown when entity is off (closed)
   TILE5_LABEL_ON: "Open"                           # text shown when entity is on (open)
@@ -245,7 +263,13 @@ substitutions:
   TILE5_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
   TILE5_TAP_PARAM_KEY: ""                          # optional extra service parameter key
   TILE5_TAP_PARAM_VAL: ""                          # optional extra service parameter value
-  TILE5_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
+  # if LONGPRESS = slider:
+  TILE5_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
+  TILE5_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
+  # if LONGPRESS = action:
+  TILE5_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
+  TILE5_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover (empty = same as TILE*_TYPE)
+  TILE5_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
 
 
   # ============================================================
@@ -259,7 +283,7 @@ substitutions:
   TILE6_ICON: "\U000F0D43"                         # Material Design Icons glyph
   TILE6_TYPE: "fan"                                # tile type: light | fan | switch | scene | script | cover
   TILE6_TAP_ACTION: "fan_toggle_preset"            # tap action: auto | toggle | activate | fan_toggle_preset | custom
-  TILE6_LONGPRESS: "auto"                          # long press: auto | none | brightness | percentage
+  TILE6_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE6_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE6_LABEL_OFF: "Off"                           # text shown when entity is off
   TILE6_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
@@ -280,7 +304,13 @@ substitutions:
   TILE6_TAP_SERVICE: "fan.toggle"                  # optional service override, e.g. fan.toggle
   TILE6_TAP_PARAM_KEY: "preset_mode"               # optional extra service parameter key
   TILE6_TAP_PARAM_VAL: "Auto"                      # optional extra service parameter value
-  TILE6_LONGPRESS_OFF_VALUE: "0"                   # slider value when entity is off
+  # if LONGPRESS = slider:
+  TILE6_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
+  TILE6_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
+  # if LONGPRESS = action:
+  TILE6_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
+  TILE6_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover (empty = same as TILE*_TYPE)
+  TILE6_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
 
   # ============================================================
   # ORIENTATION / LAYOUT
@@ -843,25 +873,38 @@ text_sensor:
 switch:
   - platform: restart
     name: "Restart"
-    
-# Two SPI buses:
-# - lcd: display
-# - my_touchscreen: touch controller
+
+# Two SPI buses used by the CYD:
+# - lcd: built-in display
+# - my_touchscreen: built-in touch controller
 spi:
   - id: lcd
-    clk_pin: 18
-    mosi_pin: 23
-    miso_pin: 19
+    clk_pin: GPIO14
+    mosi_pin: GPIO13
+    miso_pin: GPIO12
 
   - id: my_touchscreen
-    clk_pin: 25
-    mosi_pin: 32
-    miso_pin: 35
+    clk_pin: GPIO25
+    mosi_pin: GPIO32
+    miso_pin: GPIO39
 
 output:
   - platform: ledc
-    pin: 4
+    pin: GPIO21
     id: gpio_backlight_pwm
+
+  - platform: ledc
+    id: output_red
+    pin: GPIO4
+    inverted: true
+  - platform: ledc
+    id: output_green
+    pin: GPIO16
+    inverted: true
+  - platform: ledc
+    id: output_blue
+    pin: GPIO17
+    inverted: true
 
 light:
   - platform: monochromatic
@@ -869,6 +912,14 @@ light:
     name: "Power Display Backlight"
     id: back_light
     restore_mode: ALWAYS_ON
+
+  - platform: rgb
+    name: LED
+    red: output_red
+    id: led
+    green: output_green
+    blue: output_blue
+    restore_mode: ALWAYS_OFF
 
 # Touchscreen configuration (XPT2046)
 # IMPORTANT:
@@ -879,7 +930,7 @@ touchscreen:
   id: ts_touch
   spi_id: my_touchscreen
   cs_pin: 33
-  interrupt_pin: 34
+  interrupt_pin: 36
   update_interval: 20ms
   threshold: 300
 
@@ -905,9 +956,8 @@ display:
     spi_id: lcd
     model: ILI9341
     color_palette: 8BIT
-    cs_pin: 27
-    dc_pin: 26
-    reset_pin: 16
+    cs_pin: 15
+    dc_pin: 2
     invert_colors: false
     update_interval: never
     auto_clear_enabled: false
@@ -1085,35 +1135,47 @@ lvgl:
                       return id(tile1_cover_state).state != "closed";
                     return id(ha_state_tile1).state;
             on_long_press:
+              - script.execute: { id: publish_action, action: "tile1_long_press" }
               - if:
                   condition:
-                    lambda: |-
-                      std::string lp = "${TILE1_LONGPRESS}";
-                      std::string type = "${TILE1_TYPE}";
-                      if (lp == "none") return false;
-                      if (lp == "auto") return (type == "light" || type == "fan" || type == "cover");
-                      return (lp == "brightness" || lp == "percentage" || lp == "cover_position");
+                    lambda: "return std::string(\"${TILE1_LONGPRESS}\") == \"action\";"
                   then:
                     - script.execute:
-                        id: open_value_overlay
-                        title: "${TILE1_TITLE}"
-                        entity: "${TILE1_ENTITY}"
-                        tile_type: "${TILE1_TYPE}"
-                        longpress_mode: "${TILE1_LONGPRESS}"
-                        was_on: !lambda |-
-                          if (std::string("${TILE1_TYPE}") == "cover")
-                            return id(tile1_cover_state).state != "closed";
-                          return id(ha_state_tile1).state;
-                        off_value: !lambda "return atoi(\"${TILE1_LONGPRESS_OFF_VALUE}\");"
-                        brightness_value: !lambda "return id(tile1_brightness).state;"
-                        percentage_value: !lambda "return id(tile1_percentage).state;"
-                        position_value: !lambda "return id(tile1_cover_position).state;"
-                        icon_text: "${TILE1_ICON}"
-                        slider_bg_color: ${TILE1_BG_DISABLED_COLOR}
-                        slider_fill_color: ${TILE1_CIRCLE_ACTIVE_COLOR}
-                        slider_icon_color: ${TILE1_ICON_ACTIVE_COLOR}
-                        label_off: "${TILE1_LABEL_OFF}"
-                        label_on: "${TILE1_LABEL_ON}"
+                        id: do_tile_action
+                        tile_type: !lambda |-
+                          std::string t = "${TILE1_LONGPRESS_ACTION_TYPE}";
+                          return t.empty() ? std::string("${TILE1_TYPE}") : t;
+                        tap_action: "activate"
+                        service: "${TILE1_LONGPRESS_ACTION_SERVICE}"
+                        entity_id: "${TILE1_LONGPRESS_ACTION}"
+                        param_key: ""
+                        param_val: ""
+                        was_on: false
+                  else:
+                    - if:
+                        condition:
+                          lambda: "return std::string(\"${TILE1_LONGPRESS}\") == \"slider\";"
+                        then:
+                          - script.execute:
+                              id: open_value_overlay
+                              title: "${TILE1_TITLE}"
+                              entity: "${TILE1_ENTITY}"
+                              tile_type: "${TILE1_TYPE}"
+                              longpress_mode: "${TILE1_LONGPRESS_SLIDER}"
+                              was_on: !lambda |-
+                                if (std::string("${TILE1_TYPE}") == "cover")
+                                  return id(tile1_cover_state).state != "closed";
+                                return id(ha_state_tile1).state;
+                              off_value: !lambda "return atoi(\"${TILE1_LONGPRESS_OFF_VALUE}\");"
+                              brightness_value: !lambda "return id(tile1_brightness).state;"
+                              percentage_value: !lambda "return id(tile1_percentage).state;"
+                              position_value: !lambda "return id(tile1_cover_position).state;"
+                              icon_text: "${TILE1_ICON}"
+                              slider_bg_color: ${TILE1_BG_DISABLED_COLOR}
+                              slider_fill_color: ${TILE1_CIRCLE_ACTIVE_COLOR}
+                              slider_icon_color: ${TILE1_ICON_ACTIVE_COLOR}
+                              label_off: "${TILE1_LABEL_OFF}"
+                              label_on: "${TILE1_LABEL_ON}"
 
         # ---------- TILE 2 ----------
         - obj:
@@ -1173,35 +1235,47 @@ lvgl:
                       return id(tile2_cover_state).state != "closed";
                     return id(ha_state_tile2).state;
             on_long_press:
+              - script.execute: { id: publish_action, action: "tile2_long_press" }
               - if:
                   condition:
-                    lambda: |-
-                      std::string lp = "${TILE2_LONGPRESS}";
-                      std::string type = "${TILE2_TYPE}";
-                      if (lp == "none") return false;
-                      if (lp == "auto") return (type == "light" || type == "fan" || type == "cover");
-                      return (lp == "brightness" || lp == "percentage" || lp == "cover_position");
+                    lambda: "return std::string(\"${TILE2_LONGPRESS}\") == \"action\";"
                   then:
                     - script.execute:
-                        id: open_value_overlay
-                        title: "${TILE2_TITLE}"
-                        entity: "${TILE2_ENTITY}"
-                        tile_type: "${TILE2_TYPE}"
-                        longpress_mode: "${TILE2_LONGPRESS}"
-                        was_on: !lambda |-
-                          if (std::string("${TILE2_TYPE}") == "cover")
-                            return id(tile2_cover_state).state != "closed";
-                          return id(ha_state_tile2).state;
-                        off_value: !lambda "return atoi(\"${TILE2_LONGPRESS_OFF_VALUE}\");"
-                        brightness_value: !lambda "return id(tile2_brightness).state;"
-                        percentage_value: !lambda "return id(tile2_percentage).state;"
-                        position_value: !lambda "return id(tile2_cover_position).state;"
-                        icon_text: "${TILE2_ICON}"
-                        slider_bg_color: ${TILE2_BG_DISABLED_COLOR}
-                        slider_fill_color: ${TILE2_CIRCLE_ACTIVE_COLOR}
-                        slider_icon_color: ${TILE2_ICON_ACTIVE_COLOR}
-                        label_off: "${TILE2_LABEL_OFF}"
-                        label_on: "${TILE2_LABEL_ON}"
+                        id: do_tile_action
+                        tile_type: !lambda |-
+                          std::string t = "${TILE2_LONGPRESS_ACTION_TYPE}";
+                          return t.empty() ? std::string("${TILE2_TYPE}") : t;
+                        tap_action: "activate"
+                        service: "${TILE2_LONGPRESS_ACTION_SERVICE}"
+                        entity_id: "${TILE2_LONGPRESS_ACTION}"
+                        param_key: ""
+                        param_val: ""
+                        was_on: false
+                  else:
+                    - if:
+                        condition:
+                          lambda: "return std::string(\"${TILE2_LONGPRESS}\") == \"slider\";"
+                        then:
+                          - script.execute:
+                              id: open_value_overlay
+                              title: "${TILE2_TITLE}"
+                              entity: "${TILE2_ENTITY}"
+                              tile_type: "${TILE2_TYPE}"
+                              longpress_mode: "${TILE2_LONGPRESS_SLIDER}"
+                              was_on: !lambda |-
+                                if (std::string("${TILE2_TYPE}") == "cover")
+                                  return id(tile2_cover_state).state != "closed";
+                                return id(ha_state_tile2).state;
+                              off_value: !lambda "return atoi(\"${TILE2_LONGPRESS_OFF_VALUE}\");"
+                              brightness_value: !lambda "return id(tile2_brightness).state;"
+                              percentage_value: !lambda "return id(tile2_percentage).state;"
+                              position_value: !lambda "return id(tile2_cover_position).state;"
+                              icon_text: "${TILE2_ICON}"
+                              slider_bg_color: ${TILE2_BG_DISABLED_COLOR}
+                              slider_fill_color: ${TILE2_CIRCLE_ACTIVE_COLOR}
+                              slider_icon_color: ${TILE2_ICON_ACTIVE_COLOR}
+                              label_off: "${TILE2_LABEL_OFF}"
+                              label_on: "${TILE2_LABEL_ON}"
 
         # ---------- TILE 3 ----------
         - obj:
@@ -1261,35 +1335,47 @@ lvgl:
                       return id(tile3_cover_state).state != "closed";
                     return id(ha_state_tile3).state;
             on_long_press:
+              - script.execute: { id: publish_action, action: "tile3_long_press" }
               - if:
                   condition:
-                    lambda: |-
-                      std::string lp = "${TILE3_LONGPRESS}";
-                      std::string type = "${TILE3_TYPE}";
-                      if (lp == "none") return false;
-                      if (lp == "auto") return (type == "light" || type == "fan" || type == "cover");
-                      return (lp == "brightness" || lp == "percentage" || lp == "cover_position");
+                    lambda: "return std::string(\"${TILE3_LONGPRESS}\") == \"action\";"
                   then:
                     - script.execute:
-                        id: open_value_overlay
-                        title: "${TILE3_TITLE}"
-                        entity: "${TILE3_ENTITY}"
-                        tile_type: "${TILE3_TYPE}"
-                        longpress_mode: "${TILE3_LONGPRESS}"
-                        was_on: !lambda |-
-                          if (std::string("${TILE3_TYPE}") == "cover")
-                            return id(tile3_cover_state).state != "closed";
-                          return id(ha_state_tile3).state;
-                        off_value: !lambda "return atoi(\"${TILE3_LONGPRESS_OFF_VALUE}\");"
-                        brightness_value: !lambda "return id(tile3_brightness).state;"
-                        percentage_value: !lambda "return id(tile3_percentage).state;"
-                        position_value: !lambda "return id(tile3_cover_position).state;"
-                        icon_text: "${TILE3_ICON}"
-                        slider_bg_color: ${TILE3_BG_DISABLED_COLOR}
-                        slider_fill_color: ${TILE3_CIRCLE_ACTIVE_COLOR}
-                        slider_icon_color: ${TILE3_ICON_ACTIVE_COLOR}
-                        label_off: "${TILE3_LABEL_OFF}"
-                        label_on: "${TILE3_LABEL_ON}"
+                        id: do_tile_action
+                        tile_type: !lambda |-
+                          std::string t = "${TILE3_LONGPRESS_ACTION_TYPE}";
+                          return t.empty() ? std::string("${TILE3_TYPE}") : t;
+                        tap_action: "activate"
+                        service: "${TILE3_LONGPRESS_ACTION_SERVICE}"
+                        entity_id: "${TILE3_LONGPRESS_ACTION}"
+                        param_key: ""
+                        param_val: ""
+                        was_on: false
+                  else:
+                    - if:
+                        condition:
+                          lambda: "return std::string(\"${TILE3_LONGPRESS}\") == \"slider\";"
+                        then:
+                          - script.execute:
+                              id: open_value_overlay
+                              title: "${TILE3_TITLE}"
+                              entity: "${TILE3_ENTITY}"
+                              tile_type: "${TILE3_TYPE}"
+                              longpress_mode: "${TILE3_LONGPRESS_SLIDER}"
+                              was_on: !lambda |-
+                                if (std::string("${TILE3_TYPE}") == "cover")
+                                  return id(tile3_cover_state).state != "closed";
+                                return id(ha_state_tile3).state;
+                              off_value: !lambda "return atoi(\"${TILE3_LONGPRESS_OFF_VALUE}\");"
+                              brightness_value: !lambda "return id(tile3_brightness).state;"
+                              percentage_value: !lambda "return id(tile3_percentage).state;"
+                              position_value: !lambda "return id(tile3_cover_position).state;"
+                              icon_text: "${TILE3_ICON}"
+                              slider_bg_color: ${TILE3_BG_DISABLED_COLOR}
+                              slider_fill_color: ${TILE3_CIRCLE_ACTIVE_COLOR}
+                              slider_icon_color: ${TILE3_ICON_ACTIVE_COLOR}
+                              label_off: "${TILE3_LABEL_OFF}"
+                              label_on: "${TILE3_LABEL_ON}"
 
         # ---------- TILE 4 ----------
         - obj:
@@ -1349,35 +1435,47 @@ lvgl:
                       return id(tile4_cover_state).state != "closed";
                     return id(ha_state_tile4).state;
             on_long_press:
+              - script.execute: { id: publish_action, action: "tile4_long_press" }
               - if:
                   condition:
-                    lambda: |-
-                      std::string lp = "${TILE4_LONGPRESS}";
-                      std::string type = "${TILE4_TYPE}";
-                      if (lp == "none") return false;
-                      if (lp == "auto") return (type == "light" || type == "fan" || type == "cover");
-                      return (lp == "brightness" || lp == "percentage" || lp == "cover_position");
+                    lambda: "return std::string(\"${TILE4_LONGPRESS}\") == \"action\";"
                   then:
                     - script.execute:
-                        id: open_value_overlay
-                        title: "${TILE4_TITLE}"
-                        entity: "${TILE4_ENTITY}"
-                        tile_type: "${TILE4_TYPE}"
-                        longpress_mode: "${TILE4_LONGPRESS}"
-                        was_on: !lambda |-
-                          if (std::string("${TILE4_TYPE}") == "cover")
-                            return id(tile4_cover_state).state != "closed";
-                          return id(ha_state_tile4).state;
-                        off_value: !lambda "return atoi(\"${TILE4_LONGPRESS_OFF_VALUE}\");"
-                        brightness_value: !lambda "return id(tile4_brightness).state;"
-                        percentage_value: !lambda "return id(tile4_percentage).state;"
-                        position_value: !lambda "return id(tile4_cover_position).state;"
-                        icon_text: "${TILE4_ICON}"
-                        slider_bg_color: ${TILE4_BG_DISABLED_COLOR}
-                        slider_fill_color: ${TILE4_CIRCLE_ACTIVE_COLOR}
-                        slider_icon_color: ${TILE4_ICON_ACTIVE_COLOR}
-                        label_off: "${TILE4_LABEL_OFF}"
-                        label_on: "${TILE4_LABEL_ON}"
+                        id: do_tile_action
+                        tile_type: !lambda |-
+                          std::string t = "${TILE4_LONGPRESS_ACTION_TYPE}";
+                          return t.empty() ? std::string("${TILE4_TYPE}") : t;
+                        tap_action: "activate"
+                        service: "${TILE4_LONGPRESS_ACTION_SERVICE}"
+                        entity_id: "${TILE4_LONGPRESS_ACTION}"
+                        param_key: ""
+                        param_val: ""
+                        was_on: false
+                  else:
+                    - if:
+                        condition:
+                          lambda: "return std::string(\"${TILE4_LONGPRESS}\") == \"slider\";"
+                        then:
+                          - script.execute:
+                              id: open_value_overlay
+                              title: "${TILE4_TITLE}"
+                              entity: "${TILE4_ENTITY}"
+                              tile_type: "${TILE4_TYPE}"
+                              longpress_mode: "${TILE4_LONGPRESS_SLIDER}"
+                              was_on: !lambda |-
+                                if (std::string("${TILE4_TYPE}") == "cover")
+                                  return id(tile4_cover_state).state != "closed";
+                                return id(ha_state_tile4).state;
+                              off_value: !lambda "return atoi(\"${TILE4_LONGPRESS_OFF_VALUE}\");"
+                              brightness_value: !lambda "return id(tile4_brightness).state;"
+                              percentage_value: !lambda "return id(tile4_percentage).state;"
+                              position_value: !lambda "return id(tile4_cover_position).state;"
+                              icon_text: "${TILE4_ICON}"
+                              slider_bg_color: ${TILE4_BG_DISABLED_COLOR}
+                              slider_fill_color: ${TILE4_CIRCLE_ACTIVE_COLOR}
+                              slider_icon_color: ${TILE4_ICON_ACTIVE_COLOR}
+                              label_off: "${TILE4_LABEL_OFF}"
+                              label_on: "${TILE4_LABEL_ON}"
 
         # ---------- TILE 5 ----------
         - obj:
@@ -1437,35 +1535,47 @@ lvgl:
                       return id(tile5_cover_state).state != "closed";
                     return id(ha_state_tile5).state;
             on_long_press:
+              - script.execute: { id: publish_action, action: "tile5_long_press" }
               - if:
                   condition:
-                    lambda: |-
-                      std::string lp = "${TILE5_LONGPRESS}";
-                      std::string type = "${TILE5_TYPE}";
-                      if (lp == "none") return false;
-                      if (lp == "auto") return (type == "light" || type == "fan" || type == "cover");
-                      return (lp == "brightness" || lp == "percentage" || lp == "cover_position");
+                    lambda: "return std::string(\"${TILE5_LONGPRESS}\") == \"action\";"
                   then:
                     - script.execute:
-                        id: open_value_overlay
-                        title: "${TILE5_TITLE}"
-                        entity: "${TILE5_ENTITY}"
-                        tile_type: "${TILE5_TYPE}"
-                        longpress_mode: "${TILE5_LONGPRESS}"
-                        was_on: !lambda |-
-                          if (std::string("${TILE5_TYPE}") == "cover")
-                            return id(tile5_cover_state).state != "closed";
-                          return id(ha_state_tile5).state;
-                        off_value: !lambda "return atoi(\"${TILE5_LONGPRESS_OFF_VALUE}\");"
-                        brightness_value: !lambda "return id(tile5_brightness).state;"
-                        percentage_value: !lambda "return id(tile5_percentage).state;"
-                        position_value: !lambda "return id(tile5_cover_position).state;"
-                        icon_text: "${TILE5_ICON}"
-                        slider_bg_color: ${TILE5_BG_DISABLED_COLOR}
-                        slider_fill_color: ${TILE5_CIRCLE_ACTIVE_COLOR}
-                        slider_icon_color: ${TILE5_ICON_ACTIVE_COLOR}
-                        label_off: "${TILE5_LABEL_OFF}"
-                        label_on: "${TILE5_LABEL_ON}"
+                        id: do_tile_action
+                        tile_type: !lambda |-
+                          std::string t = "${TILE5_LONGPRESS_ACTION_TYPE}";
+                          return t.empty() ? std::string("${TILE5_TYPE}") : t;
+                        tap_action: "activate"
+                        service: "${TILE5_LONGPRESS_ACTION_SERVICE}"
+                        entity_id: "${TILE5_LONGPRESS_ACTION}"
+                        param_key: ""
+                        param_val: ""
+                        was_on: false
+                  else:
+                    - if:
+                        condition:
+                          lambda: "return std::string(\"${TILE5_LONGPRESS}\") == \"slider\";"
+                        then:
+                          - script.execute:
+                              id: open_value_overlay
+                              title: "${TILE5_TITLE}"
+                              entity: "${TILE5_ENTITY}"
+                              tile_type: "${TILE5_TYPE}"
+                              longpress_mode: "${TILE5_LONGPRESS_SLIDER}"
+                              was_on: !lambda |-
+                                if (std::string("${TILE5_TYPE}") == "cover")
+                                  return id(tile5_cover_state).state != "closed";
+                                return id(ha_state_tile5).state;
+                              off_value: !lambda "return atoi(\"${TILE5_LONGPRESS_OFF_VALUE}\");"
+                              brightness_value: !lambda "return id(tile5_brightness).state;"
+                              percentage_value: !lambda "return id(tile5_percentage).state;"
+                              position_value: !lambda "return id(tile5_cover_position).state;"
+                              icon_text: "${TILE5_ICON}"
+                              slider_bg_color: ${TILE5_BG_DISABLED_COLOR}
+                              slider_fill_color: ${TILE5_CIRCLE_ACTIVE_COLOR}
+                              slider_icon_color: ${TILE5_ICON_ACTIVE_COLOR}
+                              label_off: "${TILE5_LABEL_OFF}"
+                              label_on: "${TILE5_LABEL_ON}"
 
         # ---------- TILE 6 ----------
         - obj:
@@ -1525,35 +1635,47 @@ lvgl:
                       return id(tile6_cover_state).state != "closed";
                     return id(ha_state_tile6).state;
             on_long_press:
+              - script.execute: { id: publish_action, action: "tile6_long_press" }
               - if:
                   condition:
-                    lambda: |-
-                      std::string lp = "${TILE6_LONGPRESS}";
-                      std::string type = "${TILE6_TYPE}";
-                      if (lp == "none") return false;
-                      if (lp == "auto") return (type == "light" || type == "fan" || type == "cover");
-                      return (lp == "brightness" || lp == "percentage" || lp == "cover_position");
+                    lambda: "return std::string(\"${TILE6_LONGPRESS}\") == \"action\";"
                   then:
                     - script.execute:
-                        id: open_value_overlay
-                        title: "${TILE6_TITLE}"
-                        entity: "${TILE6_ENTITY}"
-                        tile_type: "${TILE6_TYPE}"
-                        longpress_mode: "${TILE6_LONGPRESS}"
-                        was_on: !lambda |-
-                          if (std::string("${TILE6_TYPE}") == "cover")
-                            return id(tile6_cover_state).state != "closed";
-                          return id(ha_state_tile6).state;
-                        off_value: !lambda "return atoi(\"${TILE6_LONGPRESS_OFF_VALUE}\");"
-                        brightness_value: !lambda "return id(tile6_brightness).state;"
-                        percentage_value: !lambda "return id(tile6_percentage).state;"
-                        position_value: !lambda "return id(tile6_cover_position).state;"
-                        icon_text: "${TILE6_ICON}"
-                        slider_bg_color: ${TILE6_BG_DISABLED_COLOR}
-                        slider_fill_color: ${TILE6_CIRCLE_ACTIVE_COLOR}
-                        slider_icon_color: ${TILE6_ICON_ACTIVE_COLOR}
-                        label_off: "${TILE6_LABEL_OFF}"
-                        label_on: "${TILE6_LABEL_ON}"
+                        id: do_tile_action
+                        tile_type: !lambda |-
+                          std::string t = "${TILE6_LONGPRESS_ACTION_TYPE}";
+                          return t.empty() ? std::string("${TILE6_TYPE}") : t;
+                        tap_action: "activate"
+                        service: "${TILE6_LONGPRESS_ACTION_SERVICE}"
+                        entity_id: "${TILE6_LONGPRESS_ACTION}"
+                        param_key: ""
+                        param_val: ""
+                        was_on: false
+                  else:
+                    - if:
+                        condition:
+                          lambda: "return std::string(\"${TILE6_LONGPRESS}\") == \"slider\";"
+                        then:
+                          - script.execute:
+                              id: open_value_overlay
+                              title: "${TILE6_TITLE}"
+                              entity: "${TILE6_ENTITY}"
+                              tile_type: "${TILE6_TYPE}"
+                              longpress_mode: "${TILE6_LONGPRESS_SLIDER}"
+                              was_on: !lambda |-
+                                if (std::string("${TILE6_TYPE}") == "cover")
+                                  return id(tile6_cover_state).state != "closed";
+                                return id(ha_state_tile6).state;
+                              off_value: !lambda "return atoi(\"${TILE6_LONGPRESS_OFF_VALUE}\");"
+                              brightness_value: !lambda "return id(tile6_brightness).state;"
+                              percentage_value: !lambda "return id(tile6_percentage).state;"
+                              position_value: !lambda "return id(tile6_cover_position).state;"
+                              icon_text: "${TILE6_ICON}"
+                              slider_bg_color: ${TILE6_BG_DISABLED_COLOR}
+                              slider_fill_color: ${TILE6_CIRCLE_ACTIVE_COLOR}
+                              slider_icon_color: ${TILE6_ICON_ACTIVE_COLOR}
+                              label_off: "${TILE6_LABEL_OFF}"
+                              label_on: "${TILE6_LABEL_ON}"
 
         # ---------- VALUE SLIDER OVERLAY ----------
         - obj:
@@ -1723,10 +1845,14 @@ script:
     parameters:
       action: string
     then:
+      - logger.log:
+          level: INFO
+          format: "publish_action: %s"
+          args: ["action.c_str()"]
       - text_sensor.template.publish:
           id: smartdisplay_action
           state: !lambda 'return action;'
-      - delay: 200ms
+      - delay: 500ms
       - text_sensor.template.publish:
           id: smartdisplay_action
           state: ""
@@ -1759,7 +1885,7 @@ script:
             }
           } else {
             if (pct <= 0) {
-              value_text = "${TILE1_LABEL_OFF}";
+              value_text = id(active_label_off).c_str();
             } else {
               char buf[20];
               snprintf(buf, sizeof(buf), "%d%s", pct, id(active_value_suffix).c_str());
@@ -1833,7 +1959,7 @@ script:
   # - service: optional Home Assistant service override
   # - entity_id: target entity
   # - param_key / param_val: optional parameters for custom services
-  # - was_on: previous entity state
+  # - was_on: previous entity state (pass false for longpress actions)
   #
   # Behavior
   #
