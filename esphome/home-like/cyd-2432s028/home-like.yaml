@@ -1811,34 +1811,33 @@ script:
             lambda: 'return std::string("${AUTO_DIM}") == "true";'
           then:
             - lambda: |-
-                id(display_dimmed) = true;
-            - light.turn_on:
-                id: back_light
-                brightness: !lambda |-
-                  int dim_value = atoi("${DIM_BRIGHTNESS}");
+                int dim_value = atoi("${DIM_BRIGHTNESS}");
+                int max_value = atoi("${MAX_BRIGHTNESS}");
 
-                  if (std::string("${NIGHT_MODE}") == "true") {
-                    auto now = id(homeassistant_time).now();
-                    int hour = now.hour;
-
-                    int start_hour = atoi("${NIGHT_START_HOUR}");
-                    int end_hour = atoi("${NIGHT_END_HOUR}");
-
-                    bool is_night = false;
-
-                    if (start_hour < end_hour) {
-                      is_night = (hour >= start_hour && hour < end_hour);
-                    } else {
-                      is_night = (hour >= start_hour || hour < end_hour);
-                    }
-
-                    if (is_night) {
-                      dim_value = atoi("${NIGHT_DIM_BRIGHTNESS}");
-                    }
+                if (std::string("${NIGHT_MODE}") == "true") {
+                  auto now = id(homeassistant_time).now();
+                  int hour = now.hour;
+                  int start_hour = atoi("${NIGHT_START_HOUR}");
+                  int end_hour = atoi("${NIGHT_END_HOUR}");
+                  bool is_night = false;
+                  if (start_hour < end_hour) {
+                    is_night = (hour >= start_hour && hour < end_hour);
+                  } else {
+                    is_night = (hour >= start_hour || hour < end_hour);
                   }
+                  if (is_night) {
+                    dim_value = atoi("${NIGHT_DIM_BRIGHTNESS}");
+                  }
+                }
 
-                  return dim_value / 100.0f;
-            - lvgl.widget.show: dim_wake_overlay
+                id(back_light).turn_on().set_brightness(dim_value / 100.0f).perform();
+
+                // Always mark as dimmed to stop the interval from re-firing
+                id(display_dimmed) = true;
+                // Only show the touch-blocking overlay when brightness actually changes
+                if (dim_value < max_value) {
+                  lv_obj_clear_flag(id(dim_wake_overlay), LV_OBJ_FLAG_HIDDEN);
+                }
 
   - id: publish_action
     mode: queued
