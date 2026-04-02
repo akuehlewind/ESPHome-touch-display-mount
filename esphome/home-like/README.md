@@ -50,6 +50,24 @@ Use this file if you have a **separate ILI9341 display module** wired to a gener
 
 ---
 
+## Credentials — secrets.yaml
+
+All sensitive values (API key, OTA password, WiFi credentials) are referenced via ESPHome's `!secret` system, so nothing sensitive is stored in the YAML itself.
+
+Copy `../secrets.yaml.example` to `secrets.yaml` (one level up, next to your ESPHome config root) and fill in your values:
+
+```yaml
+wifi_ssid: "Your WiFi Network Name"
+wifi_password: "your_wifi_password"
+smartdisplay_api_key: "your_32_byte_base64_api_key"
+ota_password: "your_ota_password"
+wifi_ap_password: "your_fallback_password"
+```
+
+`secrets.yaml` is gitignored and never committed.
+
+---
+
 ## Required assets — copy these alongside your YAML
 
 When you copy the YAML into ESPHome, you also need to copy the following folders **next to the YAML file** (or adjust the paths inside the YAML):

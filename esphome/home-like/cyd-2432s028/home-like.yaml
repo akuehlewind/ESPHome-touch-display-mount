@@ -449,7 +449,15 @@ substitutions:
   # TILE_TITLE_X: "4"
   # TILE_TITLE_Y: "38"
   # TILE_VALUE_X: "4"
-  # TILE_VALUE_Y: "52"  
+  # TILE_VALUE_Y: "52"
+
+# ============================================================
+# No need to edit below this line.
+# All configuration is done via the substitutions above.
+# Credentials are managed in secrets.yaml (see secrets.yaml.example).
+# The Material Design Icons font is included at fonts/materialdesignicons-webfont.ttf (Apache 2.0).
+# Source: https://github.com/Templarian/MaterialDesign-Webfont
+# ============================================================
 
 esphome:
   name: smartdisplay
@@ -472,28 +480,23 @@ esp32:
 
 logger:
 
+# Credentials are loaded from secrets.yaml — copy secrets.yaml.example to secrets.yaml and fill in your values.
 api:
   encryption:
-    key: "CHANGE_ME"   # set your own 32-character encryption key
+    key: !secret smartdisplay_api_key
 
 ota:
   - platform: esphome
-    password: "CHANGE_ME" # set your own OTA password
+    password: !secret ota_password
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   ap:
     ssid: "Smartdisplay Fallback Hotspot"
-    password: "CHANGE_ME" # set your own fallback hotspot password
+    password: !secret wifi_ap_password
 
 captive_portal:
-
-# ============================================================
-# No need to edit down here
-# The Material Design Icons font is included at fonts/materialdesignicons-webfont.ttf (Apache 2.0).
-# Source: https://github.com/Templarian/MaterialDesign-Webfont
-# ============================================================
 
 interval:
   - interval: 1s
