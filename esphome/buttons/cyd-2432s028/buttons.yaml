@@ -265,7 +265,6 @@ spi:
   - id: lcd
     clk_pin: GPIO14
     mosi_pin: GPIO13
-    miso_pin: GPIO12
 
   - id: my_touchscreen
     clk_pin: GPIO25
@@ -331,11 +330,10 @@ touchscreen:
 
 # Display configuration (ILI9341)
 display:
-  - platform: ili9xxx
+  - platform: mipi_spi
     id: my_display
     spi_id: lcd
     model: ILI9341
-    color_palette: 8BIT
     cs_pin: 15
     dc_pin: 2
     invert_colors: false

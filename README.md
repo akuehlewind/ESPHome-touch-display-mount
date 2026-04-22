@@ -120,7 +120,7 @@ This keeps the tile UI clean while still allowing detailed control.
 
 - Home Assistant installed
 - ESPHome Add-on installed
-- ESPHome 2026.2+
+- ESPHome 2026.4+
 - Home Assistant 2026.2+
 - Basic ESPHome knowledge
 - 3D printer access (optional)
@@ -274,7 +274,7 @@ Use the wiring table below, which shows how to put everything together.
 2.  Create a new device
 3.  Copy the appropriate YAML file
 4.  Edit the **USER CONFIG / substitutions** section at the top of the YAML (entities, labels, icons)
-5.  Adjust WiFi credentials
+5.  Copy `esphome/secrets.yaml.example` to `secrets.yaml` and fill in your credentials
 6.  Flash the device
 
 Available YAML variants (pick **one UI** for your **hardware**):
@@ -391,6 +391,32 @@ are **identical** (they must always match).
 ------------------------------------------------------------------------
 # Troubleshooting
 
+### White screen after ESPHome update (2026.4+)
+
+If the display stays **completely white** after updating ESPHome but the device still connects to Home Assistant, the cause is a breaking change in ESPHome 2026.4: the `ili9xxx` display platform was deprecated in favor of `mipi_spi`.
+
+The YAML configs in this repo already use `mipi_spi`. If you are on an **older ESPHome version (before 2026.4)** and `mipi_spi` is not available yet, change the display platform back to `ili9xxx` and add `color_palette: 8BIT`:
+
+```yaml
+display:
+  - platform: ili9xxx
+    model: ILI9341
+    color_palette: 8BIT
+    ...
+```
+
+Also re-add `miso_pin` to the LCD SPI bus:
+
+```yaml
+spi:
+  - id: lcd
+    clk_pin: GPIO14   # or GPIO18 for the external ESP32 variant
+    mosi_pin: GPIO13  # or GPIO23
+    miso_pin: GPIO12  # or GPIO19 — add this back for older ESPHome
+```
+
+---
+
 ### Corrupted / garbled display output
 
 If the display shows **corrupted graphics, horizontal lines, or random pixels**, the most common cause is a **different display controller on your Cheap Yellow Display**.
@@ -402,7 +428,7 @@ Try changing the display model in the YAML:
 
 ```yaml
 display:
-  - platform: ili9xxx
+  - platform: mipi_spi
     model: ILI9341
 ```
 

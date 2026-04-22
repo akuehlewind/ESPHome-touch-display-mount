@@ -891,7 +891,6 @@ spi:
   - id: lcd
     clk_pin: 18
     mosi_pin: 23
-    miso_pin: 19
 
   - id: my_touchscreen
     clk_pin: 25
@@ -940,11 +939,10 @@ touchscreen:
 
 # Display configuration (ILI9341)
 display:
-  - platform: ili9xxx
+  - platform: mipi_spi
     id: my_display
     spi_id: lcd
     model: ILI9341
-    color_palette: 8BIT
     cs_pin: 27
     dc_pin: 26
     reset_pin: 16
