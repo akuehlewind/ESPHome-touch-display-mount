@@ -5,6 +5,13 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-04-26
+
+### Fixed
+- Duplicate MDI glyph error when the same icon is used on multiple tiles — font glyph list is now driven by a dedicated `MDI_GLYPH_1..6` substitution block instead of the per-tile `TILE*_ICON` variables, so each glyph appears exactly once regardless of how many tiles share it
+
+---
+
 ## 2026-04-22
 
 ### Fixed

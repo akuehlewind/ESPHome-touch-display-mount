@@ -21,7 +21,8 @@
 #
 # How to customize
 # 1) Edit the TILE1..TILE6 blocks below.
-# 2) If you change icons, ensure those glyphs are included in the MDI font glyph list.
+# 2) If you change icons, update the FONT GLYPHS block in the substitutions below.
+#    Each glyph must appear exactly once — same icon on multiple tiles is fine, just list it once.
 # 3) Provide background images (see ORIENTATION section for which file each preset uses):
 #    - images/smartdisplay_background.png    (0° and 180°)
 #    - images/smartdisplay_background_90.png (90° and 270°)
@@ -75,6 +76,20 @@ substitutions:
   NIGHT_DIM_BRIGHTNESS: "18"                       # backlight brightness in percent at night
 
   # ============================================================
+  # FONT GLYPHS
+  # List every unique MDI icon used across your tiles — each value must appear exactly once.
+  # Reusing the same icon on multiple tiles is fine: just list that glyph once here.
+  # If you use fewer than 6 unique icons, leave the extra slots with their default values
+  # (unused glyphs add a few bytes to the font but cause no errors).
+  # ============================================================
+  MDI_GLYPH_1: "\U000F0769"
+  MDI_GLYPH_2: "\U000F095F"
+  MDI_GLYPH_3: "\U000F08DD"
+  MDI_GLYPH_4: "\U000F1051"
+  MDI_GLYPH_5: "\U000F111C"
+  MDI_GLYPH_6: "\U000F0D43"
+
+  # ============================================================
   # TILE 1
   # ============================================================
 
@@ -82,7 +97,7 @@ substitutions:
   TILE1_ENTITY: "light.ceiling"                    # main Home Assistant entity for this tile
   TILE1_STATE_ENTITY: "light.ceiling"              # entity used for active/inactive state styling
   TILE1_TITLE: "Ceiling"                           # tile title shown in the UI
-  TILE1_ICON: "\U000F0769"                         # Material Design Icons glyph
+  TILE1_ICON: "\U000F0769"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE1_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover
   TILE1_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
   TILE1_LONGPRESS: "slider"                        # long press mode: none | slider | action
@@ -123,7 +138,7 @@ substitutions:
   TILE2_ENTITY: "light.desk"                       # main Home Assistant entity for this tile
   TILE2_STATE_ENTITY: "light.desk"                 # entity used for active/inactive state styling
   TILE2_TITLE: "Desk"                              # tile title shown in the UI
-  TILE2_ICON: "\U000F095F"                         # Material Design Icons glyph
+  TILE2_ICON: "\U000F095F"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE2_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover
   TILE2_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
   TILE2_LONGPRESS: "slider"                        # long press mode: none | slider | action
@@ -164,7 +179,7 @@ substitutions:
   TILE3_ENTITY: "light.floor_lamp"                 # main Home Assistant entity for this tile
   TILE3_STATE_ENTITY: "light.floor_lamp"           # entity used for active/inactive state styling
   TILE3_TITLE: "Floor lamp"                        # tile title shown in the UI
-  TILE3_ICON: "\U000F08DD"                         # Material Design Icons glyph
+  TILE3_ICON: "\U000F08DD"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE3_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover
   TILE3_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
   TILE3_LONGPRESS: "slider"                        # long press mode: none | slider | action
@@ -205,7 +220,7 @@ substitutions:
   TILE4_ENTITY: "light.desk_ambient"               # main Home Assistant entity for this tile
   TILE4_STATE_ENTITY: "light.desk_ambient"         # entity used for active/inactive state styling  
   TILE4_TITLE: "Ambient"                           # tile title shown in the UI
-  TILE4_ICON: "\U000F1051"                         # Material Design Icons glyph
+  TILE4_ICON: "\U000F1051"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE4_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover
   TILE4_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
   TILE4_LONGPRESS: "slider"                        # long press mode: none | slider | action
@@ -246,7 +261,7 @@ substitutions:
   TILE5_ENTITY: "cover.living_room"                # main Home Assistant entity for this tile
   TILE5_STATE_ENTITY: "cover.living_room"          # entity used for active/inactive state styling
   TILE5_TITLE: "Cover"                             # tile title shown in the UI
-  TILE5_ICON: "\U000F111C"                         # Material Design Icons glyph (mdi:blinds)
+  TILE5_ICON: "\U000F111C"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE5_TYPE: "cover"                              # tile type: light | fan | switch | scene | script | cover
   TILE5_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
   TILE5_LONGPRESS: "slider"                        # long press mode: none | slider | action
@@ -287,7 +302,7 @@ substitutions:
   TILE6_ENTITY: "fan.air_purifier"                 # main Home Assistant entity for this tile
   TILE6_STATE_ENTITY: "fan.air_purifier"           # entity used for active/inactive state styling  
   TILE6_TITLE: "Purifier"                          # tile title shown in the UI
-  TILE6_ICON: "\U000F0D43"                         # Material Design Icons glyph
+  TILE6_ICON: "\U000F0D43"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE6_TYPE: "fan"                                # tile type: light | fan | switch | scene | script | cover
   TILE6_TAP_ACTION: "fan_toggle_preset"            # tap action: auto | toggle | activate | fan_toggle_preset | custom
   TILE6_LONGPRESS: "slider"                        # long press mode: none | slider | action
@@ -630,12 +645,12 @@ font:
     id: materialdesign_icons
     size: 28
     glyphs:
-      - "${TILE1_ICON}"
-      - "${TILE2_ICON}"
-      - "${TILE3_ICON}"
-      - "${TILE4_ICON}"
-      - "${TILE5_ICON}"
-      - "${TILE6_ICON}"
+      - "${MDI_GLYPH_1}"
+      - "${MDI_GLYPH_2}"
+      - "${MDI_GLYPH_3}"
+      - "${MDI_GLYPH_4}"
+      - "${MDI_GLYPH_5}"
+      - "${MDI_GLYPH_6}"
 
 image:
   - file: "${BG_IMAGE}"
