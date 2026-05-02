@@ -5,6 +5,13 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-05-02
+
+### Docs
+- Added assembly guides for both hardware variants (`3d_print/ESP32-2432S028/ASSEMBLY.md` and `3d_print/ILI9341-only-display/ASSEMBLY.md`) covering print parts, mounting order, power wiring, and display installation
+
+---
+
 ## 2026-04-26
 
 ### Fixed
