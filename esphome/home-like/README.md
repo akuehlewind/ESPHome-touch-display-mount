@@ -13,6 +13,7 @@ This folder contains the main, actively maintained UI: a wallpaper-backed 2×3 t
 - Supports lights, fans, switches, covers, scenes, and scripts per tile
 - Real-time state synchronization with Home Assistant
 - Long press opens a value overlay (brightness / fan speed / cover position slider)
+- Color-capable lights can open a color/temperature picker from the brightness overlay
 - Long press can alternatively fire a completely different HA entity than the short tap
 - Orientation presets: 0°, 90°, 180°, 270° — uncomment to switch
 - Auto-dim and night mode with configurable brightness levels

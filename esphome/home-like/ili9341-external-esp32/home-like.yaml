@@ -592,6 +592,34 @@ globals:
     type: std::string
     restore_value: no
 
+  - id: active_title
+    type: std::string
+    restore_value: no
+
+  - id: active_icon_text
+    type: std::string
+    restore_value: no
+
+  - id: active_brightness_pct
+    type: int
+    restore_value: no
+    initial_value: '100'
+
+  - id: active_supports_color
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: active_supports_temperature
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: active_color_detail_tab
+    type: int
+    restore_value: no
+    initial_value: '0'
+
 font:
   - file: "gfonts://Roboto@500"
     id: time_label
@@ -651,6 +679,7 @@ font:
       - "${MDI_GLYPH_4}"
       - "${MDI_GLYPH_5}"
       - "${MDI_GLYPH_6}"
+      - "\U000F012C" # check
 
 image:
   - file: "${BG_IMAGE}"
@@ -866,6 +895,42 @@ text_sensor:
     on_value: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
+    id: tile1_supported_color_modes
+    entity_id: ${TILE1_ENTITY}
+    attribute: supported_color_modes
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_supported_color_modes
+    entity_id: ${TILE2_ENTITY}
+    attribute: supported_color_modes
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_supported_color_modes
+    entity_id: ${TILE3_ENTITY}
+    attribute: supported_color_modes
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_supported_color_modes
+    entity_id: ${TILE4_ENTITY}
+    attribute: supported_color_modes
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_supported_color_modes
+    entity_id: ${TILE5_ENTITY}
+    attribute: supported_color_modes
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_supported_color_modes
+    entity_id: ${TILE6_ENTITY}
+    attribute: supported_color_modes
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
     id: tile1_cover_state
     entity_id: ${TILE1_STATE_ENTITY}
     on_value: { then: [ script.execute: ui_refresh ] }
@@ -898,7 +963,7 @@ text_sensor:
 switch:
   - platform: restart
     name: "Restart"
-    
+
 # Two SPI buses:
 # - lcd: display
 # - my_touchscreen: touch controller
@@ -1179,6 +1244,7 @@ lvgl:
                               slider_icon_color: ${TILE1_ICON_ACTIVE_COLOR}
                               label_off: "${TILE1_LABEL_OFF}"
                               label_on: "${TILE1_LABEL_ON}"
+                              supported_color_modes: !lambda "return std::string(id(tile1_supported_color_modes).state.c_str());"
 
         # ---------- TILE 2 ----------
         - obj:
@@ -1279,6 +1345,7 @@ lvgl:
                               slider_icon_color: ${TILE2_ICON_ACTIVE_COLOR}
                               label_off: "${TILE2_LABEL_OFF}"
                               label_on: "${TILE2_LABEL_ON}"
+                              supported_color_modes: !lambda "return std::string(id(tile2_supported_color_modes).state.c_str());"
 
         # ---------- TILE 3 ----------
         - obj:
@@ -1379,6 +1446,7 @@ lvgl:
                               slider_icon_color: ${TILE3_ICON_ACTIVE_COLOR}
                               label_off: "${TILE3_LABEL_OFF}"
                               label_on: "${TILE3_LABEL_ON}"
+                              supported_color_modes: !lambda "return std::string(id(tile3_supported_color_modes).state.c_str());"
 
         # ---------- TILE 4 ----------
         - obj:
@@ -1479,6 +1547,7 @@ lvgl:
                               slider_icon_color: ${TILE4_ICON_ACTIVE_COLOR}
                               label_off: "${TILE4_LABEL_OFF}"
                               label_on: "${TILE4_LABEL_ON}"
+                              supported_color_modes: !lambda "return std::string(id(tile4_supported_color_modes).state.c_str());"
 
         # ---------- TILE 5 ----------
         - obj:
@@ -1579,6 +1648,7 @@ lvgl:
                               slider_icon_color: ${TILE5_ICON_ACTIVE_COLOR}
                               label_off: "${TILE5_LABEL_OFF}"
                               label_on: "${TILE5_LABEL_ON}"
+                              supported_color_modes: !lambda "return std::string(id(tile5_supported_color_modes).state.c_str());"
 
         # ---------- TILE 6 ----------
         - obj:
@@ -1679,6 +1749,7 @@ lvgl:
                               slider_icon_color: ${TILE6_ICON_ACTIVE_COLOR}
                               label_off: "${TILE6_LABEL_OFF}"
                               label_on: "${TILE6_LABEL_ON}"
+                              supported_color_modes: !lambda "return std::string(id(tile6_supported_color_modes).state.c_str());"
 
         # ---------- VALUE SLIDER OVERLAY ----------
         - obj:
@@ -1778,6 +1849,624 @@ lvgl:
                         text_color: 0xFFFFFF
                         text: "${TILE1_ICON}"
                         clickable: false
+
+              - obj:
+                  id: overlay_color_button
+                  align: BOTTOM_RIGHT
+                  x: -13
+                  y: -13
+                  width: 44
+                  height: 44
+                  radius: 999
+                  hidden: true
+                  clickable: true
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_left: 0
+                  pad_right: 0
+                  pad_top: 0
+                  pad_bottom: 0
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  on_click:
+                    - script.execute: open_color_detail
+                  widgets:
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 0
+                        end_angle: 45
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0xFF3B30
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 45
+                        end_angle: 90
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0xFF9500
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 90
+                        end_angle: 135
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0xFFD60A
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 135
+                        end_angle: 180
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0x30D158
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 180
+                        end_angle: 225
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0x32D6FF
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 225
+                        end_angle: 270
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0x0A84FF
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 270
+                        end_angle: 315
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0x5856D6
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 315
+                        end_angle: 360
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0xBF5AF2
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+
+        # ---------- LIGHT COLOR DETAIL OVERLAY ----------
+        - obj:
+            id: color_detail_overlay
+            x: 0
+            y: 0
+            width: ${DISPLAY_W}
+            height: ${DISPLAY_H}
+            bg_color: 0x171719
+            bg_opa: COVER
+            hidden: true
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            pad_left: 0
+            pad_right: 0
+            pad_top: 0
+            pad_bottom: 0
+            border_width: 0
+            widgets:
+              - image:
+                  id: color_detail_bg
+                  src: bg_home
+                  x: 0
+                  y: 0
+                  clickable: false
+              - obj:
+                  id: color_detail_scrim
+                  x: 0
+                  y: 0
+                  width: ${DISPLAY_W}
+                  height: ${DISPLAY_H}
+                  bg_color: 0x000000
+                  bg_opa: 72%
+                  border_width: 0
+                  clickable: false
+                  scrollable: false
+
+              - obj:
+                  id: color_close_button
+                  align: TOP_LEFT
+                  x: 10
+                  y: 9
+                  width: 36
+                  height: 36
+                  radius: 999
+                  bg_color: 0x3C3C40
+                  bg_opa: COVER
+                  border_width: 1
+                  border_color: 0xFFFFFF
+                  border_opa: 20%
+                  clickable: true
+                  scrollable: false
+                  on_click:
+                    - lvgl.widget.hide: color_detail_overlay
+                    - lvgl.widget.show: brightness_overlay
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "x"
+                        text_font: sublabel_big
+                        text_color: 0xFFFFFF
+                        clickable: false
+
+              - label:
+                  id: color_detail_title
+                  align: TOP_MID
+                  y: 16
+                  text: "Light Color"
+                  styles: style_room
+
+              - obj:
+                  id: color_done_button
+                  align: TOP_RIGHT
+                  x: -10
+                  y: 9
+                  width: 36
+                  height: 36
+                  radius: 999
+                  bg_color: 0xFF9F0A
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: true
+                  scrollable: false
+                  on_click:
+                    - lvgl.widget.hide: color_detail_overlay
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "\U000F012C"
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        clickable: false
+
+              - obj:
+                  id: color_mode_tabs
+                  align: TOP_MID
+                  y: 58
+                  width: 190
+                  height: 28
+                  radius: 14
+                  bg_color: 0x3C3C40
+                  bg_opa: COVER
+                  border_width: 0
+                  scrollable: false
+                  pad_left: 0
+                  pad_right: 0
+                  pad_top: 0
+                  pad_bottom: 0
+                  widgets:
+                    - obj:
+                        id: color_tab_indicator
+                        x: 2
+                        y: 2
+                        width: 93
+                        height: 24
+                        radius: 12
+                        bg_color: 0x8E8E93
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: false
+                        scrollable: false
+                    - obj:
+                        x: 0
+                        y: 0
+                        width: 95
+                        height: 28
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: true
+                        scrollable: false
+                        pad_left: 0
+                        pad_right: 0
+                        pad_top: 0
+                        pad_bottom: 0
+                        on_click:
+                          - script.execute:
+                              id: show_color_detail_tab
+                              tab: 0
+                        widgets:
+                          - label:
+                              id: color_tab_label
+                              align: CENTER
+                              text: "Color"
+                              text_font: sublabel_big
+                              text_color: 0xFFFFFF
+                              clickable: false
+                    - obj:
+                        x: 95
+                        y: 0
+                        width: 95
+                        height: 28
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: true
+                        scrollable: false
+                        pad_left: 0
+                        pad_right: 0
+                        pad_top: 0
+                        pad_bottom: 0
+                        on_click:
+                          - script.execute:
+                              id: show_color_detail_tab
+                              tab: 1
+                        widgets:
+                          - label:
+                              id: temp_tab_label
+                              align: CENTER
+                              text: "Temp."
+                              text_font: sublabel_big
+                              text_color: 0xFFFFFF
+                              clickable: false
+
+              - obj:
+                  id: color_palette_card
+                  align: TOP_MID
+                  y: 98
+                  width: 286
+                  height: 48
+                  bg_opa: TRANSP
+                  border_width: 0
+                  scrollable: false
+                  pad_left: 0
+                  pad_right: 0
+                  pad_top: 0
+                  pad_bottom: 0
+                  widgets:
+                    - obj:
+                        id: color_preset_red
+                        x: 14
+                        y: 8
+                        width: 30
+                        height: 30
+                        radius: 999
+                        bg_color: 0xFF3B30
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        on_click:
+                          - script.execute: { id: set_light_color_name, color: "red" }
+                    - obj:
+                        id: color_preset_orange
+                        x: 61
+                        y: 8
+                        width: 30
+                        height: 30
+                        radius: 999
+                        bg_color: 0xFF9F0A
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        on_click:
+                          - script.execute: { id: set_light_color_name, color: "orange" }
+                    - obj:
+                        id: color_preset_yellow
+                        x: 108
+                        y: 8
+                        width: 30
+                        height: 30
+                        radius: 999
+                        bg_color: 0xFFD60A
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        on_click:
+                          - script.execute: { id: set_light_color_name, color: "yellow" }
+                    - obj:
+                        id: color_preset_green
+                        x: 155
+                        y: 8
+                        width: 30
+                        height: 30
+                        radius: 999
+                        bg_color: 0x30D158
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        on_click:
+                          - script.execute: { id: set_light_color_name, color: "green" }
+                    - obj:
+                        id: color_preset_blue
+                        x: 202
+                        y: 8
+                        width: 30
+                        height: 30
+                        radius: 999
+                        bg_color: 0x0A84FF
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        on_click:
+                          - script.execute: { id: set_light_color_name, color: "blue" }
+                    - obj:
+                        id: color_preset_purple
+                        x: 249
+                        y: 8
+                        width: 30
+                        height: 30
+                        radius: 999
+                        bg_color: 0xBF5AF2
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        on_click:
+                          - script.execute: { id: set_light_color_name, color: "purple" }
+
+              - obj:
+                  id: temp_palette_card
+                  align: TOP_MID
+                  y: 98
+                  width: 286
+                  height: 48
+                  bg_opa: TRANSP
+                  border_width: 0
+                  scrollable: false
+                  hidden: true
+                  pad_left: 0
+                  pad_right: 0
+                  pad_top: 0
+                  pad_bottom: 0
+                  widgets:
+                    - obj:
+                        id: temp_preset_2700
+                        x: 24
+                        y: 8
+                        width: 62
+                        height: 30
+                        radius: 15
+                        bg_color: 0xFFD4A3
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        scrollable: false
+                        scrollbar_mode: 'OFF'
+                        pad_left: 0
+                        pad_right: 0
+                        pad_top: 0
+                        pad_bottom: 0
+                        on_click:
+                          - script.execute: { id: set_light_color_temperature, kelvin: 2700 }
+                        widgets:
+                          - label:
+                              align: CENTER
+                              text: "2700K"
+                              text_font: sublabel_big
+                              text_color: 0x3A2A18
+                              clickable: false
+                    - obj:
+                        id: temp_preset_4000
+                        x: 112
+                        y: 8
+                        width: 62
+                        height: 30
+                        radius: 15
+                        bg_color: 0xFFE8C8
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        scrollable: false
+                        scrollbar_mode: 'OFF'
+                        pad_left: 0
+                        pad_right: 0
+                        pad_top: 0
+                        pad_bottom: 0
+                        on_click:
+                          - script.execute: { id: set_light_color_temperature, kelvin: 4000 }
+                        widgets:
+                          - label:
+                              align: CENTER
+                              text: "4000K"
+                              text_font: sublabel_big
+                              text_color: 0x3A2A18
+                              clickable: false
+                    - obj:
+                        id: temp_preset_6500
+                        x: 200
+                        y: 8
+                        width: 62
+                        height: 30
+                        radius: 15
+                        bg_color: 0xEAF4FF
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        scrollable: false
+                        scrollbar_mode: 'OFF'
+                        pad_left: 0
+                        pad_right: 0
+                        pad_top: 0
+                        pad_bottom: 0
+                        on_click:
+                          - script.execute: { id: set_light_color_temperature, kelvin: 6500 }
+                        widgets:
+                          - label:
+                              align: CENTER
+                              text: "6500K"
+                              text_font: sublabel_big
+                              text_color: 0x1E2A36
+                              clickable: false
+
+              - obj:
+                  id: color_brightness_card
+                  align: TOP_MID
+                  y: 165
+                  width: 188
+                  height: 46
+                  bg_opa: TRANSP
+                  border_width: 0
+                  scrollable: false
+                  pad_left: 0
+                  pad_right: 0
+                  pad_top: 0
+                  pad_bottom: 0
+                  widgets:
+                    - label:
+                        x: 13
+                        y: 6
+                        text: "Brightness"
+                        text_font: sublabel
+                        text_color: 0xD1D1D6
+                        hidden: true
+                        clickable: false
+                    - slider:
+                        id: color_brightness_slider
+                        x: 0
+                        y: 0
+                        width: 188
+                        height: 46
+                        min_value: 1
+                        max_value: 100
+                        value: 100
+                        bg_color: 0x939391
+                        bg_opa: COVER
+                        radius: 23
+                        border_width: 0
+                        indicator:
+                          bg_color: 0xFEC600
+                          bg_opa: COVER
+                          radius: 23
+                        knob:
+                          bg_opa: 0%
+                          border_width: 0
+                          shadow_width: 0
+                          pad_all: 10
+                        on_value:
+                          - script.execute:
+                              id: color_brightness_preview
+                              value: !lambda "return x;"
+                        on_release:
+                          - script.execute:
+                              id: color_brightness_commit
+                              value: !lambda "return lv_slider_get_value(id(color_brightness_slider));"
+                    - label:
+                        id: color_brightness_value
+                        align: RIGHT_MID
+                        x: -13
+                        text: "100 %"
+                        text_font: sublabel_big
+                        text_color: 0xFFFFFF
+                        hidden: true
+                        clickable: false
         # ---------- DIM / WAKE OVERLAY ----------
         - obj:
             id: dim_wake_overlay
@@ -1805,6 +2494,7 @@ script:
           id: back_light
           brightness: !lambda "return atoi(\"${MAX_BRIGHTNESS}\") / 100.0f;"
       - lvgl.widget.hide: dim_wake_overlay
+      - lvgl.widget.hide: color_detail_overlay
 
   - id: dim_display
     mode: restart
@@ -1858,6 +2548,161 @@ script:
       - text_sensor.template.publish:
           id: smartdisplay_action
           state: ""
+
+  - id: open_color_detail
+    mode: restart
+    then:
+      - lambda: |-
+          lv_label_set_text(id(color_detail_title), id(active_title).c_str());
+
+          char buf[12];
+          snprintf(buf, sizeof(buf), "%d %%", id(active_brightness_pct));
+          lv_label_set_text(id(color_brightness_value), buf);
+          lv_slider_set_value(id(color_brightness_slider), id(active_brightness_pct), LV_ANIM_OFF);
+
+          if (atoi("${DISPLAY_W}") < atoi("${DISPLAY_H}")) {
+            lv_obj_set_size(id(color_palette_card), 150, 86);
+            lv_obj_set_y(id(color_palette_card), 96);
+            lv_obj_set_pos(id(color_preset_red), 13, 4);
+            lv_obj_set_pos(id(color_preset_orange), 60, 4);
+            lv_obj_set_pos(id(color_preset_yellow), 107, 4);
+            lv_obj_set_pos(id(color_preset_green), 13, 52);
+            lv_obj_set_pos(id(color_preset_blue), 60, 52);
+            lv_obj_set_pos(id(color_preset_purple), 107, 52);
+
+            lv_obj_set_size(id(temp_palette_card), 150, 126);
+            lv_obj_set_y(id(temp_palette_card), 96);
+            lv_obj_set_pos(id(temp_preset_2700), 44, 4);
+            lv_obj_set_pos(id(temp_preset_4000), 44, 48);
+            lv_obj_set_pos(id(temp_preset_6500), 44, 92);
+
+            lv_obj_set_y(id(color_brightness_card), 256);
+          } else {
+            lv_obj_set_size(id(color_palette_card), 286, 48);
+            lv_obj_set_y(id(color_palette_card), 98);
+            lv_obj_set_pos(id(color_preset_red), 14, 8);
+            lv_obj_set_pos(id(color_preset_orange), 61, 8);
+            lv_obj_set_pos(id(color_preset_yellow), 108, 8);
+            lv_obj_set_pos(id(color_preset_green), 155, 8);
+            lv_obj_set_pos(id(color_preset_blue), 202, 8);
+            lv_obj_set_pos(id(color_preset_purple), 249, 8);
+
+            lv_obj_set_size(id(temp_palette_card), 286, 48);
+            lv_obj_set_y(id(temp_palette_card), 98);
+            lv_obj_set_pos(id(temp_preset_2700), 24, 8);
+            lv_obj_set_pos(id(temp_preset_4000), 112, 8);
+            lv_obj_set_pos(id(temp_preset_6500), 200, 8);
+
+            lv_obj_set_y(id(color_brightness_card), 165);
+          }
+
+          id(active_color_detail_tab) = id(active_supports_color) ? 0 : 1;
+      - lvgl.widget.hide: brightness_overlay
+      - lvgl.widget.show: color_detail_overlay
+      - script.execute:
+          id: show_color_detail_tab
+          tab: !lambda "return id(active_color_detail_tab);"
+
+  - id: show_color_detail_tab
+    mode: restart
+    parameters:
+      tab: int
+    then:
+      - lambda: |-
+          if (tab == 0 && !id(active_supports_color) && id(active_supports_temperature)) {
+            tab = 1;
+          } else if (tab == 1 && !id(active_supports_temperature) && id(active_supports_color)) {
+            tab = 0;
+          }
+          id(active_color_detail_tab) = tab;
+
+          if (tab == 0 && id(active_supports_color)) {
+            lv_obj_clear_flag(id(color_palette_card), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(temp_palette_card), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_x(id(color_tab_indicator), 2);
+          } else if (tab == 1 && id(active_supports_temperature)) {
+            lv_obj_add_flag(id(color_palette_card), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(temp_palette_card), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_x(id(color_tab_indicator), 95);
+          } else {
+            lv_obj_add_flag(id(color_palette_card), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(temp_palette_card), LV_OBJ_FLAG_HIDDEN);
+          }
+
+          lv_obj_set_style_text_color(
+            id(color_tab_label),
+            id(active_supports_color) ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8E8E93),
+            0
+          );
+          lv_obj_set_style_text_color(
+            id(temp_tab_label),
+            id(active_supports_temperature) ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8E8E93),
+            0
+          );
+          if (tab == 0 && id(active_supports_color)) {
+            lv_obj_set_style_text_color(id(color_tab_label), lv_color_hex(0xFFFFFF), 0);
+            lv_obj_set_style_text_color(id(temp_tab_label), lv_color_hex(0xD1D1D6), 0);
+          } else if (tab == 1 && id(active_supports_temperature)) {
+            lv_obj_set_style_text_color(id(color_tab_label), lv_color_hex(0xD1D1D6), 0);
+            lv_obj_set_style_text_color(id(temp_tab_label), lv_color_hex(0xFFFFFF), 0);
+          }
+
+  - id: color_brightness_preview
+    parameters:
+      value: int
+    then:
+      - lambda: |-
+          id(active_brightness_pct) = value;
+          char buf[12];
+          snprintf(buf, sizeof(buf), "%d %%", value);
+          lv_label_set_text(id(color_brightness_value), buf);
+
+  - id: color_brightness_commit
+    parameters:
+      value: int
+    then:
+      - lambda: 'id(active_brightness_pct) = value;'
+      - if:
+          condition:
+            lambda: 'return std::string("${DIRECT_ACTIONS}") == "true";'
+          then:
+            - homeassistant.action:
+                action: light.turn_on
+                data:
+                  entity_id: !lambda "return id(active_entity);"
+                  brightness_pct: !lambda "return value;"
+
+  - id: set_light_color_name
+    mode: queued
+    parameters:
+      color: string
+    then:
+      - if:
+          condition:
+            lambda: 'return std::string("${DIRECT_ACTIONS}") == "true";'
+          then:
+            - homeassistant.action:
+                action: light.turn_on
+                data:
+                  entity_id: !lambda "return id(active_entity);"
+                  color_name: !lambda "return color;"
+                  brightness_pct: !lambda "return id(active_brightness_pct);"
+
+  - id: set_light_color_temperature
+    mode: queued
+    parameters:
+      kelvin: int
+    then:
+      - if:
+          condition:
+            lambda: 'return std::string("${DIRECT_ACTIONS}") == "true";'
+          then:
+            - homeassistant.action:
+                action: light.turn_on
+                data:
+                  entity_id: !lambda "return id(active_entity);"
+                  color_temp_kelvin: !lambda "return kelvin;"
+                  brightness_pct: !lambda "return id(active_brightness_pct);"
 
   - id: slider_preview
     parameters:
@@ -2231,9 +3076,13 @@ script:
       slider_icon_color: uint32_t
       label_off: string
       label_on: string
+      supported_color_modes: string
     then:
       - lambda: |-
           std::string mode = longpress_mode;
+          auto contains_mode = [](const std::string& modes, const std::string& needle) {
+            return modes.find(needle) != std::string::npos;
+          };
           if (mode == "auto") {
             if (tile_type == "light") mode = "brightness";
             else if (tile_type == "fan") mode = "percentage";
@@ -2247,6 +3096,11 @@ script:
           id(active_value_suffix) = " %";
           id(active_label_off) = label_off;
           id(active_label_on) = label_on;
+          id(active_title) = title;
+          id(active_icon_text) = icon_text;
+          id(active_supports_color) = false;
+          id(active_supports_temperature) = false;
+          lv_obj_add_flag(id(overlay_color_button), LV_OBJ_FLAG_HIDDEN);
 
           int pct = off_value;
 
@@ -2272,6 +3126,21 @@ script:
 
           if (pct < 0) pct = 0;
           if (pct > 100) pct = 100;
+          id(active_brightness_pct) = pct;
+
+          if (tile_type == "light" && std::string("${DIRECT_ACTIONS}") == "true") {
+            id(active_supports_color) =
+              contains_mode(supported_color_modes, "hs") ||
+              contains_mode(supported_color_modes, "rgb") ||
+              contains_mode(supported_color_modes, "rgbw") ||
+              contains_mode(supported_color_modes, "rgbww") ||
+              contains_mode(supported_color_modes, "xy");
+            id(active_supports_temperature) = contains_mode(supported_color_modes, "color_temp");
+
+            if (id(active_supports_color) || id(active_supports_temperature)) {
+              lv_obj_clear_flag(id(overlay_color_button), LV_OBJ_FLAG_HIDDEN);
+            }
+          }
 
           if (tile_type == "cover") {
             lv_obj_set_style_bg_color(id(overlay_slider), lv_color_hex(slider_fill_color), LV_PART_MAIN);

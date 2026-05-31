@@ -5,6 +5,13 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-05-31
+
+### Added
+- Home-like light color controls: long-press brightness overlays now show a color-ring button for color-capable lights and open a color/temperature detail view with preset colors, Kelvin presets, and a brightness slider for both CYD and external ILI9341 variants. Thanks @Dominik-1980 for the initial push on this feature.
+
+---
+
 ## 2026-05-02
 
 ### Docs

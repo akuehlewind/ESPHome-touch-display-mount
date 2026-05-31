@@ -110,8 +110,9 @@ When a tile is long-pressed:
 
 1. The overlay opens
 2. The control type is determined (brightness / percentage / cover position)
-3. Slider interaction updates Home Assistant
-4. Closing the overlay returns to the tile grid
+3. For color-capable lights, the brightness overlay can open a color/temperature picker
+4. Slider interaction updates Home Assistant
+5. Closing the overlay returns to the tile grid
 
 This keeps the tile UI clean while still allowing detailed control.
 
@@ -337,7 +338,7 @@ Each tile's long-press mode is configured via `TILE*_LONGPRESS`:
 
 | Tile Type | Overlay Control |
 |-----------|----------------|
-| light     | Brightness slider |
+| light     | Brightness slider; color/temperature picker when supported by the HA light entity |
 | fan       | Speed / percentage slider |
 | cover     | Position slider |
 
@@ -511,4 +512,3 @@ Feel free to fork, remix and improve it.
 
 # More projects
 Looking for more cool projects using this display? Check out the [LoctekMotion Touch Display GitHub repository](https://github.com/3DJupp/LoctekMotion-TouchDisplay)! This awesome project takes the same 2.8" ILI9341 touchscreen setup and repurposes it—not for lights, but for controlling a height-adjustable Flexispot desk with ease. If you're into smart home automation and custom builds, it's definitely worth a look!
-

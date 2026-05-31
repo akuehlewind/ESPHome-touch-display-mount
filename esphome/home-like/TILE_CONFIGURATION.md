@@ -119,6 +119,8 @@ Only relevant when `TILE*_LONGPRESS` is set to `"action"`.
 
 In all modes, the event `tileN_long_press` is always published to `sensor.smartdisplay_action` in Home Assistant.
 
+For light tiles in `slider` mode, the brightness overlay automatically shows a color-ring button when `DIRECT_ACTIONS` is `"true"` and Home Assistant reports a supported color mode (`hs`, `rgb`, `rgbw`, `rgbww`, `xy`) or color temperature mode (`color_temp`). The color detail view can send `light.turn_on` with `color_name`, `color_temp_kelvin`, and the current brightness percentage. No extra tile substitutions are required.
+
 ---
 
 ## Value modes
