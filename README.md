@@ -109,7 +109,7 @@ The UI contains a secondary overlay layer used for interactive controls.
 When a tile is long-pressed:
 
 1. The overlay opens
-2. The control type is determined (brightness / percentage / cover position)
+2. The control type is determined (brightness / percentage / cover position / climate temperature)
 3. For color-capable lights, the brightness overlay can open a color/temperature picker
 4. Slider interaction updates Home Assistant
 5. Closing the overlay returns to the tile grid
@@ -166,7 +166,7 @@ Without this setting, direct control will not work.
 
 - LVGL-based UI (lockscreen or tile layout depending on configuration)
 - 2×3 configurable tile layout (home-like UI)
-- Long-press per tile: value overlay (brightness / fan speed / cover position) or independent entity action
+- Long-press per tile: value overlay (brightness / fan speed / cover position / climate temperature) or independent entity action
 - Real-time state synchronization with Home Assistant
 - Optional direct Home Assistant service calls
 - Automation-based mode supported
@@ -321,7 +321,7 @@ Your config choice defines the UI style:
 ## `home-like.yaml` (tiles)
 - Tiles: TILE1..TILE6
 - Action strings: `tile1_press` .. `tile6_press` (short tap), `tile1_long_press` .. `tile6_long_press` (long press)
-- Each tile can optionally call a Home Assistant service directly (e.g. light toggle, fan preset toggle, cover open/close or cover position).
+- Each tile can optionally call a Home Assistant service directly (e.g. light toggle, fan preset toggle, cover open/close, cover position, or climate target temperature).
 - Per-tile OFF label is configurable via `TILE*_LABEL_OFF` (e.g. "Off" / "Aus").
 
 ### Long-Press Behavior
@@ -330,7 +330,7 @@ Each tile's long-press mode is configured via `TILE*_LONGPRESS`:
 
 | Mode | Behavior |
 |------|----------|
-| `slider` | Opens a value overlay (brightness / fan speed / cover position) |
+| `slider` | Opens a value overlay (brightness / fan speed / cover position / climate temperature) |
 | `action` | Fires a different HA entity than the short tap |
 | `none` | Only publishes the `tileN_long_press` event, no direct action |
 
@@ -341,6 +341,7 @@ Each tile's long-press mode is configured via `TILE*_LONGPRESS`:
 | light     | Brightness slider; color/temperature picker when supported by the HA light entity |
 | fan       | Speed / percentage slider |
 | cover     | Position slider |
+| climate   | Thermostat ring for target temperature |
 
 **Action mode** — configure with `TILE*_LONGPRESS_ACTION`, `TILE*_LONGPRESS_ACTION_TYPE`, and optionally `TILE*_LONGPRESS_ACTION_SERVICE`. The action entity can be a completely different entity than the short tap target — useful for e.g. triggering a scene or script on long press while toggling a light on short press.
 

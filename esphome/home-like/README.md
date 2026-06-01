@@ -10,9 +10,9 @@ This folder contains the main, actively maintained UI: a wallpaper-backed 2×3 t
 ## What this UI does
 
 - 2×3 grid of configurable tiles, each with icon, title, and value line
-- Supports lights, fans, switches, covers, scenes, and scripts per tile
+- Supports lights, fans, switches, covers, climate entities, scenes, and scripts per tile
 - Real-time state synchronization with Home Assistant
-- Long press opens a value overlay (brightness / fan speed / cover position slider)
+- Long press opens a value overlay (brightness / fan speed / cover position / climate temperature)
 - Color-capable lights can open a color/temperature picker from the brightness overlay
 - Long press can alternatively fire a completely different HA entity than the short tap
 - Orientation presets: 0°, 90°, 180°, 270° — uncomment to switch
@@ -27,7 +27,7 @@ All tile substitutions are documented in [TILE_CONFIGURATION.md](TILE_CONFIGURAT
 
 - Every substitution key with description and default value
 - All tap actions, long press modes, and value modes explained
-- Complete copy-paste examples for: light, switch, cover, fan, scene, script
+- Complete copy-paste examples for: light, switch, cover, fan, climate, scene, script
 - Long press examples: slider overlay and independent entity action
 - How to find and format Material Design Icons
 

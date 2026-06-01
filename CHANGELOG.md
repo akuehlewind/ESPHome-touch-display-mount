@@ -8,7 +8,8 @@ Pure documentation and README updates are not included.
 ## 2026-05-31
 
 ### Added
-- Home-like light color controls: long-press brightness overlays now show a color-ring button for color-capable lights and open a color/temperature detail view with preset colors, Kelvin presets, and a brightness slider for both CYD and external ILI9341 variants. Thanks @Dominik-1980 for the initial push on this feature.
+- Home-like light color controls: long-press brightness overlays now show a color-ring button for color-capable lights and open a color/temperature detail view with preset colors, Kelvin presets, and a brightness slider for both CYD and external ILI9341 variants. The Color/Temp switch is hidden automatically when a light only supports one mode. Thanks @Dominik-1980 for the initial push on this feature.
+- Home-like climate tile support: `TILE*_TYPE: climate` now provides a thermostat-style long-press overlay with target temperature ring, +/- controls, current temperature/humidity display, clickable HVAC mode selection, half-degree temperature steps, live HA sync while open, and per-tile `TILE*_CLIMATE_*` substitutions for range, step size, and HA attribute mapping.
 
 ---
 

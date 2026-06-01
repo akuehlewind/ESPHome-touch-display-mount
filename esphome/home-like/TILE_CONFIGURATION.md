@@ -44,7 +44,7 @@ Each of the 6 tiles has the same set of keys, just with a different number (TILE
 | `TILE*_STATE_ENTITY` | Entity used to determine active/inactive visual state. Usually the same as `TILE*_ENTITY`. Set to a different entity if you want the tile to reflect a group or a related sensor. |
 | `TILE*_TITLE` | Text label shown on the tile. |
 | `TILE*_ICON` | Material Design Icons Unicode glyph. Find icons at [pictogrammers.com/library/mdi](https://pictogrammers.com/library/mdi/) — click an icon and copy the Unicode value (e.g. `U+F0769` → `"\U000F0769"`). |
-| `TILE*_TYPE` | Entity type: `light` \| `fan` \| `switch` \| `scene` \| `script` \| `cover`. Controls tap behavior, value display, and slider type in auto mode. |
+| `TILE*_TYPE` | Entity type: `light` \| `fan` \| `switch` \| `scene` \| `script` \| `cover` \| `climate`. Controls tap behavior, value display, and slider type in auto mode. |
 | `TILE*_TAP_ACTION` | What happens on short tap — see [Tap actions](#tap-actions) below. |
 | `TILE*_LONGPRESS` | What happens on long press — see [Long press modes](#long-press-modes) below. |
 | `TILE*_VALUE_MODE` | How the value line below the title is rendered — see [Value modes](#value-modes) below. |
@@ -82,8 +82,21 @@ Only relevant when `TILE*_LONGPRESS` is set to `"slider"`.
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `TILE*_LONGPRESS_SLIDER` | `"auto"` | Slider type: `auto` \| `brightness` \| `percentage` \| `cover_position`. `auto` picks the right type based on `TILE*_TYPE`. |
+| `TILE*_LONGPRESS_SLIDER` | `"auto"` | Slider type: `auto` \| `brightness` \| `percentage` \| `cover_position` \| `climate_temperature`. `auto` picks the right type based on `TILE*_TYPE`. |
 | `TILE*_LONGPRESS_OFF_VALUE` | `"0"` | Initial slider position (0–100) shown when the entity is currently off. |
+
+### Advanced settings (climate tiles)
+
+Only relevant when `TILE*_TYPE` is set to `"climate"`.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `TILE*_CLIMATE_MIN_TEMP` | `"5.0"` | Minimum target temperature shown in the thermostat overlay. |
+| `TILE*_CLIMATE_MAX_TEMP` | `"30.0"` | Maximum target temperature shown in the thermostat overlay. |
+| `TILE*_CLIMATE_STEP` | `"0.5"` | Step size for the thermostat ring and +/- buttons. Values below `0.5` are rounded up to `0.5`, so the UI always adjusts in whole or half-degree steps. |
+| `TILE*_CLIMATE_CURRENT_TEMP_ATTRIBUTE` | `"current_temperature"` | Home Assistant attribute used for the current room temperature. |
+| `TILE*_CLIMATE_TARGET_TEMP_ATTRIBUTE` | `"temperature"` | Home Assistant attribute used for the target temperature. |
+| `TILE*_CLIMATE_HUMIDITY_ATTRIBUTE` | `"current_humidity"` | Home Assistant attribute used for humidity. Leave the default if the entity does not provide humidity. |
 
 ### Advanced settings (long press — action mode)
 
@@ -101,7 +114,7 @@ Only relevant when `TILE*_LONGPRESS` is set to `"action"`.
 
 | Value | Behavior |
 |-------|----------|
-| `auto` | Picks the best action for the tile type: `toggle` for light/fan/switch/cover, `activate` for scene/script. |
+| `auto` | Picks the best action for the tile type: `toggle` for light/fan/switch/cover, `activate` for scene/script. Climate tiles do not have a default tap action; use `TILE*_TAP_SERVICE` if you want short tap behavior. |
 | `toggle` | Toggles the entity (light.toggle / fan.toggle / switch.toggle / cover open↔close). |
 | `activate` | Turns on / activates the entity (scene.turn_on / script.turn_on / light.turn_on / cover.open_cover). |
 | `fan_toggle_preset` | If fan is ON: turns it off. If fan is OFF: turns it on and sets a preset mode (configure with `TAP_PARAM_KEY` / `TAP_PARAM_VAL`). |
@@ -119,7 +132,9 @@ Only relevant when `TILE*_LONGPRESS` is set to `"action"`.
 
 In all modes, the event `tileN_long_press` is always published to `sensor.smartdisplay_action` in Home Assistant.
 
-For light tiles in `slider` mode, the brightness overlay automatically shows a color-ring button when `DIRECT_ACTIONS` is `"true"` and Home Assistant reports a supported color mode (`hs`, `rgb`, `rgbw`, `rgbww`, `xy`) or color temperature mode (`color_temp`). The color detail view can send `light.turn_on` with `color_name`, `color_temp_kelvin`, and the current brightness percentage. No extra tile substitutions are required.
+For light tiles in `slider` mode, the brightness overlay automatically shows a color-ring button when `DIRECT_ACTIONS` is `"true"` and Home Assistant reports a supported color mode (`hs`, `rgb`, `rgbw`, `rgbww`, `xy`) or color temperature mode (`color_temp`). The color detail view can send `light.turn_on` with `color_name`, `color_temp_kelvin`, and the current brightness percentage. If the light only supports color or only supports color temperature, the Color/Temp tab switch is hidden and only the supported controls are shown. No extra tile substitutions are required.
+
+For climate tiles in `slider` mode, the thermostat overlay sends `climate.set_temperature` with the configured target temperature. The min/max range, step size, and Home Assistant attribute names are configured through the `TILE*_CLIMATE_*` substitutions. The mode pill cycles through the climate entity's supported `hvac_modes` and sends `climate.set_hvac_mode` when `DIRECT_ACTIONS` is `"true"`.
 
 ---
 
@@ -127,10 +142,11 @@ For light tiles in `slider` mode, the brightness overlay automatically shows a c
 
 | Value | Behavior |
 |-------|----------|
-| `auto` | Picks automatically: `brightness` for lights, `percentage` or `preset` for fans, `text` for everything else. |
+| `auto` | Picks automatically: `brightness` for lights, `percentage` or `preset` for fans, `climate` for climate entities, `text` for everything else. |
 | `brightness` | Shows brightness as a percentage (e.g. `80 %`). When off, shows `LABEL_OFF`. |
 | `percentage` | Shows fan speed as a percentage. When off, shows `LABEL_OFF`. |
 | `preset` | Shows the fan preset_mode attribute. When off, shows `LABEL_OFF`. |
+| `climate` | Shows the target temperature, falling back to current temperature if no target is available. When off, shows `LABEL_OFF`. |
 | `text` | Shows `LABEL_ON` when on, `LABEL_OFF` when off. For scenes/scripts, always shows `LABEL_ON`. |
 
 ---
@@ -298,24 +314,24 @@ TILE4_LONGPRESS_ACTION_SERVICE: ""
 
 ---
 
-### Scene — activate on tap
+### Climate — thermostat ring on long press
 
 ```yaml
-TILE5_ENTITY: "scene.movie_night"
-TILE5_STATE_ENTITY: "scene.movie_night"  # scenes are always "on" so the tile stays active-styled
-TILE5_TITLE: "Movie"
-TILE5_ICON: "\U000F0E8B"          # mdi:movie-open
-TILE5_TYPE: "scene"
-TILE5_TAP_ACTION: "auto"          # activates the scene
-TILE5_LONGPRESS: "none"
-TILE5_VALUE_MODE: "text"          # always shows LABEL_ON for scenes
-TILE5_LABEL_OFF: "Scene"
-TILE5_LABEL_ON: "Scene"
-# colors — green theme
-TILE5_CIRCLE_ACTIVE_COLOR: "0x4CAF50"
+TILE5_ENTITY: "climate.living_room"
+TILE5_STATE_ENTITY: "climate.living_room"
+TILE5_TITLE: "Living"
+TILE5_ICON: "\U000F0438"          # mdi:radiator
+TILE5_TYPE: "climate"
+TILE5_TAP_ACTION: "auto"          # no default tap action; use TAP_SERVICE if desired
+TILE5_LONGPRESS: "slider"         # long press opens thermostat ring
+TILE5_VALUE_MODE: "auto"          # shows target temperature, or current temperature as fallback
+TILE5_LABEL_OFF: "Off"
+TILE5_LABEL_ON: "Heat"
+# colors
+TILE5_CIRCLE_ACTIVE_COLOR: "0xFF9F0A"
 TILE5_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
 TILE5_ICON_ACTIVE_COLOR: "0xFFFFFF"
-TILE5_ICON_DISABLED_COLOR: "0x4CAF50"
+TILE5_ICON_DISABLED_COLOR: "0xFF9F0A"
 TILE5_BG_ACTIVE_COLOR: "0xFFFFFF"
 TILE5_BG_DISABLED_COLOR: "0x939391"
 TILE5_TITLE_ACTIVE_COLOR: "0x000000"
@@ -326,11 +342,54 @@ TILE5_VALUE_DISABLED_COLOR: "0xD9D9D9"
 TILE5_TAP_SERVICE: ""
 TILE5_TAP_PARAM_KEY: ""
 TILE5_TAP_PARAM_VAL: ""
-TILE5_LONGPRESS_SLIDER: "auto"
+TILE5_LONGPRESS_SLIDER: "auto"    # auto = climate_temperature for climate tiles
 TILE5_LONGPRESS_OFF_VALUE: "0"
 TILE5_LONGPRESS_ACTION: ""
 TILE5_LONGPRESS_ACTION_TYPE: ""
 TILE5_LONGPRESS_ACTION_SERVICE: ""
+TILE5_CLIMATE_MIN_TEMP: "5.0"
+TILE5_CLIMATE_MAX_TEMP: "30.0"
+TILE5_CLIMATE_STEP: "0.5"
+TILE5_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"
+TILE5_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"
+TILE5_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"
+```
+
+---
+
+### Scene — activate on tap
+
+```yaml
+TILE6_ENTITY: "scene.movie_night"
+TILE6_STATE_ENTITY: "scene.movie_night"  # scenes are always "on" so the tile stays active-styled
+TILE6_TITLE: "Movie"
+TILE6_ICON: "\U000F0E8B"          # mdi:movie-open
+TILE6_TYPE: "scene"
+TILE6_TAP_ACTION: "auto"          # activates the scene
+TILE6_LONGPRESS: "none"
+TILE6_VALUE_MODE: "text"          # always shows LABEL_ON for scenes
+TILE6_LABEL_OFF: "Scene"
+TILE6_LABEL_ON: "Scene"
+# colors — green theme
+TILE6_CIRCLE_ACTIVE_COLOR: "0x4CAF50"
+TILE6_CIRCLE_DISABLED_COLOR: "0x7B7B6F"
+TILE6_ICON_ACTIVE_COLOR: "0xFFFFFF"
+TILE6_ICON_DISABLED_COLOR: "0x4CAF50"
+TILE6_BG_ACTIVE_COLOR: "0xFFFFFF"
+TILE6_BG_DISABLED_COLOR: "0x939391"
+TILE6_TITLE_ACTIVE_COLOR: "0x000000"
+TILE6_TITLE_DISABLED_COLOR: "0xFFFFFF"
+TILE6_VALUE_ACTIVE_COLOR: "0x7A7A7C"
+TILE6_VALUE_DISABLED_COLOR: "0xD9D9D9"
+# advanced
+TILE6_TAP_SERVICE: ""
+TILE6_TAP_PARAM_KEY: ""
+TILE6_TAP_PARAM_VAL: ""
+TILE6_LONGPRESS_SLIDER: "auto"
+TILE6_LONGPRESS_OFF_VALUE: "0"
+TILE6_LONGPRESS_ACTION: ""
+TILE6_LONGPRESS_ACTION_TYPE: ""
+TILE6_LONGPRESS_ACTION_SERVICE: ""
 ```
 
 ---
