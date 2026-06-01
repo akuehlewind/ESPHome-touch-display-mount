@@ -28,14 +28,15 @@
 #    - images/smartdisplay_background_90.png (90° and 270°)
 #
 # Tile configuration model
-# - TILE*_TYPE defines the entity kind: light | fan | switch | scene | script | cover
+# - TILE*_TYPE defines the entity kind: light | fan | switch | scene | script | cover | sensor
 # - TILE*_TAP_ACTION defines what happens on short tap:
 #   auto | toggle | activate | fan_toggle_preset | custom
 # - TILE*_LONGPRESS defines the long press mode: none | slider | action
 #   slider: opens a value overlay — configure with TILE*_LONGPRESS_SLIDER + TILE*_LONGPRESS_OFF_VALUE
 #   action: fires a different entity — configure with TILE*_LONGPRESS_ACTION*
 # - TILE*_VALUE_MODE defines how the value line is rendered:
-#   auto | brightness | percentage | preset | text
+#   auto | brightness | percentage | preset | text | sensor
+#   sensor mode shows the entity state + TILE*_SENSOR_UNIT (use with TILE*_TYPE = sensor)
 #
 # Notes
 # - DIRECT_ACTIONS="true" enables direct HA service calls from the device.
@@ -79,7 +80,7 @@ substitutions:
   MDI_GLYPH_2: "\U000F095F"
   MDI_GLYPH_3: "\U000F08DD"
   MDI_GLYPH_4: "\U000F1051"
-  MDI_GLYPH_5: "\U000F111C"
+  MDI_GLYPH_5: "\U000F008A"
   MDI_GLYPH_6: "\U000F0D43"
 
   # ============================================================
@@ -128,6 +129,7 @@ substitutions:
   TILE1_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"  # HA attribute for current room temperature
   TILE1_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"           # HA attribute for target temperature
   TILE1_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
+  TILE1_SENSOR_UNIT: ""                            # unit shown after the value when TILE1_TYPE = sensor (e.g. "%", "°C", "W")
 
 
   # ============================================================
@@ -176,6 +178,7 @@ substitutions:
   TILE2_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"  # HA attribute for current room temperature
   TILE2_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"           # HA attribute for target temperature
   TILE2_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
+  TILE2_SENSOR_UNIT: ""                            # unit shown after the value when TILE2_TYPE = sensor
 
 
   # ============================================================
@@ -224,6 +227,7 @@ substitutions:
   TILE3_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"  # HA attribute for current room temperature
   TILE3_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"           # HA attribute for target temperature
   TILE3_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
+  TILE3_SENSOR_UNIT: ""                            # unit shown after the value when TILE3_TYPE = sensor
 
 
   # ============================================================
@@ -272,29 +276,30 @@ substitutions:
   TILE4_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"  # HA attribute for current room temperature
   TILE4_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"           # HA attribute for target temperature
   TILE4_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
+  TILE4_SENSOR_UNIT: ""                            # unit shown after the value when TILE4_TYPE = sensor
 
 
   # ============================================================
-  # TILE 5
+  # TILE 5 — Sensor demo (battery level)
   # ============================================================
 
   # --- basic settings ---
-  TILE5_ENTITY: "cover.living_room"                # main Home Assistant entity for this tile
-  TILE5_STATE_ENTITY: "cover.living_room"          # entity used for active/inactive state styling
-  TILE5_TITLE: "Cover"                             # tile title shown in the UI
-  TILE5_ICON: "\U000F111C"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
-  TILE5_TYPE: "cover"                              # tile type: light | fan | switch | scene | script | cover | climate
+  TILE5_ENTITY: "sensor.battery_level"             # main Home Assistant entity for this tile
+  TILE5_STATE_ENTITY: "sensor.battery_level"       # entity used for active/inactive state styling
+  TILE5_TITLE: "Battery"                           # tile title shown in the UI
+  TILE5_ICON: "\U000F008A"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
+  TILE5_TYPE: "sensor"                             # tile type: light | fan | switch | scene | script | cover | climate | sensor
   TILE5_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
-  TILE5_LONGPRESS: "slider"                        # long press mode: none | slider | action
-  TILE5_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
-  TILE5_LABEL_OFF: "Closed"                        # text shown when entity is off (closed)
-  TILE5_LABEL_ON: "Open"                           # text shown when entity is on (open)
+  TILE5_LONGPRESS: "none"                          # long press mode: none | slider | action
+  TILE5_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text | sensor
+  TILE5_LABEL_OFF: "—"                             # text shown when entity is off
+  TILE5_LABEL_ON: "—"                              # text shown when entity is on
 
   # --- colors ---
-  TILE5_CIRCLE_ACTIVE_COLOR: "0x00C5EC"            # icon circle color when active
+  TILE5_CIRCLE_ACTIVE_COLOR: "0x30D158"            # icon circle color when active (green for battery)
   TILE5_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
   TILE5_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
-  TILE5_ICON_DISABLED_COLOR: "0x00C5EC"            # icon color when inactive
+  TILE5_ICON_DISABLED_COLOR: "0x30D158"            # icon color when inactive
   TILE5_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
   TILE5_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
   TILE5_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
@@ -306,10 +311,8 @@ substitutions:
   TILE5_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
   TILE5_TAP_PARAM_KEY: ""                          # optional extra service parameter key
   TILE5_TAP_PARAM_VAL: ""                          # optional extra service parameter value
-  # if LONGPRESS = slider:
   TILE5_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
   TILE5_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
-  # if LONGPRESS = action:
   TILE5_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
   TILE5_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover | climate (empty = same as TILE*_TYPE)
   TILE5_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
@@ -320,6 +323,7 @@ substitutions:
   TILE5_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"  # HA attribute for current room temperature
   TILE5_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"           # HA attribute for target temperature
   TILE5_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
+  TILE5_SENSOR_UNIT: "%"                           # unit shown after the value when TILE5_TYPE = sensor
 
 
   # ============================================================
@@ -368,6 +372,7 @@ substitutions:
   TILE6_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"  # HA attribute for current room temperature
   TILE6_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"           # HA attribute for target temperature
   TILE6_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
+  TILE6_SENSOR_UNIT: ""                            # unit shown after the value when TILE6_TYPE = sensor
 
   # ============================================================
   # ORIENTATION / LAYOUT
@@ -1199,6 +1204,37 @@ text_sensor:
   - platform: homeassistant
     id: tile6_cover_state
     entity_id: ${TILE6_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  # Sensor tile state mirrors — used when TILE*_TYPE = sensor
+  - platform: homeassistant
+    id: tile1_sensor_value
+    entity_id: ${TILE1_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_sensor_value
+    entity_id: ${TILE2_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_sensor_value
+    entity_id: ${TILE3_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_sensor_value
+    entity_id: ${TILE4_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_sensor_value
+    entity_id: ${TILE5_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_sensor_value
+    entity_id: ${TILE6_ENTITY}
     on_value: { then: [ script.execute: ui_refresh ] }
 
 switch:
@@ -3526,6 +3562,7 @@ script:
       - if:
           condition:
             lambda: |-
+              if (tile_type == "sensor") return false;
               return std::string("${DIRECT_ACTIONS}") == "true";
           then:
             - lambda: |-
@@ -3960,6 +3997,16 @@ script:
             if (lbl) lv_label_set_text(lbl, s.c_str());
           };
 
+          auto sensor_val_str = [](const std::string& val) -> std::string {
+            if (val.empty() || val == "unknown" || val == "unavailable") return "";
+            float f = atof(val.c_str());
+            if (isnan(f)) return val;
+            if (f == (int)f) return std::to_string((int)f);
+            char buf[16];
+            snprintf(buf, sizeof(buf), "%.1f", f);
+            return std::string(buf);
+          };
+
           auto set_value_auto = [&](lv_obj_t* lbl,
                                     bool on,
                                     const std::string& tile_type,
@@ -3971,7 +4018,9 @@ script:
                                     float climate_target_temperature,
                                     float climate_humidity,
                                     const std::string& label_on,
-                                    const std::string& label_off) {
+                                    const std::string& label_off,
+                                    const std::string& sensor_state = "",
+                                    const std::string& sensor_unit = "") {
             std::string mode = value_mode;
 
             if (mode == "auto" || mode.empty()) {
@@ -3981,6 +4030,8 @@ script:
                 mode = preset.empty() ? "percentage" : "preset";
               } else if (tile_type == "climate") {
                 mode = "climate";
+              } else if (tile_type == "sensor") {
+                mode = "sensor";
               } else {
                 mode = "text";
               }
@@ -4054,10 +4105,24 @@ script:
               return;
             }
 
+            if (mode == "sensor") {
+              if (sensor_state.empty() || sensor_state == "unknown" || sensor_state == "unavailable") {
+                set_lbl(lbl, "—");
+                return;
+              }
+              if (sensor_unit.empty()) {
+                set_lbl(lbl, sensor_state);
+              } else {
+                set_lbl(lbl, sensor_state + " " + sensor_unit);
+              }
+              return;
+            }
+
             set_lbl(lbl, "—");
           };
 
           auto is_active = [](const std::string& tile_type, const std::string& state) {
+            if (tile_type == "sensor") return true;
             if (tile_type == "climate") {
               return !state.empty() && state != "off" && state != "unavailable" && state != "unknown";
             }
@@ -4066,6 +4131,7 @@ script:
           };
 
           // Cover-aware active state: "closed" = off, anything else (open/opening/closing) = on
+          // Sensor tiles are always active (handled by is_active)
           bool t1_on = (std::string("${TILE1_TYPE}") == "cover") ? (id(tile1_cover_state).state != "closed") : is_active("${TILE1_TYPE}", std::string(id(ha_state_tile1).state.c_str()));
           bool t2_on = (std::string("${TILE2_TYPE}") == "cover") ? (id(tile2_cover_state).state != "closed") : is_active("${TILE2_TYPE}", std::string(id(ha_state_tile2).state.c_str()));
           bool t3_on = (std::string("${TILE3_TYPE}") == "cover") ? (id(tile3_cover_state).state != "closed") : is_active("${TILE3_TYPE}", std::string(id(ha_state_tile3).state.c_str()));
@@ -4076,32 +4142,38 @@ script:
           set_value_auto(id(t1_value), t1_on, "${TILE1_TYPE}", "${TILE1_VALUE_MODE}",
                          id(tile1_brightness).state, id(tile1_percentage).state, std::string(id(tile1_preset).state.c_str()),
                          id(tile1_climate_current_temperature).state, id(tile1_climate_target_temperature).state, id(tile1_climate_humidity).state,
-                         "${TILE1_LABEL_ON}", "${TILE1_LABEL_OFF}");
+                         "${TILE1_LABEL_ON}", "${TILE1_LABEL_OFF}",
+                         sensor_val_str(id(tile1_sensor_value).state), "${TILE1_SENSOR_UNIT}");
 
           set_value_auto(id(t2_value), t2_on, "${TILE2_TYPE}", "${TILE2_VALUE_MODE}",
                          id(tile2_brightness).state, id(tile2_percentage).state, std::string(id(tile2_preset).state.c_str()),
                          id(tile2_climate_current_temperature).state, id(tile2_climate_target_temperature).state, id(tile2_climate_humidity).state,
-                         "${TILE2_LABEL_ON}", "${TILE2_LABEL_OFF}");
+                         "${TILE2_LABEL_ON}", "${TILE2_LABEL_OFF}",
+                         sensor_val_str(id(tile2_sensor_value).state), "${TILE2_SENSOR_UNIT}");
 
           set_value_auto(id(t3_value), t3_on, "${TILE3_TYPE}", "${TILE3_VALUE_MODE}",
                          id(tile3_brightness).state, id(tile3_percentage).state, std::string(id(tile3_preset).state.c_str()),
                          id(tile3_climate_current_temperature).state, id(tile3_climate_target_temperature).state, id(tile3_climate_humidity).state,
-                         "${TILE3_LABEL_ON}", "${TILE3_LABEL_OFF}");
+                         "${TILE3_LABEL_ON}", "${TILE3_LABEL_OFF}",
+                         sensor_val_str(id(tile3_sensor_value).state), "${TILE3_SENSOR_UNIT}");
 
           set_value_auto(id(t4_value), t4_on, "${TILE4_TYPE}", "${TILE4_VALUE_MODE}",
                          id(tile4_brightness).state, id(tile4_percentage).state, std::string(id(tile4_preset).state.c_str()),
                          id(tile4_climate_current_temperature).state, id(tile4_climate_target_temperature).state, id(tile4_climate_humidity).state,
-                         "${TILE4_LABEL_ON}", "${TILE4_LABEL_OFF}");
+                         "${TILE4_LABEL_ON}", "${TILE4_LABEL_OFF}",
+                         sensor_val_str(id(tile4_sensor_value).state), "${TILE4_SENSOR_UNIT}");
 
           set_value_auto(id(t5_value), t5_on, "${TILE5_TYPE}", "${TILE5_VALUE_MODE}",
                          id(tile5_brightness).state, id(tile5_percentage).state, std::string(id(tile5_preset).state.c_str()),
                          id(tile5_climate_current_temperature).state, id(tile5_climate_target_temperature).state, id(tile5_climate_humidity).state,
-                         "${TILE5_LABEL_ON}", "${TILE5_LABEL_OFF}");
+                         "${TILE5_LABEL_ON}", "${TILE5_LABEL_OFF}",
+                         sensor_val_str(id(tile5_sensor_value).state), "${TILE5_SENSOR_UNIT}");
 
           set_value_auto(id(t6_value), t6_on, "${TILE6_TYPE}", "${TILE6_VALUE_MODE}",
                          id(tile6_brightness).state, id(tile6_percentage).state, std::string(id(tile6_preset).state.c_str()),
                          id(tile6_climate_current_temperature).state, id(tile6_climate_target_temperature).state, id(tile6_climate_humidity).state,
-                         "${TILE6_LABEL_ON}", "${TILE6_LABEL_OFF}");
+                         "${TILE6_LABEL_ON}", "${TILE6_LABEL_OFF}",
+                         sensor_val_str(id(tile6_sensor_value).state), "${TILE6_SENSOR_UNIT}");
 
           if (id(active_control_kind) == "climate_temperature" && !lv_obj_has_flag(id(climate_detail_overlay), LV_OBJ_FLAG_HIDDEN)) {
             auto label_for_climate_mode = [](std::string mode) {
