@@ -121,7 +121,7 @@ This keeps the tile UI clean while still allowing detailed control.
 
 - Home Assistant installed
 - ESPHome Add-on installed
-- ESPHome 2026.4+
+- **ESPHome 2026.4 or newer** — the YAML configs are written for the current display stack (`mipi_spi` + LVGL-managed rotation) and are validated on **2026.6**. On older ESPHome versions you need the adjustments described under [Troubleshooting](#troubleshooting).
 - Home Assistant 2026.2+
 - Basic ESPHome knowledge
 - 3D printer access (optional)
@@ -132,7 +132,7 @@ This keeps the tile UI clean while still allowing detailed control.
 
 This project was tested using:
 
-- **ESPHome 2026.2+**
+- **ESPHome 2026.6** (configs target 2026.4+)
 - **Home Assistant 2026.2+**
 - ESP32-2432S028 (Cheap Yellow Display / CYD)
 - ILI9341 + XPT2046 standalone wiring variant
@@ -279,6 +279,8 @@ Use the wiring table below, which shows how to put everything together.
 6.  Flash the device
 
 Available YAML variants (pick **one UI** for your **hardware**):
+
+> ℹ️ **ESPHome version:** these configs are written for **ESPHome 2026.4+** (display `mipi_spi` + LVGL-managed rotation) and validated on **2026.6**. Older versions need the tweaks under [Troubleshooting](#troubleshooting).
 
 ### Cheap Yellow Display (ESP32-2432S028 / CYD)
 - `esphome/home-like/cyd-2432s028/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles) — actively maintained
@@ -450,25 +452,47 @@ Flashing with a different model is usually the fastest way to identify the corre
 
 ---
 
+### `Invalid offsets.` / won't compile on ESPHome 2026.6+
+
+If validation fails on the `dimensions:` line of the display with:
+
+```
+display.mipi_spi: Invalid offsets.
+```
+
+this is the ESPHome 2026.6 change to `mipi_spi`: a `transform:` block on the display combined with swapped (rotated) `dimensions:` is no longer accepted. **The configs in this repo are already fixed for this** — rotation is now handled by LVGL:
+
+- the display is driven at its **native** size (`dimensions: 240 × 320`) with **no** `transform:` block
+- rotation is set via `LVGL_ROTATION` in the chosen ORIENTATION preset, which feeds `rotation:` in the `lvgl:` block (LVGL rotates the display **and** the touch coordinates together)
+
+If you copied an older version of the YAML, pull the current one. Simply updating `git`/your local copy is enough.
+
+---
+
 ### Display rotated / mirrored
 
 If the UI appears **rotated, mirrored, or upside down**, use the built-in **ORIENTATION preset block** in the substitutions section at the top of `home-like.yaml`.
 
-Four presets are provided and documented as comments — uncomment the one matching your desired orientation (0°, 90°, 180°, 270°) and comment out the others. Each preset sets the correct `DISPLAY_SWAP_XY`, `DISPLAY_MIRROR_X/Y`, `TOUCH_SWAP_XY`, `TOUCH_MIRROR_X/Y`, grid layout, and background image automatically.
+Four presets are provided and documented as comments — uncomment the one matching your desired orientation (0°, 90°, 180°, 270°) and comment out the others. Each preset sets the matching `LVGL_ROTATION` (0/90/180/270), touch axis correction, grid layout, and background image automatically.
 
-> Note: touch calibration values (`TOUCH_CAL_*`) are device-specific. The portrait presets include approximate values that may need tuning after flashing.
+> Note: touch calibration values (`TOUCH_CAL_*`) are device-specific. The presets include approximate values that may need tuning after flashing.
 
-If your board behaves differently from the presets, you can tune the transform values manually via the substitutions. The underlying parameters are:
+Since ESPHome 2026.4 **LVGL manages rotation** for both the display and the touchscreen — you should **not** add a `transform:`/`rotation:` to the `display:` block. If only the orientation is wrong, change `LVGL_ROTATION`:
 
 ```yaml
-transform:
-  swap_xy: true
-  mirror_x: true
-  mirror_y: true
+# in the active ORIENTATION preset
+LVGL_ROTATION: "90"   # 0 / 90 / 180 / 270
 ```
 
-Depending on the board variant, you may need to experiment with these values until the orientation matches your screen.
-Make sure `display.transform` and `touchscreen.transform` always use the same values, otherwise touch input will be misaligned.
+If touch is mirrored or axes are swapped relative to the display, tune the touchscreen axis correction (these only correct the raw XPT2046 vs. the native panel and stay the same across orientations):
+
+```yaml
+TOUCH_SWAP_XY: "false"
+TOUCH_MIRROR_X: "false"
+TOUCH_MIRROR_Y: "true"
+```
+
+> On **ESPHome before 2026.4** the `lvgl: rotation:` option is not available. In that case remove `rotation:` from the `lvgl:` block and instead rotate on the display via a `transform:` block (`swap_xy` / `mirror_x` / `mirror_y`) with the `dimensions:` set to the final rotated size — and keep `display.transform` and `touchscreen.transform` in sync.
 
 ------------------------------------------------------------------------
 

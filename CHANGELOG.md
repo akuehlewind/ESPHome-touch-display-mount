@@ -5,6 +5,16 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-06-21
+
+### Fixed
+- ESPHome 2026.6 compile failure `display.mipi_spi: Invalid offsets.` on the `dimensions:` line (#23) — `mipi_spi` no longer accepts a display `transform:` combined with swapped/rotated `dimensions:`. Rotation is now handled by LVGL: the display runs at its native 240×320 with no `transform:`, and orientation is driven by `LVGL_ROTATION` feeding `lvgl: rotation:` (LVGL rotates display and touch together). Affects both `cyd-2432s028` and `ili9341-external-esp32` home-like configs. Reported by @Twilek-de and @carla2409; fix approach contributed by @atl285. Thanks!
+
+### Changed
+- ORIENTATION presets: `DISPLAY_SWAP_XY` / `DISPLAY_MIRROR_X/Y` replaced by a single `LVGL_ROTATION` (0/90/180/270). Touch transform is now a constant native-axis correction (no longer per-orientation), since LVGL rotates touch coordinates automatically.
+
+---
+
 ## 2026-05-31
 
 ### Added

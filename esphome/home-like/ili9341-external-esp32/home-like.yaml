@@ -54,9 +54,10 @@
 # 1) Secrets: api.encryption.key, ota.password, WiFi credentials (prefer secrets.yaml)
 # 2) SPI pins and control pins if your wiring differs from the example above
 # 3) TILE*_ENTITY / TILE*_STATE_ENTITY: Home Assistant entity IDs you want to control/mirror
-# 4) Touch calibration + transform:
+# 4) Orientation + touch calibration:
+#    - rotation is set via LVGL_ROTATION in the ORIENTATION presets (LVGL
+#      rotates display + touch together, ESPHome 2026.4+)
 #    - calibration is device-specific
-#    - touchscreen.transform MUST match display.transform exactly
 ############################################################
 
 substitutions:
@@ -382,6 +383,11 @@ substitutions:
   # Touch calibration values (TOUCH_CAL_*) are device-specific —
   # portrait/flipped values are approximate and may need tuning.
   #
+  # LVGL_ROTATION (0/90/180/270) drives the rotation — LVGL rotates both the
+  # display output and the touch coordinates (ESPHome 2026.4+). DISPLAY_W/H are
+  # the *logical* (post-rotation) canvas size used by the tile layout below;
+  # the physical panel is always driven at its native 240×320 (see display:).
+  #
   # Tile content layout:
   #   Landscape — icon left, title + value to its right
   #   Portrait  — icon centered on top, title + value stacked below
@@ -391,11 +397,9 @@ substitutions:
   ORIENTATION: "0"
   DISPLAY_W: "320"
   DISPLAY_H: "240"
-  DISPLAY_SWAP_XY: "true"
-  DISPLAY_MIRROR_X: "false"
-  DISPLAY_MIRROR_Y: "false"
-  TOUCH_SWAP_XY: "true"
-  TOUCH_MIRROR_X: "false"
+  LVGL_ROTATION: "90"
+  TOUCH_SWAP_XY: "false"
+  TOUCH_MIRROR_X: "true"
   TOUCH_MIRROR_Y: "false"
   TOUCH_CAL_X_MIN: "280"
   TOUCH_CAL_X_MAX: "3860"
@@ -423,15 +427,13 @@ substitutions:
   # ORIENTATION: "90"
   # DISPLAY_W: "240"
   # DISPLAY_H: "320"
-  # DISPLAY_SWAP_XY: "false"
-  # DISPLAY_MIRROR_X: "false"
-  # DISPLAY_MIRROR_Y: "true"
+  # LVGL_ROTATION: "180"
   # TOUCH_SWAP_XY: "false"
-  # TOUCH_MIRROR_X: "false"
-  # TOUCH_MIRROR_Y: "true"
-  # TOUCH_CAL_X_MIN: "340"
+  # TOUCH_MIRROR_X: "true"
+  # TOUCH_MIRROR_Y: "false"
+  # TOUCH_CAL_X_MIN: "280"
   # TOUCH_CAL_X_MAX: "3860"
-  # TOUCH_CAL_Y_MIN: "280"
+  # TOUCH_CAL_Y_MIN: "340"
   # TOUCH_CAL_Y_MAX: "3860"
   # GRID_COL1_X: "6"
   # GRID_COL2_X: "123"
@@ -455,12 +457,10 @@ substitutions:
   # ORIENTATION: "180"
   # DISPLAY_W: "320"
   # DISPLAY_H: "240"
-  # DISPLAY_SWAP_XY: "true"
-  # DISPLAY_MIRROR_X: "true"
-  # DISPLAY_MIRROR_Y: "true"
-  # TOUCH_SWAP_XY: "true"
+  # LVGL_ROTATION: "270"
+  # TOUCH_SWAP_XY: "false"
   # TOUCH_MIRROR_X: "true"
-  # TOUCH_MIRROR_Y: "true"
+  # TOUCH_MIRROR_Y: "false"
   # TOUCH_CAL_X_MIN: "280"
   # TOUCH_CAL_X_MAX: "3860"
   # TOUCH_CAL_Y_MIN: "340"
@@ -487,15 +487,13 @@ substitutions:
   # ORIENTATION: "270"
   # DISPLAY_W: "240"
   # DISPLAY_H: "320"
-  # DISPLAY_SWAP_XY: "false"
-  # DISPLAY_MIRROR_X: "true"
-  # DISPLAY_MIRROR_Y: "false"
+  # LVGL_ROTATION: "0"
   # TOUCH_SWAP_XY: "false"
   # TOUCH_MIRROR_X: "true"
   # TOUCH_MIRROR_Y: "false"
-  # TOUCH_CAL_X_MIN: "340"
+  # TOUCH_CAL_X_MIN: "280"
   # TOUCH_CAL_X_MAX: "3860"
-  # TOUCH_CAL_Y_MIN: "280"
+  # TOUCH_CAL_Y_MIN: "340"
   # TOUCH_CAL_Y_MAX: "3860"
   # GRID_COL1_X: "6"
   # GRID_COL2_X: "123"
@@ -1240,7 +1238,11 @@ light:
 # Touchscreen configuration (XPT2046)
 # IMPORTANT:
 # - calibration values are device-specific
-# - touchscreen.transform must match display.transform exactly
+# - Since ESPHome 2026.4 LVGL manages rotation (see `rotation:` in the lvgl
+#   block) and rotates touch coordinates automatically. The transform below is
+#   therefore NOT a per-orientation rotation — it only corrects the raw XPT2046
+#   axis orientation against the panel's native (portrait) frame and stays the
+#   same for every ORIENTATION preset.
 touchscreen:
   platform: xpt2046
   id: ts_touch
@@ -1278,20 +1280,21 @@ display:
     update_interval: never
     auto_clear_enabled: false
 
-    transform:
-      swap_xy: ${DISPLAY_SWAP_XY}
-      mirror_x: ${DISPLAY_MIRROR_X}
-      mirror_y: ${DISPLAY_MIRROR_Y}
-
+    # Native panel dimensions (portrait). Do NOT swap these per orientation and
+    # do NOT add a display transform — rotation is handled by LVGL below.
+    # ESPHome 2026.6+ rejects a swapped transform here with "Invalid offsets".
     dimensions:
-      width: ${DISPLAY_W}
-      height: ${DISPLAY_H}
+      width: 240
+      height: 320
 
 lvgl:
   displays:
     - my_display
   touchscreens:
     - touchscreen_id: ts_touch
+
+  # LVGL owns the rotation (display + touch) since ESPHome 2026.4.
+  rotation: ${LVGL_ROTATION}
 
   style_definitions:
     - id: style_tile
