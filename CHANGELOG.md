@@ -5,6 +5,13 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-09-17
+
+### Fixed
+- `image:` blocks now use the `platform: file` form. The bare `image: - file:` syntax is deprecated in ESPHome 2026.9 and is removed in 2027.1; the new form is accepted by 2026.8 as well, so this does not raise the minimum version. Affects the `cyd-2432s028` and `ili9341-external-esp32` home-like configs.
+
+---
+
 ## 2026-06-21
 
 ### Fixed

@@ -753,7 +753,8 @@ font:
       - "\U000F012C" # check
 
 image:
-  - file: "${BG_IMAGE}"
+  - platform: file
+    file: "${BG_IMAGE}"
     id: bg_home
     type: RGB565
 
