@@ -542,7 +542,10 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret ota_password
+    # A bare 'encryption:' inherits the api encryption key, which authenticates
+    # the uploader; ESPHome 2026.9 warns that a separate ota password costs
+    # ~3.5 KB of flash and 60 bytes of RAM for no added protection.
+    encryption:
 
 wifi:
   ssid: !secret wifi_ssid

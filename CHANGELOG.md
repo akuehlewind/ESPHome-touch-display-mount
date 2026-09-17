@@ -5,6 +5,13 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-09-17
+
+### Changed
+- OTA now uses encryption instead of a password. `ota: - platform: esphome` carries a bare `encryption:`, which inherits the `api:` encryption key; ESPHome 2026.9 warns that a separate OTA password costs about 3.5 KB of flash and 60 bytes of RAM while adding no protection a device with an API key does not already have. `ota_password` is gone from `secrets.yaml.example`. **Requires ESPHome 2026.9 or newer**, and a device already running a password-protected build needs one serial install, because the running firmware asks for a password the new config no longer carries.
+
+---
+
 ## 2026-06-21
 
 ### Fixed
