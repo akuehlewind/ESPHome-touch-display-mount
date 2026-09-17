@@ -5,6 +5,16 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-09-17
+
+### Added
+- `esphome/home-like/cyd-2432s028-9342/home-like.yaml` — home-like config for the ESP32-2432S028 board revision that ships an **ILI9342** panel (the USB-C + Micro-USB variant). That panel is natively landscape 320×240, so the ILI9341 config drives it at the wrong row width: the board boots, connects and responds to touch normally while the UI appears sheared into diagonal stripes. Only hardware settings differ from `cyd-2432s028/home-like.yaml`: `model: ILI9342` at 40 MHz with the dimensions supplied by the model, `LVGL_ROTATION` = `ORIENTATION + 180` (instead of `+ 90`), and a touch transform against the landscape native frame — `swap_xy: true` throughout, both mirrors `true` in landscape (0°/180°) and both `false` in portrait (90°/270°). All four orientation presets verified on hardware.
+
+### Docs
+- README + home-like README: document the ILI9342 board revision, and point the "corrupted / garbled display output" troubleshooting entry at it for the diagonal-stripes symptom.
+
+---
+
 ## 2026-06-21
 
 ### Fixed

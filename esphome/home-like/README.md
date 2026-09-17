@@ -45,6 +45,20 @@ The **ESP32-2432S028**, commonly known as the **Cheap Yellow Display (CYD)**, is
 
 Use this file if you have a standalone ESP32-2432S028 board.
 
+### `cyd-2432s028-9342/home-like.yaml` — CYD with an ILI9342 panel (USB-C + Micro-USB revision)
+
+Boards sold as **ESP32-2432S028** do not all use the same display controller. The Micro-USB-only board has an **ILI9341**, natively portrait 240×320. Boards with **both USB-C and Micro-USB** commonly have an **ILI9342**, which is natively **landscape 320×240** (some batches use an ST7789V instead).
+
+Use this file if the CYD config above boots normally — WiFi connects, the logs look clean, touch responds — but the UI appears sheared into **diagonal stripes**. That is what a 240×320 driver looks like on a 320×240 panel: every row is written at the wrong width.
+
+Only hardware settings differ from `cyd-2432s028/home-like.yaml`; the tile UI, backgrounds and every other substitution are identical:
+
+- `model: ILI9342` at 40 MHz, with the native dimensions supplied by the model (no `dimensions:` block)
+- `LVGL_ROTATION` = `ORIENTATION + 180` in every preset, instead of `+ 90`, because the panel is already landscape and its native top edge faces the USB side
+- touch transform corrected against the **landscape** native frame: `swap_xy: true` in every preset, with both mirrors `true` in landscape (0°/180°) and both `false` in portrait (90°/270°)
+
+All four orientation presets were verified on hardware. If the picture is upright but taps land on the tile diagonally opposite, the two mirror values are the wrong pair for that preset.
+
 ### `ili9341-external-esp32/home-like.yaml` — Standalone ILI9341 + external ESP32
 
 Use this file if you have a **separate ILI9341 display module** wired to a generic ESP32 board (e.g. ESP32 DevKit / Wroom 32D). This requires manual wiring according to the pin table in the main README.

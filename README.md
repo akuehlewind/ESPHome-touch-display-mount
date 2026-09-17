@@ -32,9 +32,10 @@ The enclosure is designed for:
 - Minimal footprint  
 - Professional, integrated appearance  
 
-Two hardware variants are supported:
+Three hardware variants are supported:
 
 - ✅ **ESP32-2432S028 (Cheap Yellow Display / CYD)**
+- ✅ **ESP32-2432S028 with an ILI9342 panel (USB-C + Micro-USB board revision)**
 - ✅ **Standalone ILI9341 + External ESP32 wiring variant**
 
 The ESP32-2432S028 integrates the ESP32, ILI9341 display, touchscreen controller, and backlight circuitry on a single board.  
@@ -284,6 +285,7 @@ Available YAML variants (pick **one UI** for your **hardware**):
 
 ### Cheap Yellow Display (ESP32-2432S028 / CYD)
 - `esphome/home-like/cyd-2432s028/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles) — actively maintained
+- `esphome/home-like/cyd-2432s028-9342/home-like.yaml` – same UI for the USB-C + Micro-USB board revision with an **ILI9342** (natively landscape) panel — use it if the file above shows diagonal stripes
 - `esphome/buttons/cyd-2432s028/buttons.yaml` – lockscreen with 4 round buttons (simple / legacy)
 
 ### External display wiring (any ESP32 + ILI9341 + XPT2046)
@@ -427,6 +429,8 @@ If the display shows **corrupted graphics, horizontal lines, or random pixels**,
 
 Most CYD boards use **ILI9341**, but some variants ship with **ST7789** or **ILI9342**.  
 If the driver in ESPHome does not match the controller, the display output may look broken.
+
+**Diagonal stripes** — the UI still recognisable, but sheared across the screen — are the signature of an **ILI9342** board (the USB-C + Micro-USB revision). That panel is natively **landscape 320×240**, so a 240×320 driver writes every row at the wrong width. Ready-to-flash config: [`esphome/home-like/cyd-2432s028-9342/home-like.yaml`](esphome/home-like/cyd-2432s028-9342/home-like.yaml), which also carries the matching `LVGL_ROTATION` and touch transform values — both differ from the ILI9341 file.
 
 Try changing the display model in the YAML:
 

@@ -1,0 +1,4286 @@
+############################################################
+# SmartDisplay – iOS Home app–inspired Tiles UI
+# Target device: ESP32-2432S028 / Cheap Yellow Display (CYD) — ILI9342 board revision
+# Resolution: configurable via ORIENTATION substitutions (landscape 320×240 default)
+#
+# Target hardware
+# - Cheap Yellow Display (ESP32-2432S028), USB-C + Micro-USB board revision
+# - Built-in ILI9342 display — natively LANDSCAPE 320x240
+# - Built-in XPT2046 touchscreen
+#
+# Which board do I have?
+# - Micro-USB only     -> ILI9341 (native 240x320) -> use ../cyd-2432s028/home-like.yaml
+# - USB-C + Micro-USB  -> ILI9342 (this file), or ST7789V on some batches
+# Symptom of the wrong driver: the board boots normally, WiFi connects, logs look
+# clean and touch responds, but the panel shows the UI sheared into diagonal
+# stripes — each row is written at the wrong width.
+#
+# All rotation and touch values below were verified on hardware in all four
+# ORIENTATION presets.
+#
+# What this config does
+# - Renders a wallpaper background + a 2x3 grid of “tiles” (LVGL).
+# - Each tile shows: icon (MDI font), title, and a value line.
+# - Tile taps publish a short-lived text_sensor event (smartdisplay_action)
+#   so you can build Home Assistant automations on top.
+# - Optional: the device can also call Home Assistant services directly
+#   (toggle lights/switches/fans/covers, activate scenes/scripts, set fan preset,
+#   set light brightness, set fan percentage, set cover position).
+#
+# The layout is inspired by common modern smart home UIs.
+#
+# How to customize
+# 1) Edit the TILE1..TILE6 blocks below.
+# 2) If you change icons, update the FONT GLYPHS block in the substitutions below.
+#    Each glyph must appear exactly once — same icon on multiple tiles is fine, just list it once.
+# 3) Provide background images (see ORIENTATION section for which file each preset uses):
+#    - images/smartdisplay_background.png    (0° and 180°)
+#    - images/smartdisplay_background_90.png (90° and 270°)
+#
+# Tile configuration model
+# - TILE*_TYPE defines the entity kind: light | fan | switch | scene | script | cover
+# - TILE*_TAP_ACTION defines what happens on short tap:
+#   auto | toggle | activate | fan_toggle_preset | custom
+# - TILE*_LONGPRESS defines the long press mode: none | slider | action
+#   slider: opens a value overlay — configure with TILE*_LONGPRESS_SLIDER + TILE*_LONGPRESS_OFF_VALUE
+#   action: fires a different entity — configure with TILE*_LONGPRESS_ACTION*
+# - TILE*_VALUE_MODE defines how the value line is rendered:
+#   auto | brightness | percentage | preset | text
+#
+# Notes
+# - DIRECT_ACTIONS="true" enables direct HA service calls from the device.
+#   If "false", only the smartdisplay_action event is emitted.
+# - In auto mode, values and long-press behavior are derived from TILE*_TYPE:
+#   light -> brightness, fan -> percentage/preset, scene/script -> text
+#
+# What you must adapt before flashing
+# 1) Secrets: api.encryption.key, ota.password, WiFi credentials (prefer secrets.yaml)
+# 2) Pins, touch calibration and transform if your CYD variant differs
+# 3) TILE*_ENTITY / TILE*_STATE_ENTITY: Home Assistant entity IDs you want to control/mirror
+# 4) Orientation + touch calibration:
+#    - rotation is set via LVGL_ROTATION in the ORIENTATION presets (LVGL
+#      rotates display + touch together, ESPHome 2026.4+)
+#    - calibration is device-specific
+############################################################
+
+substitutions:
+
+  DIRECT_ACTIONS: "true"                           # true = call Home Assistant services directly, false = only emit action events
+  ROOM_NAME: "Office"                              # room name shown in the top-left header
+  TIME_24H: "true"                                 # true = 24h format, false = 12h format
+
+  ## DIM settings
+  AUTO_DIM: "true"                                 # true = enable auto dimming
+  AUTO_DIM_TIMEOUT: "10"                           # seconds after last touch
+  MAX_BRIGHTNESS: "100"                            # backlight brightness in percent
+  DIM_BRIGHTNESS: "40"                             # dimmed backlight brightness in percent
+  NIGHT_MODE: "true"                               # true = use separate dim level at night
+  NIGHT_START_HOUR: "22"                           # 0-23
+  NIGHT_END_HOUR: "7"                              # 0-23
+  NIGHT_DIM_BRIGHTNESS: "18"                       # backlight brightness in percent at night
+
+  # ============================================================
+  # FONT GLYPHS
+  # List every unique MDI icon used across your tiles — each value must appear exactly once.
+  # Reusing the same icon on multiple tiles is fine: just list that glyph once here.
+  # If you use fewer than 6 unique icons, leave the extra slots with their default values
+  # (unused glyphs add a few bytes to the font but cause no errors).
+  # ============================================================
+  MDI_GLYPH_1: "\U000F0769"
+  MDI_GLYPH_2: "\U000F095F"
+  MDI_GLYPH_3: "\U000F08DD"
+  MDI_GLYPH_4: "\U000F1051"
+  MDI_GLYPH_5: "\U000F111C"
+  MDI_GLYPH_6: "\U000F0D43"
+
+  # ============================================================
+  # TILE 1
+  # ============================================================
+
+  # --- basic settings ---
+  TILE1_ENTITY: "light.ceiling"                    # main Home Assistant entity for this tile
+  TILE1_STATE_ENTITY: "light.ceiling"              # entity used for active/inactive state styling
+  TILE1_TITLE: "Ceiling"                           # tile title shown in the UI
+  TILE1_ICON: "\U000F0769"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
+  TILE1_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover | climate
+  TILE1_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE1_LONGPRESS: "slider"                        # long press mode: none | slider | action
+  TILE1_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
+  TILE1_LABEL_OFF: "Off"                           # text shown when entity is off
+  TILE1_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+
+  # --- colors ---
+  TILE1_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
+  TILE1_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
+  TILE1_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
+  TILE1_ICON_DISABLED_COLOR: "0xFEC600"            # icon color when inactive
+  TILE1_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
+  TILE1_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
+  TILE1_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
+  TILE1_TITLE_DISABLED_COLOR: "0xFFFFFF"           # title color when inactive
+  TILE1_VALUE_ACTIVE_COLOR: "0x7A7A7C"             # value color when active
+  TILE1_VALUE_DISABLED_COLOR: "0xD9D9D9"           # value color when inactive
+
+  # --- advanced settings ---
+  TILE1_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
+  TILE1_TAP_PARAM_KEY: ""                          # optional extra service parameter key
+  TILE1_TAP_PARAM_VAL: ""                          # optional extra service parameter value
+  # if LONGPRESS = slider:
+  TILE1_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
+  TILE1_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
+  # if LONGPRESS = action:
+  TILE1_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
+  TILE1_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover | climate (empty = same as TILE*_TYPE)
+  TILE1_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
+  # if TYPE = climate:
+  TILE1_CLIMATE_MIN_TEMP: "5.0"                  # minimum target temperature shown in the thermostat overlay
+  TILE1_CLIMATE_MAX_TEMP: "30.0"                 # maximum target temperature shown in the thermostat overlay
+  TILE1_CLIMATE_STEP: "0.5"                      # target temperature step size
+  TILE1_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"  # HA attribute for current room temperature
+  TILE1_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"           # HA attribute for target temperature
+  TILE1_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
+
+
+  # ============================================================
+  # TILE 2
+  # ============================================================
+
+  # --- basic settings ---
+  TILE2_ENTITY: "light.desk"                       # main Home Assistant entity for this tile
+  TILE2_STATE_ENTITY: "light.desk"                 # entity used for active/inactive state styling
+  TILE2_TITLE: "Desk"                              # tile title shown in the UI
+  TILE2_ICON: "\U000F095F"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
+  TILE2_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover | climate
+  TILE2_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE2_LONGPRESS: "slider"                        # long press mode: none | slider | action
+  TILE2_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
+  TILE2_LABEL_OFF: "Off"                           # text shown when entity is off
+  TILE2_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+
+  # --- colors ---
+  TILE2_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
+  TILE2_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
+  TILE2_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
+  TILE2_ICON_DISABLED_COLOR: "0xFEC600"            # icon color when inactive
+  TILE2_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
+  TILE2_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
+  TILE2_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
+  TILE2_TITLE_DISABLED_COLOR: "0xFFFFFF"           # title color when inactive
+  TILE2_VALUE_ACTIVE_COLOR: "0x7A7A7C"             # value color when active
+  TILE2_VALUE_DISABLED_COLOR: "0xD9D9D9"           # value color when inactive
+
+  # --- advanced settings ---
+  TILE2_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
+  TILE2_TAP_PARAM_KEY: ""                          # optional extra service parameter key
+  TILE2_TAP_PARAM_VAL: ""                          # optional extra service parameter value
+  # if LONGPRESS = slider:
+  TILE2_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
+  TILE2_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
+  # if LONGPRESS = action:
+  TILE2_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
+  TILE2_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover | climate (empty = same as TILE*_TYPE)
+  TILE2_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
+  # if TYPE = climate:
+  TILE2_CLIMATE_MIN_TEMP: "5.0"                  # minimum target temperature shown in the thermostat overlay
+  TILE2_CLIMATE_MAX_TEMP: "30.0"                 # maximum target temperature shown in the thermostat overlay
+  TILE2_CLIMATE_STEP: "0.5"                      # target temperature step size
+  TILE2_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"  # HA attribute for current room temperature
+  TILE2_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"           # HA attribute for target temperature
+  TILE2_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
+
+
+  # ============================================================
+  # TILE 3
+  # ============================================================
+
+  # --- basic settings ---
+  TILE3_ENTITY: "light.floor_lamp"                 # main Home Assistant entity for this tile
+  TILE3_STATE_ENTITY: "light.floor_lamp"           # entity used for active/inactive state styling
+  TILE3_TITLE: "Floor lamp"                        # tile title shown in the UI
+  TILE3_ICON: "\U000F08DD"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
+  TILE3_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover | climate
+  TILE3_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE3_LONGPRESS: "slider"                        # long press mode: none | slider | action
+  TILE3_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
+  TILE3_LABEL_OFF: "Off"                           # text shown when entity is off
+  TILE3_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+
+  # --- colors ---
+  TILE3_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
+  TILE3_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
+  TILE3_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
+  TILE3_ICON_DISABLED_COLOR: "0xFEC600"            # icon color when inactive
+  TILE3_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
+  TILE3_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
+  TILE3_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
+  TILE3_TITLE_DISABLED_COLOR: "0xFFFFFF"           # title color when inactive
+  TILE3_VALUE_ACTIVE_COLOR: "0x7A7A7C"             # value color when active
+  TILE3_VALUE_DISABLED_COLOR: "0xD9D9D9"           # value color when inactive
+
+  # --- advanced settings ---
+  TILE3_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
+  TILE3_TAP_PARAM_KEY: ""                          # optional extra service parameter key
+  TILE3_TAP_PARAM_VAL: ""                          # optional extra service parameter value
+  # if LONGPRESS = slider:
+  TILE3_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
+  TILE3_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
+  # if LONGPRESS = action:
+  TILE3_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
+  TILE3_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover | climate (empty = same as TILE*_TYPE)
+  TILE3_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
+  # if TYPE = climate:
+  TILE3_CLIMATE_MIN_TEMP: "5.0"                  # minimum target temperature shown in the thermostat overlay
+  TILE3_CLIMATE_MAX_TEMP: "30.0"                 # maximum target temperature shown in the thermostat overlay
+  TILE3_CLIMATE_STEP: "0.5"                      # target temperature step size
+  TILE3_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"  # HA attribute for current room temperature
+  TILE3_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"           # HA attribute for target temperature
+  TILE3_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
+
+
+  # ============================================================
+  # TILE 4
+  # ============================================================
+
+  # --- basic settings ---
+  TILE4_ENTITY: "light.desk_ambient"               # main Home Assistant entity for this tile
+  TILE4_STATE_ENTITY: "light.desk_ambient"         # entity used for active/inactive state styling  
+  TILE4_TITLE: "Ambient"                           # tile title shown in the UI
+  TILE4_ICON: "\U000F1051"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
+  TILE4_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover | climate
+  TILE4_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE4_LONGPRESS: "slider"                        # long press mode: none | slider | action
+  TILE4_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
+  TILE4_LABEL_OFF: "Off"                           # text shown when entity is off
+  TILE4_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+
+  # --- colors ---
+  TILE4_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
+  TILE4_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
+  TILE4_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
+  TILE4_ICON_DISABLED_COLOR: "0xFEC600"            # icon color when inactive
+  TILE4_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
+  TILE4_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
+  TILE4_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
+  TILE4_TITLE_DISABLED_COLOR: "0xFFFFFF"           # title color when inactive
+  TILE4_VALUE_ACTIVE_COLOR: "0x7A7A7C"             # value color when active
+  TILE4_VALUE_DISABLED_COLOR: "0xD9D9D9"           # value color when inactive
+
+  # --- advanced settings ---
+  TILE4_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
+  TILE4_TAP_PARAM_KEY: ""                          # optional extra service parameter key
+  TILE4_TAP_PARAM_VAL: ""                          # optional extra service parameter value
+  # if LONGPRESS = slider:
+  TILE4_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
+  TILE4_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
+  # if LONGPRESS = action:
+  TILE4_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
+  TILE4_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover | climate (empty = same as TILE*_TYPE)
+  TILE4_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
+  # if TYPE = climate:
+  TILE4_CLIMATE_MIN_TEMP: "5.0"                  # minimum target temperature shown in the thermostat overlay
+  TILE4_CLIMATE_MAX_TEMP: "30.0"                 # maximum target temperature shown in the thermostat overlay
+  TILE4_CLIMATE_STEP: "0.5"                      # target temperature step size
+  TILE4_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"  # HA attribute for current room temperature
+  TILE4_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"           # HA attribute for target temperature
+  TILE4_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
+
+
+  # ============================================================
+  # TILE 5
+  # ============================================================
+
+  # --- basic settings ---
+  TILE5_ENTITY: "cover.living_room"                # main Home Assistant entity for this tile
+  TILE5_STATE_ENTITY: "cover.living_room"          # entity used for active/inactive state styling
+  TILE5_TITLE: "Cover"                             # tile title shown in the UI
+  TILE5_ICON: "\U000F111C"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
+  TILE5_TYPE: "cover"                              # tile type: light | fan | switch | scene | script | cover | climate
+  TILE5_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE5_LONGPRESS: "slider"                        # long press mode: none | slider | action
+  TILE5_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
+  TILE5_LABEL_OFF: "Closed"                        # text shown when entity is off (closed)
+  TILE5_LABEL_ON: "Open"                           # text shown when entity is on (open)
+
+  # --- colors ---
+  TILE5_CIRCLE_ACTIVE_COLOR: "0x00C5EC"            # icon circle color when active
+  TILE5_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
+  TILE5_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
+  TILE5_ICON_DISABLED_COLOR: "0x00C5EC"            # icon color when inactive
+  TILE5_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
+  TILE5_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
+  TILE5_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
+  TILE5_TITLE_DISABLED_COLOR: "0xFFFFFF"           # title color when inactive
+  TILE5_VALUE_ACTIVE_COLOR: "0x7A7A7C"             # value color when active
+  TILE5_VALUE_DISABLED_COLOR: "0xD9D9D9"           # value color when inactive
+
+  # --- advanced settings ---
+  TILE5_TAP_SERVICE: ""                            # optional service override, e.g. light.toggle
+  TILE5_TAP_PARAM_KEY: ""                          # optional extra service parameter key
+  TILE5_TAP_PARAM_VAL: ""                          # optional extra service parameter value
+  # if LONGPRESS = slider:
+  TILE5_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
+  TILE5_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
+  # if LONGPRESS = action:
+  TILE5_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
+  TILE5_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover | climate (empty = same as TILE*_TYPE)
+  TILE5_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
+  # if TYPE = climate:
+  TILE5_CLIMATE_MIN_TEMP: "5.0"                  # minimum target temperature shown in the thermostat overlay
+  TILE5_CLIMATE_MAX_TEMP: "30.0"                 # maximum target temperature shown in the thermostat overlay
+  TILE5_CLIMATE_STEP: "0.5"                      # target temperature step size
+  TILE5_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"  # HA attribute for current room temperature
+  TILE5_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"           # HA attribute for target temperature
+  TILE5_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
+
+
+  # ============================================================
+  # TILE 6
+  # ============================================================
+
+  # --- basic settings ---
+  TILE6_ENTITY: "fan.air_purifier"                 # main Home Assistant entity for this tile
+  TILE6_STATE_ENTITY: "fan.air_purifier"           # entity used for active/inactive state styling  
+  TILE6_TITLE: "Purifier"                          # tile title shown in the UI
+  TILE6_ICON: "\U000F0D43"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
+  TILE6_TYPE: "fan"                                # tile type: light | fan | switch | scene | script | cover | climate
+  TILE6_TAP_ACTION: "fan_toggle_preset"            # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE6_LONGPRESS: "slider"                        # long press mode: none | slider | action
+  TILE6_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
+  TILE6_LABEL_OFF: "Off"                           # text shown when entity is off
+  TILE6_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+
+  # --- colors ---
+  TILE6_CIRCLE_ACTIVE_COLOR: "0x00C5EC"            # icon circle color when active
+  TILE6_CIRCLE_DISABLED_COLOR: "0x7B7B6F"          # icon circle color when inactive
+  TILE6_ICON_ACTIVE_COLOR: "0xFFFFFF"              # icon color when active
+  TILE6_ICON_DISABLED_COLOR: "0x00C5EC"            # icon color when inactive
+  TILE6_BG_ACTIVE_COLOR: "0xFFFFFF"                # tile background color when active
+  TILE6_BG_DISABLED_COLOR: "0x939391"              # tile background color when inactive
+  TILE6_TITLE_ACTIVE_COLOR: "0x000000"             # title color when active
+  TILE6_TITLE_DISABLED_COLOR: "0xFFFFFF"           # title color when inactive
+  TILE6_VALUE_ACTIVE_COLOR: "0x7A7A7C"             # value color when active
+  TILE6_VALUE_DISABLED_COLOR: "0xD9D9D9"           # value color when inactive
+
+  # --- advanced settings ---
+  TILE6_TAP_SERVICE: "fan.toggle"                  # optional service override, e.g. fan.toggle
+  TILE6_TAP_PARAM_KEY: "preset_mode"               # optional extra service parameter key
+  TILE6_TAP_PARAM_VAL: "Auto"                      # optional extra service parameter value
+  # if LONGPRESS = slider:
+  TILE6_LONGPRESS_SLIDER: "auto"                   # slider type: auto | brightness | percentage | cover_position
+  TILE6_LONGPRESS_OFF_VALUE: "0"                   # initial slider value when entity is off
+  # if LONGPRESS = action:
+  TILE6_LONGPRESS_ACTION: ""                       # entity_id to fire on long press
+  TILE6_LONGPRESS_ACTION_TYPE: ""                  # entity type: light | fan | switch | scene | script | cover | climate (empty = same as TILE*_TYPE)
+  TILE6_LONGPRESS_ACTION_SERVICE: ""               # service to call (default: activate/turn_on — set e.g. "light.toggle" to toggle instead)
+  # if TYPE = climate:
+  TILE6_CLIMATE_MIN_TEMP: "5.0"                  # minimum target temperature shown in the thermostat overlay
+  TILE6_CLIMATE_MAX_TEMP: "30.0"                 # maximum target temperature shown in the thermostat overlay
+  TILE6_CLIMATE_STEP: "0.5"                      # target temperature step size
+  TILE6_CLIMATE_CURRENT_TEMP_ATTRIBUTE: "current_temperature"  # HA attribute for current room temperature
+  TILE6_CLIMATE_TARGET_TEMP_ATTRIBUTE: "temperature"           # HA attribute for target temperature
+  TILE6_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
+
+  # ============================================================
+  # ORIENTATION / LAYOUT
+  # Uncomment ONE preset block below, comment out the others.
+  # Touch calibration values (TOUCH_CAL_*) are device-specific —
+  # portrait/flipped values are approximate and may need tuning.
+  #
+  # LVGL_ROTATION (0/90/180/270) drives the rotation — LVGL rotates both the
+  # display output and the touch coordinates (ESPHome 2026.4+). DISPLAY_W/H are
+  # the *logical* (post-rotation) canvas size used by the tile layout below;
+  # the physical panel is always driven at its native 320×240 (see display:).
+  #
+  # This panel is natively LANDSCAPE and its native top edge faces the USB side,
+  # so LVGL_ROTATION = ORIENTATION + 180 here (the ILI9341 config uses +90).
+  #
+  # The touch transform is NOT identical across presets on this board: swap_xy is
+  # always true, but the landscape presets (0/180) need both mirrors true while the
+  # portrait presets (90/270) need both false. With the wrong pair, taps land 180°
+  # rotated — e.g. the top-left tile fires the bottom-right one.
+  #
+  # Tile content layout:
+  #   Landscape — icon left, title + value to its right
+  #   Portrait  — icon centered on top, title + value stacked below
+  # ============================================================
+
+  # ----- 0° — Landscape 320×240 (default, USB on right) -----
+  ORIENTATION: "0"
+  DISPLAY_W: "320"
+  DISPLAY_H: "240"
+  LVGL_ROTATION: "180"
+  TOUCH_SWAP_XY: "true"
+  TOUCH_MIRROR_X: "true"
+  TOUCH_MIRROR_Y: "true"
+  TOUCH_CAL_X_MIN: "340"
+  TOUCH_CAL_X_MAX: "3860"
+  TOUCH_CAL_Y_MIN: "280"
+  TOUCH_CAL_Y_MAX: "3860"
+  GRID_COL1_X: "9"
+  GRID_COL2_X: "164"
+  GRID_ROW1_Y: "54"
+  GRID_ROW2_Y: "114"
+  GRID_ROW3_Y: "174"
+  TILE_W: "147"
+  TILE_H: "52"
+  HEADER_Y: "14"
+  OVERLAY_SLIDER_W: "96"
+  OVERLAY_SLIDER_H: "160"
+  BG_IMAGE: "images/smartdisplay_background.png"
+  TILE_ICON_X: "0"
+  TILE_ICON_Y: "0"
+  TILE_TITLE_X: "48"
+  TILE_TITLE_Y: "4"
+  TILE_VALUE_X: "48"
+  TILE_VALUE_Y: "18"
+
+  # ----- 90° — Portrait 240×320 (USB on bottom) -----
+  # ORIENTATION: "90"
+  # DISPLAY_W: "240"
+  # DISPLAY_H: "320"
+  # LVGL_ROTATION: "270"
+  # TOUCH_SWAP_XY: "true"
+  # TOUCH_MIRROR_X: "false"
+  # TOUCH_MIRROR_Y: "false"
+  # TOUCH_CAL_X_MIN: "340"
+  # TOUCH_CAL_X_MAX: "3860"
+  # TOUCH_CAL_Y_MIN: "280"
+  # TOUCH_CAL_Y_MAX: "3860"
+  # GRID_COL1_X: "6"
+  # GRID_COL2_X: "123"
+  # GRID_ROW1_Y: "54"
+  # GRID_ROW2_Y: "142"
+  # GRID_ROW3_Y: "230"
+  # TILE_W: "111"
+  # TILE_H: "80"
+  # HEADER_Y: "14"
+  # OVERLAY_SLIDER_W: "96"
+  # OVERLAY_SLIDER_H: "200"
+  # BG_IMAGE: "images/smartdisplay_background_90.png"
+  # TILE_ICON_X: "0"
+  # TILE_ICON_Y: "0"
+  # TILE_TITLE_X: "4"
+  # TILE_TITLE_Y: "38"
+  # TILE_VALUE_X: "4"
+  # TILE_VALUE_Y: "52"
+
+  # ----- 180° — Landscape flipped 320×240 (USB on left) -----
+  # ORIENTATION: "180"
+  # DISPLAY_W: "320"
+  # DISPLAY_H: "240"
+  # LVGL_ROTATION: "0"
+  # TOUCH_SWAP_XY: "true"
+  # TOUCH_MIRROR_X: "true"
+  # TOUCH_MIRROR_Y: "true"
+  # TOUCH_CAL_X_MIN: "340"
+  # TOUCH_CAL_X_MAX: "3860"
+  # TOUCH_CAL_Y_MIN: "280"
+  # TOUCH_CAL_Y_MAX: "3860"
+  # GRID_COL1_X: "9"
+  # GRID_COL2_X: "164"
+  # GRID_ROW1_Y: "54"
+  # GRID_ROW2_Y: "114"
+  # GRID_ROW3_Y: "174"
+  # TILE_W: "147"
+  # TILE_H: "52"
+  # HEADER_Y: "14"
+  # OVERLAY_SLIDER_W: "96"
+  # OVERLAY_SLIDER_H: "160"
+  # BG_IMAGE: "images/smartdisplay_background.png"
+  # TILE_ICON_X: "0"
+  # TILE_ICON_Y: "0"
+  # TILE_TITLE_X: "48"
+  # TILE_TITLE_Y: "4"
+  # TILE_VALUE_X: "48"
+  # TILE_VALUE_Y: "18"
+
+  # ----- 270° — Portrait flipped 240×320 (USB on top) -----
+  # ORIENTATION: "270"
+  # DISPLAY_W: "240"
+  # DISPLAY_H: "320"
+  # LVGL_ROTATION: "90"
+  # TOUCH_SWAP_XY: "true"
+  # TOUCH_MIRROR_X: "false"
+  # TOUCH_MIRROR_Y: "false"
+  # TOUCH_CAL_X_MIN: "340"
+  # TOUCH_CAL_X_MAX: "3860"
+  # TOUCH_CAL_Y_MIN: "280"
+  # TOUCH_CAL_Y_MAX: "3860"
+  # GRID_COL1_X: "6"
+  # GRID_COL2_X: "123"
+  # GRID_ROW1_Y: "54"
+  # GRID_ROW2_Y: "142"
+  # GRID_ROW3_Y: "230"
+  # TILE_W: "111"
+  # TILE_H: "80"
+  # HEADER_Y: "14"
+  # OVERLAY_SLIDER_W: "96"
+  # OVERLAY_SLIDER_H: "200"
+  # BG_IMAGE: "images/smartdisplay_background_90.png"
+  # TILE_ICON_X: "0"
+  # TILE_ICON_Y: "0"
+  # TILE_TITLE_X: "4"
+  # TILE_TITLE_Y: "38"
+  # TILE_VALUE_X: "4"
+  # TILE_VALUE_Y: "52"
+
+# ============================================================
+# No need to edit below this line.
+# All configuration is done via the substitutions above.
+# Credentials are managed in secrets.yaml (see secrets.yaml.example).
+# The Material Design Icons font is included at fonts/materialdesignicons-webfont.ttf (Apache 2.0).
+# Source: https://github.com/Templarian/MaterialDesign-Webfont
+# ============================================================
+
+esphome:
+  name: smartdisplay
+  friendly_name: SmartDisplay
+  on_boot:
+    priority: 600
+    then:
+      - lambda: |-
+          id(last_touch_ms) = millis();
+          id(display_dimmed) = false;
+      - light.turn_on:
+          id: back_light
+          brightness: !lambda "return atoi(\"${MAX_BRIGHTNESS}\") / 100.0f;"
+      - script.execute: ui_refresh
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+# Credentials are loaded from secrets.yaml — copy secrets.yaml.example to secrets.yaml and fill in your values.
+api:
+  encryption:
+    key: !secret smartdisplay_api_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Smartdisplay Fallback Hotspot"
+    password: !secret wifi_ap_password
+
+captive_portal:
+
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            lambda: |-
+              if (std::string("${AUTO_DIM}") != "true") return false;
+              if (id(display_dimmed)) return false;
+              return (millis() - id(last_touch_ms)) > (atoi("${AUTO_DIM_TIMEOUT}") * 1000UL);
+          then:
+            - script.execute: dim_display
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    on_time:
+      - seconds: 0
+        minutes: /1
+        then:
+          - script.execute: ui_refresh
+
+      - seconds: 0
+        minutes: 0
+        hours: ${NIGHT_START_HOUR}
+        then:
+          - if:
+              condition:
+                lambda: 'return id(display_dimmed);'
+              then:
+                - script.execute: dim_display
+
+      - seconds: 0
+        minutes: 0
+        hours: ${NIGHT_END_HOUR}
+        then:
+          - if:
+              condition:
+                lambda: 'return id(display_dimmed);'
+              then:
+                - script.execute: dim_display
+
+globals:
+  - id: active_entity
+    type: std::string
+    restore_value: no
+
+  - id: active_control_kind
+    type: std::string
+    restore_value: no
+
+  - id: active_value_suffix
+    type: std::string
+    restore_value: no
+
+  - id: last_touch_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+
+  - id: display_dimmed
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: active_label_off
+    type: std::string
+    restore_value: no
+
+  - id: active_label_on
+    type: std::string
+    restore_value: no
+
+  - id: active_title
+    type: std::string
+    restore_value: no
+
+  - id: active_icon_text
+    type: std::string
+    restore_value: no
+
+  - id: active_brightness_pct
+    type: int
+    restore_value: no
+    initial_value: '100'
+
+  - id: active_supports_color
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: active_supports_temperature
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: active_color_detail_tab
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: active_climate_current_x10
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: active_climate_target_x10
+    type: int
+    restore_value: no
+    initial_value: '200'
+
+  - id: active_climate_humidity
+    type: int
+    restore_value: no
+    initial_value: '-1'
+
+  - id: active_climate_min_x10
+    type: int
+    restore_value: no
+    initial_value: '50'
+
+  - id: active_climate_max_x10
+    type: int
+    restore_value: no
+    initial_value: '300'
+
+  - id: active_climate_step_x10
+    type: int
+    restore_value: no
+    initial_value: '5'
+
+  - id: active_climate_mode
+    type: std::string
+    restore_value: no
+
+  - id: active_climate_supported_modes
+    type: std::string
+    restore_value: no
+
+font:
+  - file: "gfonts://Roboto@500"
+    id: time_label
+    size: 18
+    bpp: 4
+    glyphs: ['0','1','2','3','4','5','6','7','8','9',':',' ', 'A', 'M', 'P']
+
+  - file: "gfonts://Roboto@500"
+    id: headline
+    size: 18
+    bpp: 4
+    glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°',
+             '0','1','2','3','4','5','6','7','8','9',
+             'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+             ' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+             'ä','ö','ü','Ä','Ö','Ü','ß','/']
+
+  - file: "gfonts://Roboto@700"
+    id: label
+    size: 11
+    bpp: 4
+    glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°',
+             '0','1','2','3','4','5','6','7','8','9',
+             'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+             ' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+             'ä','ö','ü','Ä','Ö','Ü','ß','/']
+
+  - file: "gfonts://Roboto@400"
+    id: sublabel
+    size: 11
+    bpp: 4
+    glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°',
+             '0','1','2','3','4','5','6','7','8','9',
+             'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+             ' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+             'ä','ö','ü','Ä','Ö','Ü','ß','/','…']
+
+  - file: "gfonts://Roboto@400"
+    id: sublabel_big
+    size: 14
+    bpp: 4
+    glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°',
+             '0','1','2','3','4','5','6','7','8','9',
+             'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+             ' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+             'ä','ö','ü','Ä','Ö','Ü','ß','/','…']             
+
+  # Material Design Icons (MDI) — included at fonts/materialdesignicons-webfont.ttf (Apache 2.0)
+  # Source: https://github.com/Templarian/MaterialDesign-Webfont
+  - file: 'fonts/materialdesignicons-webfont.ttf'
+    id: materialdesign_icons
+    size: 28
+    glyphs:
+      - "${MDI_GLYPH_1}"
+      - "${MDI_GLYPH_2}"
+      - "${MDI_GLYPH_3}"
+      - "${MDI_GLYPH_4}"
+      - "${MDI_GLYPH_5}"
+      - "${MDI_GLYPH_6}"
+      - "\U000F012C" # check
+
+image:
+  - file: "${BG_IMAGE}"
+    id: bg_home
+    type: RGB565
+
+sensor:
+  - platform: wifi_signal
+    name: "Wifi Signal"
+    update_interval: 600s
+
+  - platform: uptime
+    name: "Uptime"
+    id: uptime_s
+    update_interval: 15s
+
+  - platform: homeassistant
+    id: tile1_brightness
+    entity_id: ${TILE1_ENTITY}
+    attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile1_percentage
+    entity_id: ${TILE1_ENTITY}
+    attribute: percentage
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_brightness
+    entity_id: ${TILE2_ENTITY}
+    attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_percentage
+    entity_id: ${TILE2_ENTITY}
+    attribute: percentage
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_brightness
+    entity_id: ${TILE3_ENTITY}
+    attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_percentage
+    entity_id: ${TILE3_ENTITY}
+    attribute: percentage
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_brightness
+    entity_id: ${TILE4_ENTITY}
+    attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_percentage
+    entity_id: ${TILE4_ENTITY}
+    attribute: percentage
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_brightness
+    entity_id: ${TILE5_ENTITY}
+    attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_percentage
+    entity_id: ${TILE5_ENTITY}
+    attribute: percentage
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_brightness
+    entity_id: ${TILE6_ENTITY}
+    attribute: brightness
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_percentage
+    entity_id: ${TILE6_ENTITY}
+    attribute: percentage
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile1_cover_position
+    entity_id: ${TILE1_ENTITY}
+    attribute: current_position
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_cover_position
+    entity_id: ${TILE2_ENTITY}
+    attribute: current_position
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_cover_position
+    entity_id: ${TILE3_ENTITY}
+    attribute: current_position
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_cover_position
+    entity_id: ${TILE4_ENTITY}
+    attribute: current_position
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_cover_position
+    entity_id: ${TILE5_ENTITY}
+    attribute: current_position
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_cover_position
+    entity_id: ${TILE6_ENTITY}
+    attribute: current_position
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile1_climate_current_temperature
+    entity_id: ${TILE1_ENTITY}
+    attribute: ${TILE1_CLIMATE_CURRENT_TEMP_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile1_climate_target_temperature
+    entity_id: ${TILE1_ENTITY}
+    attribute: ${TILE1_CLIMATE_TARGET_TEMP_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile1_climate_humidity
+    entity_id: ${TILE1_ENTITY}
+    attribute: ${TILE1_CLIMATE_HUMIDITY_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_climate_current_temperature
+    entity_id: ${TILE2_ENTITY}
+    attribute: ${TILE2_CLIMATE_CURRENT_TEMP_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_climate_target_temperature
+    entity_id: ${TILE2_ENTITY}
+    attribute: ${TILE2_CLIMATE_TARGET_TEMP_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_climate_humidity
+    entity_id: ${TILE2_ENTITY}
+    attribute: ${TILE2_CLIMATE_HUMIDITY_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_climate_current_temperature
+    entity_id: ${TILE3_ENTITY}
+    attribute: ${TILE3_CLIMATE_CURRENT_TEMP_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_climate_target_temperature
+    entity_id: ${TILE3_ENTITY}
+    attribute: ${TILE3_CLIMATE_TARGET_TEMP_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_climate_humidity
+    entity_id: ${TILE3_ENTITY}
+    attribute: ${TILE3_CLIMATE_HUMIDITY_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_climate_current_temperature
+    entity_id: ${TILE4_ENTITY}
+    attribute: ${TILE4_CLIMATE_CURRENT_TEMP_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_climate_target_temperature
+    entity_id: ${TILE4_ENTITY}
+    attribute: ${TILE4_CLIMATE_TARGET_TEMP_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_climate_humidity
+    entity_id: ${TILE4_ENTITY}
+    attribute: ${TILE4_CLIMATE_HUMIDITY_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_climate_current_temperature
+    entity_id: ${TILE5_ENTITY}
+    attribute: ${TILE5_CLIMATE_CURRENT_TEMP_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_climate_target_temperature
+    entity_id: ${TILE5_ENTITY}
+    attribute: ${TILE5_CLIMATE_TARGET_TEMP_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_climate_humidity
+    entity_id: ${TILE5_ENTITY}
+    attribute: ${TILE5_CLIMATE_HUMIDITY_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_climate_current_temperature
+    entity_id: ${TILE6_ENTITY}
+    attribute: ${TILE6_CLIMATE_CURRENT_TEMP_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_climate_target_temperature
+    entity_id: ${TILE6_ENTITY}
+    attribute: ${TILE6_CLIMATE_TARGET_TEMP_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_climate_humidity
+    entity_id: ${TILE6_ENTITY}
+    attribute: ${TILE6_CLIMATE_HUMIDITY_ATTRIBUTE}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+binary_sensor:
+  - platform: status
+    name: "Node Status"
+    id: system_status
+
+# ----------------------------------------------------------
+# Text sensors
+#
+# smartdisplay_action:
+# - Main touch event channel exported to Home Assistant
+# - On short tap, publishes one of:
+#     tile1_press / tile2_press / tile3_press / tile4_press / tile5_press / tile6_press
+# - The value is reset shortly after publishing
+#
+# tile*_preset:
+# - Mirrors the Home Assistant preset_mode attribute for each tile entity
+# - Used by the UI to display fan presets when applicable
+# ----------------------------------------------------------
+text_sensor:
+  - platform: template
+    id: smartdisplay_action
+    name: "SmartDisplay Action"
+    icon: mdi:gesture-tap-button
+
+  - platform: homeassistant
+    id: ha_state_tile1
+    entity_id: ${TILE1_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_state_tile2
+    entity_id: ${TILE2_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_state_tile3
+    entity_id: ${TILE3_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_state_tile4
+    entity_id: ${TILE4_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_state_tile5
+    entity_id: ${TILE5_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_state_tile6
+    entity_id: ${TILE6_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile1_preset
+    entity_id: ${TILE1_ENTITY}
+    attribute: preset_mode
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_preset
+    entity_id: ${TILE2_ENTITY}
+    attribute: preset_mode
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_preset
+    entity_id: ${TILE3_ENTITY}
+    attribute: preset_mode
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_preset
+    entity_id: ${TILE4_ENTITY}
+    attribute: preset_mode
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_preset
+    entity_id: ${TILE5_ENTITY}
+    attribute: preset_mode
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_preset
+    entity_id: ${TILE6_ENTITY}
+    attribute: preset_mode
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile1_supported_color_modes
+    entity_id: ${TILE1_ENTITY}
+    attribute: supported_color_modes
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_supported_color_modes
+    entity_id: ${TILE2_ENTITY}
+    attribute: supported_color_modes
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_supported_color_modes
+    entity_id: ${TILE3_ENTITY}
+    attribute: supported_color_modes
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_supported_color_modes
+    entity_id: ${TILE4_ENTITY}
+    attribute: supported_color_modes
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_supported_color_modes
+    entity_id: ${TILE5_ENTITY}
+    attribute: supported_color_modes
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_supported_color_modes
+    entity_id: ${TILE6_ENTITY}
+    attribute: supported_color_modes
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile1_climate_mode
+    entity_id: ${TILE1_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_climate_mode
+    entity_id: ${TILE2_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_climate_mode
+    entity_id: ${TILE3_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_climate_mode
+    entity_id: ${TILE4_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_climate_mode
+    entity_id: ${TILE5_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_climate_mode
+    entity_id: ${TILE6_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile1_climate_supported_modes
+    entity_id: ${TILE1_ENTITY}
+    attribute: hvac_modes
+
+  - platform: homeassistant
+    id: tile2_climate_supported_modes
+    entity_id: ${TILE2_ENTITY}
+    attribute: hvac_modes
+
+  - platform: homeassistant
+    id: tile3_climate_supported_modes
+    entity_id: ${TILE3_ENTITY}
+    attribute: hvac_modes
+
+  - platform: homeassistant
+    id: tile4_climate_supported_modes
+    entity_id: ${TILE4_ENTITY}
+    attribute: hvac_modes
+
+  - platform: homeassistant
+    id: tile5_climate_supported_modes
+    entity_id: ${TILE5_ENTITY}
+    attribute: hvac_modes
+
+  - platform: homeassistant
+    id: tile6_climate_supported_modes
+    entity_id: ${TILE6_ENTITY}
+    attribute: hvac_modes
+
+  - platform: homeassistant
+    id: tile1_cover_state
+    entity_id: ${TILE1_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile2_cover_state
+    entity_id: ${TILE2_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile3_cover_state
+    entity_id: ${TILE3_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile4_cover_state
+    entity_id: ${TILE4_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile5_cover_state
+    entity_id: ${TILE5_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: tile6_cover_state
+    entity_id: ${TILE6_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+switch:
+  - platform: restart
+    name: "Restart"
+
+# Two SPI buses used by the CYD:
+# - lcd: built-in display
+# - my_touchscreen: built-in touch controller
+spi:
+  - id: lcd
+    clk_pin: GPIO14
+    mosi_pin: GPIO13
+
+  - id: my_touchscreen
+    clk_pin: GPIO25
+    mosi_pin: GPIO32
+    miso_pin: GPIO39
+
+output:
+  - platform: ledc
+    pin: GPIO21
+    id: gpio_backlight_pwm
+
+  - platform: ledc
+    id: output_red
+    pin: GPIO4
+    inverted: true
+  - platform: ledc
+    id: output_green
+    pin: GPIO16
+    inverted: true
+  - platform: ledc
+    id: output_blue
+    pin: GPIO17
+    inverted: true
+
+light:
+  - platform: monochromatic
+    output: gpio_backlight_pwm
+    name: "Power Display Backlight"
+    id: back_light
+    restore_mode: ALWAYS_ON
+
+  - platform: rgb
+    name: LED
+    red: output_red
+    id: led
+    green: output_green
+    blue: output_blue
+    restore_mode: ALWAYS_OFF
+
+# Touchscreen configuration (XPT2046)
+# IMPORTANT:
+# - calibration values are device-specific
+# - Since ESPHome 2026.4 LVGL manages rotation (see `rotation:` in the lvgl
+#   block) and rotates touch coordinates automatically. The transform below is
+#   therefore NOT a per-orientation rotation — it corrects the raw XPT2046 axis
+#   orientation against the panel's native (landscape) frame. swap_xy stays true
+#   for every preset; the mirrors differ: both true in landscape (0/180), both
+#   false in portrait (90/270). The ILI9341 config uses swap_xy false / mirror_x
+#   true / mirror_y false because its native frame is portrait.
+touchscreen:
+  platform: xpt2046
+  id: ts_touch
+  spi_id: my_touchscreen
+  cs_pin: 33
+  interrupt_pin: 36
+  update_interval: 20ms
+  threshold: 300
+
+  calibration:
+    x_min: ${TOUCH_CAL_X_MIN}
+    x_max: ${TOUCH_CAL_X_MAX}
+    y_min: ${TOUCH_CAL_Y_MIN}
+    y_max: ${TOUCH_CAL_Y_MAX}
+
+  transform:
+    swap_xy: ${TOUCH_SWAP_XY}
+    mirror_x: ${TOUCH_MIRROR_X}
+    mirror_y: ${TOUCH_MIRROR_Y}
+
+  on_touch:
+    - lambda: |-
+        id(last_touch_ms) = millis();
+
+# Display configuration (ILI9342 — natively landscape 320x240)
+display:
+  - platform: mipi_spi
+    id: my_display
+    spi_id: lcd
+    # ESPHome also ships an ESP32-2432S028-9342 model with the same controller and
+    # different gamma tables; either works, this one keeps the pins explicit.
+    model: ILI9342
+    data_rate: 40MHz
+    cs_pin:
+      number: 15
+      ignore_strapping_warning: true
+    dc_pin:
+      number: 2
+      ignore_strapping_warning: true
+    invert_colors: false
+    update_interval: never
+    auto_clear_enabled: false
+
+    # The model supplies the native (landscape 320x240) dimensions. Do NOT set
+    # dimensions or a display transform here — rotation is handled by LVGL below.
+    # ESPHome 2026.6+ rejects a swapped transform with "Invalid offsets".
+
+lvgl:
+  displays:
+    - my_display
+  touchscreens:
+    - touchscreen_id: ts_touch
+
+  # LVGL owns the rotation (display + touch) since ESPHome 2026.4.
+  rotation: ${LVGL_ROTATION}
+
+  style_definitions:
+    - id: style_tile
+      bg_color: 0xFFFFFF
+      bg_opa: 95%
+      radius: 18
+      border_width: 0
+      pad_left: 8
+      pad_right: 8
+      pad_top: 8
+      pad_bottom: 8
+      shadow_width: 0
+      shadow_opa: 40%
+
+    - id: style_tile_disabled
+      bg_color: 0x939391
+      bg_opa: 95%
+      radius: 18
+      border_width: 0
+      pad_left: 8
+      pad_right: 8
+      pad_top: 8
+      pad_bottom: 8
+      shadow_width: 0
+      shadow_opa: 25%
+
+    - id: style_icon_circle
+      bg_color: 0xFEC600
+      bg_opa: COVER
+      radius: 999
+      border_width: 0
+
+    - id: style_icon_circle_disabled
+      bg_color: 0x7B7B6F
+      bg_opa: 95%
+      radius: 999
+      border_width: 0
+
+    - id: style_room
+      text_font: headline
+      text_color: 0xFFFFFF
+      text_opa: 100%
+
+    - id: style_time
+      text_font: time_label
+      text_color: 0xFFFFFF
+      text_opa: 100%
+
+    - id: style_title
+      text_font: label
+      text_color: 0x000000
+      text_opa: 100%
+
+    - id: style_value
+      text_font: sublabel
+      text_color: 0x7A7A7C
+      text_opa: 100%
+
+    - id: style_value_big
+      text_font: sublabel_big
+      text_color: 0xFFFFFF
+      text_opa: 80%
+
+    - id: style_title_disabled
+      text_font: label
+      text_color: 0xFFFFFF
+      text_opa: 100%
+
+    - id: style_value_disabled
+      text_font: sublabel
+      text_color: 0xD9D9D9
+      text_opa: 100%
+
+  pages:
+    - id: home_page
+      bg_color: 0x000000
+      bg_opa: COVER
+      scrollable: false
+      scrollbar_mode: 'OFF'
+      widgets:
+        - image:
+            id: bg
+            src: bg_home
+            x: 0
+            y: 0
+
+        - label:
+            id: lbl_room
+            x: 11
+            y: ${HEADER_Y}
+            text: "${ROOM_NAME}"
+            styles: style_room
+
+        - label:
+            id: lbl_time
+            align: TOP_RIGHT
+            x: -11
+            y: ${HEADER_Y}
+            text: ""
+            styles: style_time
+
+        # ---------- TILE 1 ----------
+        - obj:
+            id: tile1
+            x: ${GRID_COL1_X}
+            y: ${GRID_ROW1_Y}
+            width: ${TILE_W}
+            height: ${TILE_H}
+            styles: style_tile
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            widgets:
+              - obj:
+                  id: tile1_icon_circle
+                  x: ${TILE_ICON_X}
+                  y: ${TILE_ICON_Y}
+                  width: 36
+                  height: 36
+                  styles: style_icon_circle
+                  clickable: false
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  widgets:
+                    - label:
+                        id: tile1_icon_lbl
+                        align: CENTER
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE1_ICON}"
+                        clickable: false
+              - label:
+                  id: t1_title
+                  x: ${TILE_TITLE_X}
+                  y: ${TILE_TITLE_Y}
+                  text: "${TILE1_TITLE}"
+                  styles: style_title
+                  clickable: false
+              - label:
+                  id: t1_value
+                  x: ${TILE_VALUE_X}
+                  y: ${TILE_VALUE_Y}
+                  text: "—"
+                  styles: style_value
+                  clickable: false
+            on_short_click:
+              - script.execute: { id: publish_action, action: "tile1_press" }
+              - script.execute:
+                  id: do_tile_action
+                  tile_type: "${TILE1_TYPE}"
+                  tap_action: "${TILE1_TAP_ACTION}"
+                  service: "${TILE1_TAP_SERVICE}"
+                  entity_id: "${TILE1_ENTITY}"
+                  param_key: "${TILE1_TAP_PARAM_KEY}"
+                  param_val: "${TILE1_TAP_PARAM_VAL}"
+                  was_on: !lambda |-
+                    if (std::string("${TILE1_TYPE}") == "cover")
+                      return id(tile1_cover_state).state != "closed";
+                    return std::string(id(ha_state_tile1).state.c_str()) == "on";
+            on_long_press:
+              - script.execute: { id: publish_action, action: "tile1_long_press" }
+              - if:
+                  condition:
+                    lambda: "return std::string(\"${TILE1_LONGPRESS}\") == \"action\";"
+                  then:
+                    - script.execute:
+                        id: do_tile_action
+                        tile_type: !lambda |-
+                          std::string t = "${TILE1_LONGPRESS_ACTION_TYPE}";
+                          return t.empty() ? std::string("${TILE1_TYPE}") : t;
+                        tap_action: "activate"
+                        service: "${TILE1_LONGPRESS_ACTION_SERVICE}"
+                        entity_id: "${TILE1_LONGPRESS_ACTION}"
+                        param_key: ""
+                        param_val: ""
+                        was_on: false
+                  else:
+                    - if:
+                        condition:
+                          lambda: "return std::string(\"${TILE1_LONGPRESS}\") == \"slider\";"
+                        then:
+                          - script.execute:
+                              id: open_value_overlay
+                              title: "${TILE1_TITLE}"
+                              entity: "${TILE1_ENTITY}"
+                              tile_type: "${TILE1_TYPE}"
+                              longpress_mode: "${TILE1_LONGPRESS_SLIDER}"
+                              was_on: !lambda |-
+                                if (std::string("${TILE1_TYPE}") == "cover")
+                                  return id(tile1_cover_state).state != "closed";
+                                return std::string(id(ha_state_tile1).state.c_str()) == "on";
+                              off_value: !lambda "return atoi(\"${TILE1_LONGPRESS_OFF_VALUE}\");"
+                              brightness_value: !lambda "return id(tile1_brightness).state;"
+                              percentage_value: !lambda "return id(tile1_percentage).state;"
+                              position_value: !lambda "return id(tile1_cover_position).state;"
+                              icon_text: "${TILE1_ICON}"
+                              slider_bg_color: ${TILE1_BG_DISABLED_COLOR}
+                              slider_fill_color: ${TILE1_CIRCLE_ACTIVE_COLOR}
+                              slider_icon_color: ${TILE1_ICON_ACTIVE_COLOR}
+                              label_off: "${TILE1_LABEL_OFF}"
+                              label_on: "${TILE1_LABEL_ON}"
+                              supported_color_modes: !lambda "return std::string(id(tile1_supported_color_modes).state.c_str());"
+                              climate_current_temperature: !lambda "return id(tile1_climate_current_temperature).state;"
+                              climate_target_temperature: !lambda "return id(tile1_climate_target_temperature).state;"
+                              climate_humidity: !lambda "return id(tile1_climate_humidity).state;"
+                              climate_mode: !lambda "return std::string(id(tile1_climate_mode).state.c_str());"
+                              climate_supported_modes: !lambda "return std::string(id(tile1_climate_supported_modes).state.c_str());"
+                              climate_min_temp: "${TILE1_CLIMATE_MIN_TEMP}"
+                              climate_max_temp: "${TILE1_CLIMATE_MAX_TEMP}"
+                              climate_step: "${TILE1_CLIMATE_STEP}"
+
+        # ---------- TILE 2 ----------
+        - obj:
+            id: tile2
+            x: ${GRID_COL2_X}
+            y: ${GRID_ROW1_Y}
+            width: ${TILE_W}
+            height: ${TILE_H}
+            styles: style_tile
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            widgets:
+              - obj:
+                  id: tile2_icon_circle
+                  x: ${TILE_ICON_X}
+                  y: ${TILE_ICON_Y}
+                  width: 36
+                  height: 36
+                  styles: style_icon_circle
+                  clickable: false
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  widgets:
+                    - label:
+                        id: tile2_icon_lbl
+                        align: CENTER
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE2_ICON}"
+                        clickable: false
+              - label:
+                  id: t2_title
+                  x: ${TILE_TITLE_X}
+                  y: ${TILE_TITLE_Y}
+                  text: "${TILE2_TITLE}"
+                  styles: style_title
+                  clickable: false
+              - label:
+                  id: t2_value
+                  x: ${TILE_VALUE_X}
+                  y: ${TILE_VALUE_Y}
+                  text: "—"
+                  styles: style_value
+                  clickable: false
+            on_short_click:
+              - script.execute: { id: publish_action, action: "tile2_press" }
+              - script.execute:
+                  id: do_tile_action
+                  tile_type: "${TILE2_TYPE}"
+                  tap_action: "${TILE2_TAP_ACTION}"
+                  service: "${TILE2_TAP_SERVICE}"
+                  entity_id: "${TILE2_ENTITY}"
+                  param_key: "${TILE2_TAP_PARAM_KEY}"
+                  param_val: "${TILE2_TAP_PARAM_VAL}"
+                  was_on: !lambda |-
+                    if (std::string("${TILE2_TYPE}") == "cover")
+                      return id(tile2_cover_state).state != "closed";
+                    return std::string(id(ha_state_tile2).state.c_str()) == "on";
+            on_long_press:
+              - script.execute: { id: publish_action, action: "tile2_long_press" }
+              - if:
+                  condition:
+                    lambda: "return std::string(\"${TILE2_LONGPRESS}\") == \"action\";"
+                  then:
+                    - script.execute:
+                        id: do_tile_action
+                        tile_type: !lambda |-
+                          std::string t = "${TILE2_LONGPRESS_ACTION_TYPE}";
+                          return t.empty() ? std::string("${TILE2_TYPE}") : t;
+                        tap_action: "activate"
+                        service: "${TILE2_LONGPRESS_ACTION_SERVICE}"
+                        entity_id: "${TILE2_LONGPRESS_ACTION}"
+                        param_key: ""
+                        param_val: ""
+                        was_on: false
+                  else:
+                    - if:
+                        condition:
+                          lambda: "return std::string(\"${TILE2_LONGPRESS}\") == \"slider\";"
+                        then:
+                          - script.execute:
+                              id: open_value_overlay
+                              title: "${TILE2_TITLE}"
+                              entity: "${TILE2_ENTITY}"
+                              tile_type: "${TILE2_TYPE}"
+                              longpress_mode: "${TILE2_LONGPRESS_SLIDER}"
+                              was_on: !lambda |-
+                                if (std::string("${TILE2_TYPE}") == "cover")
+                                  return id(tile2_cover_state).state != "closed";
+                                return std::string(id(ha_state_tile2).state.c_str()) == "on";
+                              off_value: !lambda "return atoi(\"${TILE2_LONGPRESS_OFF_VALUE}\");"
+                              brightness_value: !lambda "return id(tile2_brightness).state;"
+                              percentage_value: !lambda "return id(tile2_percentage).state;"
+                              position_value: !lambda "return id(tile2_cover_position).state;"
+                              icon_text: "${TILE2_ICON}"
+                              slider_bg_color: ${TILE2_BG_DISABLED_COLOR}
+                              slider_fill_color: ${TILE2_CIRCLE_ACTIVE_COLOR}
+                              slider_icon_color: ${TILE2_ICON_ACTIVE_COLOR}
+                              label_off: "${TILE2_LABEL_OFF}"
+                              label_on: "${TILE2_LABEL_ON}"
+                              supported_color_modes: !lambda "return std::string(id(tile2_supported_color_modes).state.c_str());"
+                              climate_current_temperature: !lambda "return id(tile2_climate_current_temperature).state;"
+                              climate_target_temperature: !lambda "return id(tile2_climate_target_temperature).state;"
+                              climate_humidity: !lambda "return id(tile2_climate_humidity).state;"
+                              climate_mode: !lambda "return std::string(id(tile2_climate_mode).state.c_str());"
+                              climate_supported_modes: !lambda "return std::string(id(tile2_climate_supported_modes).state.c_str());"
+                              climate_min_temp: "${TILE2_CLIMATE_MIN_TEMP}"
+                              climate_max_temp: "${TILE2_CLIMATE_MAX_TEMP}"
+                              climate_step: "${TILE2_CLIMATE_STEP}"
+
+        # ---------- TILE 3 ----------
+        - obj:
+            id: tile3
+            x: ${GRID_COL1_X}
+            y: ${GRID_ROW2_Y}
+            width: ${TILE_W}
+            height: ${TILE_H}
+            styles: style_tile
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            widgets:
+              - obj:
+                  id: tile3_icon_circle
+                  x: ${TILE_ICON_X}
+                  y: ${TILE_ICON_Y}
+                  width: 36
+                  height: 36
+                  styles: style_icon_circle
+                  clickable: false
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  widgets:
+                    - label:
+                        id: tile3_icon_lbl
+                        align: CENTER
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE3_ICON}"
+                        clickable: false
+              - label:
+                  id: t3_title
+                  x: ${TILE_TITLE_X}
+                  y: ${TILE_TITLE_Y}
+                  text: "${TILE3_TITLE}"
+                  styles: style_title
+                  clickable: false
+              - label:
+                  id: t3_value
+                  x: ${TILE_VALUE_X}
+                  y: ${TILE_VALUE_Y}
+                  text: "—"
+                  styles: style_value
+                  clickable: false
+            on_short_click:
+              - script.execute: { id: publish_action, action: "tile3_press" }
+              - script.execute:
+                  id: do_tile_action
+                  tile_type: "${TILE3_TYPE}"
+                  tap_action: "${TILE3_TAP_ACTION}"
+                  service: "${TILE3_TAP_SERVICE}"
+                  entity_id: "${TILE3_ENTITY}"
+                  param_key: "${TILE3_TAP_PARAM_KEY}"
+                  param_val: "${TILE3_TAP_PARAM_VAL}"
+                  was_on: !lambda |-
+                    if (std::string("${TILE3_TYPE}") == "cover")
+                      return id(tile3_cover_state).state != "closed";
+                    return std::string(id(ha_state_tile3).state.c_str()) == "on";
+            on_long_press:
+              - script.execute: { id: publish_action, action: "tile3_long_press" }
+              - if:
+                  condition:
+                    lambda: "return std::string(\"${TILE3_LONGPRESS}\") == \"action\";"
+                  then:
+                    - script.execute:
+                        id: do_tile_action
+                        tile_type: !lambda |-
+                          std::string t = "${TILE3_LONGPRESS_ACTION_TYPE}";
+                          return t.empty() ? std::string("${TILE3_TYPE}") : t;
+                        tap_action: "activate"
+                        service: "${TILE3_LONGPRESS_ACTION_SERVICE}"
+                        entity_id: "${TILE3_LONGPRESS_ACTION}"
+                        param_key: ""
+                        param_val: ""
+                        was_on: false
+                  else:
+                    - if:
+                        condition:
+                          lambda: "return std::string(\"${TILE3_LONGPRESS}\") == \"slider\";"
+                        then:
+                          - script.execute:
+                              id: open_value_overlay
+                              title: "${TILE3_TITLE}"
+                              entity: "${TILE3_ENTITY}"
+                              tile_type: "${TILE3_TYPE}"
+                              longpress_mode: "${TILE3_LONGPRESS_SLIDER}"
+                              was_on: !lambda |-
+                                if (std::string("${TILE3_TYPE}") == "cover")
+                                  return id(tile3_cover_state).state != "closed";
+                                return std::string(id(ha_state_tile3).state.c_str()) == "on";
+                              off_value: !lambda "return atoi(\"${TILE3_LONGPRESS_OFF_VALUE}\");"
+                              brightness_value: !lambda "return id(tile3_brightness).state;"
+                              percentage_value: !lambda "return id(tile3_percentage).state;"
+                              position_value: !lambda "return id(tile3_cover_position).state;"
+                              icon_text: "${TILE3_ICON}"
+                              slider_bg_color: ${TILE3_BG_DISABLED_COLOR}
+                              slider_fill_color: ${TILE3_CIRCLE_ACTIVE_COLOR}
+                              slider_icon_color: ${TILE3_ICON_ACTIVE_COLOR}
+                              label_off: "${TILE3_LABEL_OFF}"
+                              label_on: "${TILE3_LABEL_ON}"
+                              supported_color_modes: !lambda "return std::string(id(tile3_supported_color_modes).state.c_str());"
+                              climate_current_temperature: !lambda "return id(tile3_climate_current_temperature).state;"
+                              climate_target_temperature: !lambda "return id(tile3_climate_target_temperature).state;"
+                              climate_humidity: !lambda "return id(tile3_climate_humidity).state;"
+                              climate_mode: !lambda "return std::string(id(tile3_climate_mode).state.c_str());"
+                              climate_supported_modes: !lambda "return std::string(id(tile3_climate_supported_modes).state.c_str());"
+                              climate_min_temp: "${TILE3_CLIMATE_MIN_TEMP}"
+                              climate_max_temp: "${TILE3_CLIMATE_MAX_TEMP}"
+                              climate_step: "${TILE3_CLIMATE_STEP}"
+
+        # ---------- TILE 4 ----------
+        - obj:
+            id: tile4
+            x: ${GRID_COL2_X}
+            y: ${GRID_ROW2_Y}
+            width: ${TILE_W}
+            height: ${TILE_H}
+            styles: style_tile
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            widgets:
+              - obj:
+                  id: tile4_icon_circle
+                  x: ${TILE_ICON_X}
+                  y: ${TILE_ICON_Y}
+                  width: 36
+                  height: 36
+                  styles: style_icon_circle
+                  clickable: false
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  widgets:
+                    - label:
+                        id: tile4_icon_lbl
+                        align: CENTER
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE4_ICON}"
+                        clickable: false
+              - label:
+                  id: t4_title
+                  x: ${TILE_TITLE_X}
+                  y: ${TILE_TITLE_Y}
+                  text: "${TILE4_TITLE}"
+                  styles: style_title
+                  clickable: false
+              - label:
+                  id: t4_value
+                  x: ${TILE_VALUE_X}
+                  y: ${TILE_VALUE_Y}
+                  text: "—"
+                  styles: style_value
+                  clickable: false
+            on_short_click:
+              - script.execute: { id: publish_action, action: "tile4_press" }
+              - script.execute:
+                  id: do_tile_action
+                  tile_type: "${TILE4_TYPE}"
+                  tap_action: "${TILE4_TAP_ACTION}"
+                  service: "${TILE4_TAP_SERVICE}"
+                  entity_id: "${TILE4_ENTITY}"
+                  param_key: "${TILE4_TAP_PARAM_KEY}"
+                  param_val: "${TILE4_TAP_PARAM_VAL}"
+                  was_on: !lambda |-
+                    if (std::string("${TILE4_TYPE}") == "cover")
+                      return id(tile4_cover_state).state != "closed";
+                    return std::string(id(ha_state_tile4).state.c_str()) == "on";
+            on_long_press:
+              - script.execute: { id: publish_action, action: "tile4_long_press" }
+              - if:
+                  condition:
+                    lambda: "return std::string(\"${TILE4_LONGPRESS}\") == \"action\";"
+                  then:
+                    - script.execute:
+                        id: do_tile_action
+                        tile_type: !lambda |-
+                          std::string t = "${TILE4_LONGPRESS_ACTION_TYPE}";
+                          return t.empty() ? std::string("${TILE4_TYPE}") : t;
+                        tap_action: "activate"
+                        service: "${TILE4_LONGPRESS_ACTION_SERVICE}"
+                        entity_id: "${TILE4_LONGPRESS_ACTION}"
+                        param_key: ""
+                        param_val: ""
+                        was_on: false
+                  else:
+                    - if:
+                        condition:
+                          lambda: "return std::string(\"${TILE4_LONGPRESS}\") == \"slider\";"
+                        then:
+                          - script.execute:
+                              id: open_value_overlay
+                              title: "${TILE4_TITLE}"
+                              entity: "${TILE4_ENTITY}"
+                              tile_type: "${TILE4_TYPE}"
+                              longpress_mode: "${TILE4_LONGPRESS_SLIDER}"
+                              was_on: !lambda |-
+                                if (std::string("${TILE4_TYPE}") == "cover")
+                                  return id(tile4_cover_state).state != "closed";
+                                return std::string(id(ha_state_tile4).state.c_str()) == "on";
+                              off_value: !lambda "return atoi(\"${TILE4_LONGPRESS_OFF_VALUE}\");"
+                              brightness_value: !lambda "return id(tile4_brightness).state;"
+                              percentage_value: !lambda "return id(tile4_percentage).state;"
+                              position_value: !lambda "return id(tile4_cover_position).state;"
+                              icon_text: "${TILE4_ICON}"
+                              slider_bg_color: ${TILE4_BG_DISABLED_COLOR}
+                              slider_fill_color: ${TILE4_CIRCLE_ACTIVE_COLOR}
+                              slider_icon_color: ${TILE4_ICON_ACTIVE_COLOR}
+                              label_off: "${TILE4_LABEL_OFF}"
+                              label_on: "${TILE4_LABEL_ON}"
+                              supported_color_modes: !lambda "return std::string(id(tile4_supported_color_modes).state.c_str());"
+                              climate_current_temperature: !lambda "return id(tile4_climate_current_temperature).state;"
+                              climate_target_temperature: !lambda "return id(tile4_climate_target_temperature).state;"
+                              climate_humidity: !lambda "return id(tile4_climate_humidity).state;"
+                              climate_mode: !lambda "return std::string(id(tile4_climate_mode).state.c_str());"
+                              climate_supported_modes: !lambda "return std::string(id(tile4_climate_supported_modes).state.c_str());"
+                              climate_min_temp: "${TILE4_CLIMATE_MIN_TEMP}"
+                              climate_max_temp: "${TILE4_CLIMATE_MAX_TEMP}"
+                              climate_step: "${TILE4_CLIMATE_STEP}"
+
+        # ---------- TILE 5 ----------
+        - obj:
+            id: tile5
+            x: ${GRID_COL1_X}
+            y: ${GRID_ROW3_Y}
+            width: ${TILE_W}
+            height: ${TILE_H}
+            styles: style_tile
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            widgets:
+              - obj:
+                  id: tile5_icon_circle
+                  x: ${TILE_ICON_X}
+                  y: ${TILE_ICON_Y}
+                  width: 36
+                  height: 36
+                  styles: style_icon_circle
+                  clickable: false
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  widgets:
+                    - label:
+                        id: tile5_icon_lbl
+                        align: CENTER
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE5_ICON}"
+                        clickable: false
+              - label:
+                  id: t5_title
+                  x: ${TILE_TITLE_X}
+                  y: ${TILE_TITLE_Y}
+                  text: "${TILE5_TITLE}"
+                  styles: style_title
+                  clickable: false
+              - label:
+                  id: t5_value
+                  x: ${TILE_VALUE_X}
+                  y: ${TILE_VALUE_Y}
+                  text: "—"
+                  styles: style_value
+                  clickable: false
+            on_short_click:
+              - script.execute: { id: publish_action, action: "tile5_press" }
+              - script.execute:
+                  id: do_tile_action
+                  tile_type: "${TILE5_TYPE}"
+                  tap_action: "${TILE5_TAP_ACTION}"
+                  service: "${TILE5_TAP_SERVICE}"
+                  entity_id: "${TILE5_ENTITY}"
+                  param_key: "${TILE5_TAP_PARAM_KEY}"
+                  param_val: "${TILE5_TAP_PARAM_VAL}"
+                  was_on: !lambda |-
+                    if (std::string("${TILE5_TYPE}") == "cover")
+                      return id(tile5_cover_state).state != "closed";
+                    return std::string(id(ha_state_tile5).state.c_str()) == "on";
+            on_long_press:
+              - script.execute: { id: publish_action, action: "tile5_long_press" }
+              - if:
+                  condition:
+                    lambda: "return std::string(\"${TILE5_LONGPRESS}\") == \"action\";"
+                  then:
+                    - script.execute:
+                        id: do_tile_action
+                        tile_type: !lambda |-
+                          std::string t = "${TILE5_LONGPRESS_ACTION_TYPE}";
+                          return t.empty() ? std::string("${TILE5_TYPE}") : t;
+                        tap_action: "activate"
+                        service: "${TILE5_LONGPRESS_ACTION_SERVICE}"
+                        entity_id: "${TILE5_LONGPRESS_ACTION}"
+                        param_key: ""
+                        param_val: ""
+                        was_on: false
+                  else:
+                    - if:
+                        condition:
+                          lambda: "return std::string(\"${TILE5_LONGPRESS}\") == \"slider\";"
+                        then:
+                          - script.execute:
+                              id: open_value_overlay
+                              title: "${TILE5_TITLE}"
+                              entity: "${TILE5_ENTITY}"
+                              tile_type: "${TILE5_TYPE}"
+                              longpress_mode: "${TILE5_LONGPRESS_SLIDER}"
+                              was_on: !lambda |-
+                                if (std::string("${TILE5_TYPE}") == "cover")
+                                  return id(tile5_cover_state).state != "closed";
+                                return std::string(id(ha_state_tile5).state.c_str()) == "on";
+                              off_value: !lambda "return atoi(\"${TILE5_LONGPRESS_OFF_VALUE}\");"
+                              brightness_value: !lambda "return id(tile5_brightness).state;"
+                              percentage_value: !lambda "return id(tile5_percentage).state;"
+                              position_value: !lambda "return id(tile5_cover_position).state;"
+                              icon_text: "${TILE5_ICON}"
+                              slider_bg_color: ${TILE5_BG_DISABLED_COLOR}
+                              slider_fill_color: ${TILE5_CIRCLE_ACTIVE_COLOR}
+                              slider_icon_color: ${TILE5_ICON_ACTIVE_COLOR}
+                              label_off: "${TILE5_LABEL_OFF}"
+                              label_on: "${TILE5_LABEL_ON}"
+                              supported_color_modes: !lambda "return std::string(id(tile5_supported_color_modes).state.c_str());"
+                              climate_current_temperature: !lambda "return id(tile5_climate_current_temperature).state;"
+                              climate_target_temperature: !lambda "return id(tile5_climate_target_temperature).state;"
+                              climate_humidity: !lambda "return id(tile5_climate_humidity).state;"
+                              climate_mode: !lambda "return std::string(id(tile5_climate_mode).state.c_str());"
+                              climate_supported_modes: !lambda "return std::string(id(tile5_climate_supported_modes).state.c_str());"
+                              climate_min_temp: "${TILE5_CLIMATE_MIN_TEMP}"
+                              climate_max_temp: "${TILE5_CLIMATE_MAX_TEMP}"
+                              climate_step: "${TILE5_CLIMATE_STEP}"
+
+        # ---------- TILE 6 ----------
+        - obj:
+            id: tile6
+            x: ${GRID_COL2_X}
+            y: ${GRID_ROW3_Y}
+            width: ${TILE_W}
+            height: ${TILE_H}
+            styles: style_tile
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            widgets:
+              - obj:
+                  id: tile6_icon_circle
+                  x: ${TILE_ICON_X}
+                  y: ${TILE_ICON_Y}
+                  width: 36
+                  height: 36
+                  styles: style_icon_circle
+                  clickable: false
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  widgets:
+                    - label:
+                        id: tile6_icon_lbl
+                        align: CENTER
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE6_ICON}"
+                        clickable: false
+              - label:
+                  id: t6_title
+                  x: ${TILE_TITLE_X}
+                  y: ${TILE_TITLE_Y}
+                  text: "${TILE6_TITLE}"
+                  styles: style_title
+                  clickable: false
+              - label:
+                  id: t6_value
+                  x: ${TILE_VALUE_X}
+                  y: ${TILE_VALUE_Y}
+                  text: "—"
+                  styles: style_value
+                  clickable: false
+            on_short_click:
+              - script.execute: { id: publish_action, action: "tile6_press" }
+              - script.execute:
+                  id: do_tile_action
+                  tile_type: "${TILE6_TYPE}"
+                  tap_action: "${TILE6_TAP_ACTION}"
+                  service: "${TILE6_TAP_SERVICE}"
+                  entity_id: "${TILE6_ENTITY}"
+                  param_key: "${TILE6_TAP_PARAM_KEY}"
+                  param_val: "${TILE6_TAP_PARAM_VAL}"
+                  was_on: !lambda |-
+                    if (std::string("${TILE6_TYPE}") == "cover")
+                      return id(tile6_cover_state).state != "closed";
+                    return std::string(id(ha_state_tile6).state.c_str()) == "on";
+            on_long_press:
+              - script.execute: { id: publish_action, action: "tile6_long_press" }
+              - if:
+                  condition:
+                    lambda: "return std::string(\"${TILE6_LONGPRESS}\") == \"action\";"
+                  then:
+                    - script.execute:
+                        id: do_tile_action
+                        tile_type: !lambda |-
+                          std::string t = "${TILE6_LONGPRESS_ACTION_TYPE}";
+                          return t.empty() ? std::string("${TILE6_TYPE}") : t;
+                        tap_action: "activate"
+                        service: "${TILE6_LONGPRESS_ACTION_SERVICE}"
+                        entity_id: "${TILE6_LONGPRESS_ACTION}"
+                        param_key: ""
+                        param_val: ""
+                        was_on: false
+                  else:
+                    - if:
+                        condition:
+                          lambda: "return std::string(\"${TILE6_LONGPRESS}\") == \"slider\";"
+                        then:
+                          - script.execute:
+                              id: open_value_overlay
+                              title: "${TILE6_TITLE}"
+                              entity: "${TILE6_ENTITY}"
+                              tile_type: "${TILE6_TYPE}"
+                              longpress_mode: "${TILE6_LONGPRESS_SLIDER}"
+                              was_on: !lambda |-
+                                if (std::string("${TILE6_TYPE}") == "cover")
+                                  return id(tile6_cover_state).state != "closed";
+                                return std::string(id(ha_state_tile6).state.c_str()) == "on";
+                              off_value: !lambda "return atoi(\"${TILE6_LONGPRESS_OFF_VALUE}\");"
+                              brightness_value: !lambda "return id(tile6_brightness).state;"
+                              percentage_value: !lambda "return id(tile6_percentage).state;"
+                              position_value: !lambda "return id(tile6_cover_position).state;"
+                              icon_text: "${TILE6_ICON}"
+                              slider_bg_color: ${TILE6_BG_DISABLED_COLOR}
+                              slider_fill_color: ${TILE6_CIRCLE_ACTIVE_COLOR}
+                              slider_icon_color: ${TILE6_ICON_ACTIVE_COLOR}
+                              label_off: "${TILE6_LABEL_OFF}"
+                              label_on: "${TILE6_LABEL_ON}"
+                              supported_color_modes: !lambda "return std::string(id(tile6_supported_color_modes).state.c_str());"
+                              climate_current_temperature: !lambda "return id(tile6_climate_current_temperature).state;"
+                              climate_target_temperature: !lambda "return id(tile6_climate_target_temperature).state;"
+                              climate_humidity: !lambda "return id(tile6_climate_humidity).state;"
+                              climate_mode: !lambda "return std::string(id(tile6_climate_mode).state.c_str());"
+                              climate_supported_modes: !lambda "return std::string(id(tile6_climate_supported_modes).state.c_str());"
+                              climate_min_temp: "${TILE6_CLIMATE_MIN_TEMP}"
+                              climate_max_temp: "${TILE6_CLIMATE_MAX_TEMP}"
+                              climate_step: "${TILE6_CLIMATE_STEP}"
+
+        # ---------- VALUE SLIDER OVERLAY ----------
+        - obj:
+            id: brightness_overlay
+            x: 0
+            y: 0
+            width: ${DISPLAY_W}
+            height: ${DISPLAY_H}
+            bg_opa: TRANSP
+            hidden: true
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            pad_left: 0
+            pad_right: 0
+            pad_top: 0
+            pad_bottom: 0
+            border_width: 0
+            widgets:
+              - image:
+                  id: brightness_overlay_bg
+                  src: bg_home
+                  x: 0
+                  y: 0
+                  clickable: true
+                  on_click:
+                    - lvgl.widget.hide: brightness_overlay
+
+              - obj:
+                  id: brightness_overlay_dim
+                  x: 0
+                  y: 0
+                  width: ${DISPLAY_W}
+                  height: ${DISPLAY_H}
+                  bg_color: 0x000000
+                  bg_opa: 18%
+                  border_width: 0
+                  clickable: false
+                  scrollable: false
+
+              - label:
+                  id: overlay_title
+                  align: TOP_MID
+                  y: 10
+                  text: "Light"
+                  styles: style_room
+
+              - label:
+                  id: overlay_value
+                  align: TOP_MID
+                  y: 35
+                  text: "100 %"
+                  styles: style_value_big
+
+              - slider:
+                  id: overlay_slider
+                  align: CENTER
+                  y: 18
+                  width: ${OVERLAY_SLIDER_W}
+                  height: ${OVERLAY_SLIDER_H}
+                  min_value: 0
+                  max_value: 100
+                  value: 100
+                  adv_hittest: false
+
+                  bg_color: 0x939391
+                  bg_opa: 100%
+                  radius: 28
+                  border_width: 0
+
+                  indicator:
+                    bg_color: 0xFEC600
+                    bg_opa: 100%
+                    radius: 28
+
+                  knob:
+                    bg_opa: 0%
+                    border_width: 0
+                    shadow_width: 0
+                    pad_all: 10
+
+                  on_value:
+                    - script.execute:
+                        id: slider_preview
+                        value: !lambda "return x;"
+
+                  on_release:
+                    - script.execute:
+                        id: slider_commit
+                        value: !lambda "return lv_slider_get_value(id(overlay_slider));"
+
+                  widgets:
+                    - label:
+                        id: overlay_icon
+                        align: BOTTOM_MID
+                        y: -10
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        text: "${TILE1_ICON}"
+                        clickable: false
+
+              - obj:
+                  id: overlay_color_button
+                  align: BOTTOM_RIGHT
+                  x: -13
+                  y: -13
+                  width: 44
+                  height: 44
+                  radius: 999
+                  hidden: true
+                  clickable: true
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_left: 0
+                  pad_right: 0
+                  pad_top: 0
+                  pad_bottom: 0
+                  scrollable: false
+                  scrollbar_mode: 'OFF'
+                  on_click:
+                    - script.execute: open_color_detail
+                  widgets:
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 0
+                        end_angle: 45
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0xFF3B30
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 45
+                        end_angle: 90
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0xFF9500
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 90
+                        end_angle: 135
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0xFFD60A
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 135
+                        end_angle: 180
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0x30D158
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 180
+                        end_angle: 225
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0x32D6FF
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 225
+                        end_angle: 270
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0x0A84FF
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 270
+                        end_angle: 315
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0x5856D6
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+                    - arc:
+                        align: CENTER
+                        width: 40
+                        height: 40
+                        start_angle: 315
+                        end_angle: 360
+                        min_value: 0
+                        max_value: 100
+                        value: 0
+                        adjustable: false
+                        arc_width: 10
+                        arc_rounded: false
+                        arc_color: 0xBF5AF2
+                        arc_opa: COVER
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: false
+                        indicator:
+                          arc_opa: TRANSP
+                        knob:
+                          bg_opa: TRANSP
+                          border_width: 0
+
+        # ---------- LIGHT COLOR DETAIL OVERLAY ----------
+        - obj:
+            id: color_detail_overlay
+            x: 0
+            y: 0
+            width: ${DISPLAY_W}
+            height: ${DISPLAY_H}
+            bg_color: 0x171719
+            bg_opa: COVER
+            hidden: true
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            pad_left: 0
+            pad_right: 0
+            pad_top: 0
+            pad_bottom: 0
+            border_width: 0
+            widgets:
+              - image:
+                  id: color_detail_bg
+                  src: bg_home
+                  x: 0
+                  y: 0
+                  clickable: false
+              - obj:
+                  id: color_detail_scrim
+                  x: 0
+                  y: 0
+                  width: ${DISPLAY_W}
+                  height: ${DISPLAY_H}
+                  bg_color: 0x000000
+                  bg_opa: 72%
+                  border_width: 0
+                  clickable: false
+                  scrollable: false
+
+              - obj:
+                  id: color_close_button
+                  align: TOP_LEFT
+                  x: 10
+                  y: 9
+                  width: 36
+                  height: 36
+                  radius: 999
+                  bg_color: 0x3C3C40
+                  bg_opa: COVER
+                  border_width: 1
+                  border_color: 0xFFFFFF
+                  border_opa: 20%
+                  clickable: true
+                  scrollable: false
+                  on_click:
+                    - lvgl.widget.hide: color_detail_overlay
+                    - lvgl.widget.show: brightness_overlay
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "x"
+                        text_font: sublabel_big
+                        text_color: 0xFFFFFF
+                        clickable: false
+
+              - label:
+                  id: color_detail_title
+                  align: TOP_MID
+                  y: 16
+                  text: "Light Color"
+                  styles: style_room
+
+              - obj:
+                  id: color_done_button
+                  align: TOP_RIGHT
+                  x: -10
+                  y: 9
+                  width: 36
+                  height: 36
+                  radius: 999
+                  bg_color: 0xFF9F0A
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: true
+                  scrollable: false
+                  on_click:
+                    - lvgl.widget.hide: color_detail_overlay
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "\U000F012C"
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        clickable: false
+
+              - obj:
+                  id: color_mode_tabs
+                  align: TOP_MID
+                  y: 58
+                  width: 190
+                  height: 28
+                  radius: 14
+                  bg_color: 0x3C3C40
+                  bg_opa: COVER
+                  border_width: 0
+                  scrollable: false
+                  pad_left: 0
+                  pad_right: 0
+                  pad_top: 0
+                  pad_bottom: 0
+                  widgets:
+                    - obj:
+                        id: color_tab_indicator
+                        x: 2
+                        y: 2
+                        width: 93
+                        height: 24
+                        radius: 12
+                        bg_color: 0x8E8E93
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: false
+                        scrollable: false
+                    - obj:
+                        x: 0
+                        y: 0
+                        width: 95
+                        height: 28
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: true
+                        scrollable: false
+                        pad_left: 0
+                        pad_right: 0
+                        pad_top: 0
+                        pad_bottom: 0
+                        on_click:
+                          - script.execute:
+                              id: show_color_detail_tab
+                              tab: 0
+                        widgets:
+                          - label:
+                              id: color_tab_label
+                              align: CENTER
+                              text: "Color"
+                              text_font: sublabel_big
+                              text_color: 0xFFFFFF
+                              clickable: false
+                    - obj:
+                        x: 95
+                        y: 0
+                        width: 95
+                        height: 28
+                        bg_opa: TRANSP
+                        border_width: 0
+                        clickable: true
+                        scrollable: false
+                        pad_left: 0
+                        pad_right: 0
+                        pad_top: 0
+                        pad_bottom: 0
+                        on_click:
+                          - script.execute:
+                              id: show_color_detail_tab
+                              tab: 1
+                        widgets:
+                          - label:
+                              id: temp_tab_label
+                              align: CENTER
+                              text: "Temp."
+                              text_font: sublabel_big
+                              text_color: 0xFFFFFF
+                              clickable: false
+
+              - obj:
+                  id: color_palette_card
+                  align: TOP_MID
+                  y: 98
+                  width: 286
+                  height: 48
+                  bg_opa: TRANSP
+                  border_width: 0
+                  scrollable: false
+                  pad_left: 0
+                  pad_right: 0
+                  pad_top: 0
+                  pad_bottom: 0
+                  widgets:
+                    - obj:
+                        id: color_preset_red
+                        x: 14
+                        y: 8
+                        width: 30
+                        height: 30
+                        radius: 999
+                        bg_color: 0xFF3B30
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        on_click:
+                          - script.execute: { id: set_light_color_name, color: "red" }
+                    - obj:
+                        id: color_preset_orange
+                        x: 61
+                        y: 8
+                        width: 30
+                        height: 30
+                        radius: 999
+                        bg_color: 0xFF9F0A
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        on_click:
+                          - script.execute: { id: set_light_color_name, color: "orange" }
+                    - obj:
+                        id: color_preset_yellow
+                        x: 108
+                        y: 8
+                        width: 30
+                        height: 30
+                        radius: 999
+                        bg_color: 0xFFD60A
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        on_click:
+                          - script.execute: { id: set_light_color_name, color: "yellow" }
+                    - obj:
+                        id: color_preset_green
+                        x: 155
+                        y: 8
+                        width: 30
+                        height: 30
+                        radius: 999
+                        bg_color: 0x30D158
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        on_click:
+                          - script.execute: { id: set_light_color_name, color: "green" }
+                    - obj:
+                        id: color_preset_blue
+                        x: 202
+                        y: 8
+                        width: 30
+                        height: 30
+                        radius: 999
+                        bg_color: 0x0A84FF
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        on_click:
+                          - script.execute: { id: set_light_color_name, color: "blue" }
+                    - obj:
+                        id: color_preset_purple
+                        x: 249
+                        y: 8
+                        width: 30
+                        height: 30
+                        radius: 999
+                        bg_color: 0xBF5AF2
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        on_click:
+                          - script.execute: { id: set_light_color_name, color: "purple" }
+
+              - obj:
+                  id: temp_palette_card
+                  align: TOP_MID
+                  y: 98
+                  width: 286
+                  height: 48
+                  bg_opa: TRANSP
+                  border_width: 0
+                  scrollable: false
+                  hidden: true
+                  pad_left: 0
+                  pad_right: 0
+                  pad_top: 0
+                  pad_bottom: 0
+                  widgets:
+                    - obj:
+                        id: temp_preset_2700
+                        x: 24
+                        y: 8
+                        width: 62
+                        height: 30
+                        radius: 15
+                        bg_color: 0xFFD4A3
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        scrollable: false
+                        scrollbar_mode: 'OFF'
+                        pad_left: 0
+                        pad_right: 0
+                        pad_top: 0
+                        pad_bottom: 0
+                        on_click:
+                          - script.execute: { id: set_light_color_temperature, kelvin: 2700 }
+                        widgets:
+                          - label:
+                              align: CENTER
+                              text: "2700K"
+                              text_font: sublabel_big
+                              text_color: 0x3A2A18
+                              clickable: false
+                    - obj:
+                        id: temp_preset_4000
+                        x: 112
+                        y: 8
+                        width: 62
+                        height: 30
+                        radius: 15
+                        bg_color: 0xFFE8C8
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        scrollable: false
+                        scrollbar_mode: 'OFF'
+                        pad_left: 0
+                        pad_right: 0
+                        pad_top: 0
+                        pad_bottom: 0
+                        on_click:
+                          - script.execute: { id: set_light_color_temperature, kelvin: 4000 }
+                        widgets:
+                          - label:
+                              align: CENTER
+                              text: "4000K"
+                              text_font: sublabel_big
+                              text_color: 0x3A2A18
+                              clickable: false
+                    - obj:
+                        id: temp_preset_6500
+                        x: 200
+                        y: 8
+                        width: 62
+                        height: 30
+                        radius: 15
+                        bg_color: 0xEAF4FF
+                        bg_opa: COVER
+                        border_width: 0
+                        clickable: true
+                        scrollable: false
+                        scrollbar_mode: 'OFF'
+                        pad_left: 0
+                        pad_right: 0
+                        pad_top: 0
+                        pad_bottom: 0
+                        on_click:
+                          - script.execute: { id: set_light_color_temperature, kelvin: 6500 }
+                        widgets:
+                          - label:
+                              align: CENTER
+                              text: "6500K"
+                              text_font: sublabel_big
+                              text_color: 0x1E2A36
+                              clickable: false
+
+              - obj:
+                  id: color_brightness_card
+                  align: TOP_MID
+                  y: 165
+                  width: 188
+                  height: 46
+                  bg_opa: TRANSP
+                  border_width: 0
+                  scrollable: false
+                  pad_left: 0
+                  pad_right: 0
+                  pad_top: 0
+                  pad_bottom: 0
+                  widgets:
+                    - label:
+                        x: 13
+                        y: 6
+                        text: "Brightness"
+                        text_font: sublabel
+                        text_color: 0xD1D1D6
+                        hidden: true
+                        clickable: false
+                    - slider:
+                        id: color_brightness_slider
+                        x: 0
+                        y: 0
+                        width: 188
+                        height: 46
+                        min_value: 1
+                        max_value: 100
+                        value: 100
+                        bg_color: 0x939391
+                        bg_opa: COVER
+                        radius: 23
+                        border_width: 0
+                        indicator:
+                          bg_color: 0xFEC600
+                          bg_opa: COVER
+                          radius: 23
+                        knob:
+                          bg_opa: 0%
+                          border_width: 0
+                          shadow_width: 0
+                          pad_all: 10
+                        on_value:
+                          - script.execute:
+                              id: color_brightness_preview
+                              value: !lambda "return x;"
+                        on_release:
+                          - script.execute:
+                              id: color_brightness_commit
+                              value: !lambda "return lv_slider_get_value(id(color_brightness_slider));"
+                    - label:
+                        id: color_brightness_value
+                        align: RIGHT_MID
+                        x: -13
+                        text: "100 %"
+                        text_font: sublabel_big
+                        text_color: 0xFFFFFF
+                        hidden: true
+                        clickable: false
+
+        # ---------- CLIMATE DETAIL OVERLAY ----------
+        - obj:
+            id: climate_detail_overlay
+            x: 0
+            y: 0
+            width: ${DISPLAY_W}
+            height: ${DISPLAY_H}
+            bg_color: 0x171719
+            bg_opa: COVER
+            hidden: true
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            pad_left: 0
+            pad_right: 0
+            pad_top: 0
+            pad_bottom: 0
+            border_width: 0
+            widgets:
+              - image:
+                  id: climate_detail_bg
+                  src: bg_home
+                  x: 0
+                  y: 0
+                  clickable: false
+              - obj:
+                  id: climate_detail_scrim
+                  x: 0
+                  y: 0
+                  width: ${DISPLAY_W}
+                  height: ${DISPLAY_H}
+                  bg_color: 0x000000
+                  bg_opa: 62%
+                  border_width: 0
+                  clickable: false
+                  scrollable: false
+
+              - obj:
+                  id: climate_close_button
+                  align: TOP_LEFT
+                  x: 10
+                  y: 9
+                  width: 36
+                  height: 36
+                  radius: 999
+                  bg_color: 0x3C3C40
+                  bg_opa: COVER
+                  border_width: 1
+                  border_color: 0xFFFFFF
+                  border_opa: 20%
+                  clickable: true
+                  scrollable: false
+                  on_click:
+                    - lvgl.widget.hide: climate_detail_overlay
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "x"
+                        text_font: sublabel_big
+                        text_color: 0xFFFFFF
+                        clickable: false
+
+              - obj:
+                  id: climate_done_button
+                  align: TOP_RIGHT
+                  x: -10
+                  y: 9
+                  width: 36
+                  height: 36
+                  radius: 999
+                  bg_color: 0xFEC600
+                  bg_opa: COVER
+                  border_width: 0
+                  clickable: true
+                  scrollable: false
+                  on_click:
+                    - lvgl.widget.hide: climate_detail_overlay
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "\U000F012C"
+                        text_font: materialdesign_icons
+                        text_color: 0xFFFFFF
+                        clickable: false
+
+              - label:
+                  id: climate_detail_title
+                  align: TOP_MID
+                  y: 16
+                  text: "Climate"
+                  styles: style_room
+
+              - label:
+                  id: climate_current_label
+                  align: TOP_MID
+                  y: 42
+                  text: "Current: --"
+                  text_font: sublabel_big
+                  text_color: 0xD1E8FF
+                  text_opa: 85%
+                  clickable: false
+
+              - arc:
+                  id: climate_arc
+                  align: CENTER
+                  y: 20
+                  width: 184
+                  height: 184
+                  start_angle: 135
+                  end_angle: 45
+                  min_value: 50
+                  max_value: 300
+                  value: 200
+                  adjustable: true
+                  arc_width: 20
+                  arc_rounded: true
+                  arc_color: 0x4B4B4F
+                  arc_opa: 80%
+                  bg_opa: TRANSP
+                  border_width: 0
+                  indicator:
+                    arc_color: 0xFEC600
+                    arc_opa: COVER
+                    arc_width: 20
+                    arc_rounded: true
+                  knob:
+                    bg_color: 0xFFFFFF
+                    bg_opa: COVER
+                    border_width: 0
+                    shadow_width: 0
+                  on_value:
+                    - script.execute:
+                        id: climate_target_preview
+                        value: !lambda "return x;"
+                  on_release:
+                    - script.execute:
+                        id: climate_target_commit
+                        value: !lambda "return lv_arc_get_value(id(climate_arc));"
+
+              - label:
+                  id: climate_set_label
+                  align: CENTER
+                  y: -16
+                  text: "SET TO"
+                  text_font: sublabel_big
+                  text_color: 0xFFFFFF
+                  text_opa: 68%
+                  clickable: false
+
+              - label:
+                  id: climate_target_label
+                  align: CENTER
+                  y: 20
+                  text: "20.0°"
+                  text_font: headline
+                  text_color: 0xFFFFFF
+                  clickable: false
+
+              - obj:
+                  id: climate_minus_button
+                  align: BOTTOM_LEFT
+                  x: 38
+                  y: -16
+                  width: 48
+                  height: 36
+                  radius: 18
+                  bg_color: 0x3C3C40
+                  bg_opa: COVER
+                  border_width: 1
+                  border_color: 0xFFFFFF
+                  border_opa: 16%
+                  clickable: true
+                  scrollable: false
+                  on_click:
+                    - script.execute:
+                        id: climate_adjust_target
+                        direction: -1
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "-"
+                        text_font: headline
+                        text_color: 0xFFFFFF
+                        clickable: false
+
+              - obj:
+                  id: climate_plus_button
+                  align: BOTTOM_RIGHT
+                  x: -38
+                  y: -16
+                  width: 48
+                  height: 36
+                  radius: 18
+                  bg_color: 0x3C3C40
+                  bg_opa: COVER
+                  border_width: 1
+                  border_color: 0xFFFFFF
+                  border_opa: 16%
+                  clickable: true
+                  scrollable: false
+                  on_click:
+                    - script.execute:
+                        id: climate_adjust_target
+                        direction: 1
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "+"
+                        text_font: headline
+                        text_color: 0xFFFFFF
+                        clickable: false
+
+              - obj:
+                  id: climate_mode_pill
+                  align: BOTTOM_MID
+                  y: -18
+                  width: 126
+                  height: 34
+                  radius: 17
+                  bg_color: 0x2C2C30
+                  bg_opa: 82%
+                  border_width: 0
+                  clickable: true
+                  scrollable: false
+                  on_click:
+                    - script.execute: climate_cycle_mode
+                  widgets:
+                    - label:
+                        id: climate_mode_label
+                        align: CENTER
+                        text: "Auto"
+                        text_font: sublabel_big
+                        text_color: 0xFFFFFF
+                        clickable: false
+        # ---------- DIM / WAKE OVERLAY ----------
+        - obj:
+            id: dim_wake_overlay
+            x: 0
+            y: 0
+            width: ${DISPLAY_W}
+            height: ${DISPLAY_H}
+            hidden: true
+            bg_opa: TRANSP
+            border_width: 0
+            scrollable: false
+            scrollbar_mode: 'OFF'
+            clickable: true
+            on_click:
+              - script.execute: wake_display
+
+script:
+  - id: wake_display
+    mode: restart
+    then:
+      - lambda: |-
+          id(last_touch_ms) = millis();
+          id(display_dimmed) = false;
+      - light.turn_on:
+          id: back_light
+          brightness: !lambda "return atoi(\"${MAX_BRIGHTNESS}\") / 100.0f;"
+      - lvgl.widget.hide: dim_wake_overlay
+      - lvgl.widget.hide: color_detail_overlay
+      - lvgl.widget.hide: climate_detail_overlay
+
+  - id: dim_display
+    mode: restart
+    then:
+      - if:
+          condition:
+            lambda: 'return std::string("${AUTO_DIM}") == "true";'
+          then:
+            - lambda: |-
+                int dim_value = atoi("${DIM_BRIGHTNESS}");
+                int max_value = atoi("${MAX_BRIGHTNESS}");
+
+                if (std::string("${NIGHT_MODE}") == "true") {
+                  auto now = id(homeassistant_time).now();
+                  int hour = now.hour;
+                  int start_hour = atoi("${NIGHT_START_HOUR}");
+                  int end_hour = atoi("${NIGHT_END_HOUR}");
+                  bool is_night = false;
+                  if (start_hour < end_hour) {
+                    is_night = (hour >= start_hour && hour < end_hour);
+                  } else {
+                    is_night = (hour >= start_hour || hour < end_hour);
+                  }
+                  if (is_night) {
+                    dim_value = atoi("${NIGHT_DIM_BRIGHTNESS}");
+                  }
+                }
+
+                id(back_light).turn_on().set_brightness(dim_value / 100.0f).perform();
+
+                // Always mark as dimmed to stop the interval from re-firing
+                id(display_dimmed) = true;
+                // Only show the touch-blocking overlay when brightness actually changes
+                if (dim_value < max_value) {
+                  lv_obj_clear_flag(id(dim_wake_overlay), LV_OBJ_FLAG_HIDDEN);
+                }
+
+  - id: publish_action
+    mode: queued
+    parameters:
+      action: string
+    then:
+      - logger.log:
+          level: INFO
+          format: "publish_action: %s"
+          args: ["action.c_str()"]
+      - text_sensor.template.publish:
+          id: smartdisplay_action
+          state: !lambda 'return action;'
+      - delay: 500ms
+      - text_sensor.template.publish:
+          id: smartdisplay_action
+          state: ""
+
+  - id: climate_target_preview
+    parameters:
+      value: int
+    then:
+      - lambda: |-
+          int min_x10 = id(active_climate_min_x10);
+          int max_x10 = id(active_climate_max_x10);
+          if (value < min_x10) value = min_x10;
+          if (value > max_x10) value = max_x10;
+          int step_x10 = id(active_climate_step_x10);
+          if (step_x10 < 5) step_x10 = 5;
+          value = min_x10 + (int) lround((value - min_x10) / (float) step_x10) * step_x10;
+          if (value < min_x10) value = min_x10;
+          if (value > max_x10) value = max_x10;
+          id(active_climate_target_x10) = value;
+
+          char buf[16];
+          snprintf(buf, sizeof(buf), "%.1f°", value / 10.0f);
+          lv_label_set_text(id(climate_target_label), buf);
+          lv_arc_set_value(id(climate_arc), value);
+
+  - id: climate_target_commit
+    parameters:
+      value: int
+    then:
+      - script.execute:
+          id: climate_target_preview
+          value: !lambda "return value;"
+      - if:
+          condition:
+            lambda: 'return std::string("${DIRECT_ACTIONS}") == "true";'
+          then:
+            - homeassistant.action:
+                action: climate.set_temperature
+                data:
+                  entity_id: !lambda "return id(active_entity);"
+                  temperature: !lambda "return value / 10.0f;"
+
+  - id: climate_adjust_target
+    parameters:
+      direction: int
+    then:
+      - lambda: |-
+          int step_x10 = id(active_climate_step_x10);
+          if (step_x10 < 5) step_x10 = 5;
+          int next = id(active_climate_target_x10) + (direction * step_x10);
+          if (next < id(active_climate_min_x10)) next = id(active_climate_min_x10);
+          if (next > id(active_climate_max_x10)) next = id(active_climate_max_x10);
+          id(active_climate_target_x10) = next;
+      - script.execute:
+          id: climate_target_commit
+          value: !lambda "return id(active_climate_target_x10);"
+
+  - id: climate_cycle_mode
+    mode: restart
+    then:
+      - lambda: |-
+          auto lower = [](std::string value) {
+            for (char &c : value) {
+              if (c >= 'A' && c <= 'Z') c = (char) (c - 'A' + 'a');
+            }
+            return value;
+          };
+          auto label_for = [](const std::string& mode) {
+            if (mode == "off") return std::string("Off");
+            if (mode == "heat") return std::string("Heat");
+            if (mode == "cool") return std::string("Cool");
+            if (mode == "heat_cool") return std::string("Heat/Cool");
+            if (mode == "auto") return std::string("Auto");
+            if (mode == "dry") return std::string("Dry");
+            if (mode == "fan_only") return std::string("Fan");
+            return mode.empty() ? std::string("Auto") : mode;
+          };
+
+          std::string supported = lower(id(active_climate_supported_modes));
+          std::string current = lower(id(active_climate_mode));
+          const char* order[] = {"off", "heat", "cool", "heat_cool", "auto", "dry", "fan_only"};
+          const int count = sizeof(order) / sizeof(order[0]);
+
+          auto supported_mode = [&](const std::string& mode) {
+            std::string single_quoted = "'" + mode + "'";
+            std::string double_quoted = "\"" + mode + "\"";
+            return supported.empty() || supported == mode ||
+                   supported.find(single_quoted) != std::string::npos ||
+                   supported.find(double_quoted) != std::string::npos;
+          };
+
+          int current_index = -1;
+          for (int i = 0; i < count; i++) {
+            if (current == order[i]) {
+              current_index = i;
+              break;
+            }
+          }
+
+          std::string next = "";
+          for (int offset = 1; offset <= count; offset++) {
+            int idx = (current_index + offset + count) % count;
+            if (supported_mode(order[idx])) {
+              next = order[idx];
+              break;
+            }
+          }
+
+          if (next.empty()) next = current.empty() ? std::string("auto") : current;
+          id(active_climate_mode) = next;
+          lv_label_set_text(id(climate_mode_label), label_for(next).c_str());
+      - if:
+          condition:
+            lambda: 'return std::string("${DIRECT_ACTIONS}") == "true";'
+          then:
+            - homeassistant.action:
+                action: climate.set_hvac_mode
+                data:
+                  entity_id: !lambda "return id(active_entity);"
+                  hvac_mode: !lambda "return id(active_climate_mode);"
+
+  - id: open_color_detail
+    mode: restart
+    then:
+      - lambda: |-
+          lv_label_set_text(id(color_detail_title), id(active_title).c_str());
+
+          char buf[12];
+          snprintf(buf, sizeof(buf), "%d %%", id(active_brightness_pct));
+          lv_label_set_text(id(color_brightness_value), buf);
+          lv_slider_set_value(id(color_brightness_slider), id(active_brightness_pct), LV_ANIM_OFF);
+
+          bool show_tabs = id(active_supports_color) && id(active_supports_temperature);
+          if (show_tabs) {
+            lv_obj_clear_flag(id(color_mode_tabs), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(color_mode_tabs), LV_OBJ_FLAG_HIDDEN);
+          }
+
+          if (atoi("${DISPLAY_W}") < atoi("${DISPLAY_H}")) {
+            int palette_y = show_tabs ? 96 : 76;
+            lv_obj_set_size(id(color_palette_card), 150, 86);
+            lv_obj_set_y(id(color_palette_card), palette_y);
+            lv_obj_set_pos(id(color_preset_red), 13, 4);
+            lv_obj_set_pos(id(color_preset_orange), 60, 4);
+            lv_obj_set_pos(id(color_preset_yellow), 107, 4);
+            lv_obj_set_pos(id(color_preset_green), 13, 52);
+            lv_obj_set_pos(id(color_preset_blue), 60, 52);
+            lv_obj_set_pos(id(color_preset_purple), 107, 52);
+
+            lv_obj_set_size(id(temp_palette_card), 150, 126);
+            lv_obj_set_y(id(temp_palette_card), palette_y);
+            lv_obj_set_pos(id(temp_preset_2700), 44, 4);
+            lv_obj_set_pos(id(temp_preset_4000), 44, 48);
+            lv_obj_set_pos(id(temp_preset_6500), 44, 92);
+
+            lv_obj_set_y(id(color_brightness_card), 256);
+          } else {
+            int palette_y = show_tabs ? 98 : 78;
+            lv_obj_set_size(id(color_palette_card), 286, 48);
+            lv_obj_set_y(id(color_palette_card), palette_y);
+            lv_obj_set_pos(id(color_preset_red), 14, 8);
+            lv_obj_set_pos(id(color_preset_orange), 61, 8);
+            lv_obj_set_pos(id(color_preset_yellow), 108, 8);
+            lv_obj_set_pos(id(color_preset_green), 155, 8);
+            lv_obj_set_pos(id(color_preset_blue), 202, 8);
+            lv_obj_set_pos(id(color_preset_purple), 249, 8);
+
+            lv_obj_set_size(id(temp_palette_card), 286, 48);
+            lv_obj_set_y(id(temp_palette_card), palette_y);
+            lv_obj_set_pos(id(temp_preset_2700), 24, 8);
+            lv_obj_set_pos(id(temp_preset_4000), 112, 8);
+            lv_obj_set_pos(id(temp_preset_6500), 200, 8);
+
+            lv_obj_set_y(id(color_brightness_card), 165);
+          }
+
+          id(active_color_detail_tab) = id(active_supports_color) ? 0 : 1;
+      - lvgl.widget.hide: brightness_overlay
+      - lvgl.widget.show: color_detail_overlay
+      - script.execute:
+          id: show_color_detail_tab
+          tab: !lambda "return id(active_color_detail_tab);"
+
+  - id: show_color_detail_tab
+    mode: restart
+    parameters:
+      tab: int
+    then:
+      - lambda: |-
+          if (tab == 0 && !id(active_supports_color) && id(active_supports_temperature)) {
+            tab = 1;
+          } else if (tab == 1 && !id(active_supports_temperature) && id(active_supports_color)) {
+            tab = 0;
+          }
+          id(active_color_detail_tab) = tab;
+
+          bool show_tabs = id(active_supports_color) && id(active_supports_temperature);
+          if (show_tabs) {
+            lv_obj_clear_flag(id(color_mode_tabs), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(color_mode_tabs), LV_OBJ_FLAG_HIDDEN);
+          }
+
+          if (tab == 0 && id(active_supports_color)) {
+            lv_obj_clear_flag(id(color_palette_card), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(temp_palette_card), LV_OBJ_FLAG_HIDDEN);
+            if (show_tabs) lv_obj_set_x(id(color_tab_indicator), 2);
+          } else if (tab == 1 && id(active_supports_temperature)) {
+            lv_obj_add_flag(id(color_palette_card), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(temp_palette_card), LV_OBJ_FLAG_HIDDEN);
+            if (show_tabs) lv_obj_set_x(id(color_tab_indicator), 95);
+          } else {
+            lv_obj_add_flag(id(color_palette_card), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(temp_palette_card), LV_OBJ_FLAG_HIDDEN);
+          }
+
+          lv_obj_set_style_text_color(
+            id(color_tab_label),
+            id(active_supports_color) ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8E8E93),
+            0
+          );
+          lv_obj_set_style_text_color(
+            id(temp_tab_label),
+            id(active_supports_temperature) ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x8E8E93),
+            0
+          );
+          if (tab == 0 && id(active_supports_color)) {
+            lv_obj_set_style_text_color(id(color_tab_label), lv_color_hex(0xFFFFFF), 0);
+            lv_obj_set_style_text_color(id(temp_tab_label), lv_color_hex(0xD1D1D6), 0);
+          } else if (tab == 1 && id(active_supports_temperature)) {
+            lv_obj_set_style_text_color(id(color_tab_label), lv_color_hex(0xD1D1D6), 0);
+            lv_obj_set_style_text_color(id(temp_tab_label), lv_color_hex(0xFFFFFF), 0);
+          }
+
+  - id: color_brightness_preview
+    parameters:
+      value: int
+    then:
+      - lambda: |-
+          id(active_brightness_pct) = value;
+          char buf[12];
+          snprintf(buf, sizeof(buf), "%d %%", value);
+          lv_label_set_text(id(color_brightness_value), buf);
+
+  - id: color_brightness_commit
+    parameters:
+      value: int
+    then:
+      - lambda: 'id(active_brightness_pct) = value;'
+      - if:
+          condition:
+            lambda: 'return std::string("${DIRECT_ACTIONS}") == "true";'
+          then:
+            - homeassistant.action:
+                action: light.turn_on
+                data:
+                  entity_id: !lambda "return id(active_entity);"
+                  brightness_pct: !lambda "return value;"
+
+  - id: set_light_color_name
+    mode: queued
+    parameters:
+      color: string
+    then:
+      - if:
+          condition:
+            lambda: 'return std::string("${DIRECT_ACTIONS}") == "true";'
+          then:
+            - homeassistant.action:
+                action: light.turn_on
+                data:
+                  entity_id: !lambda "return id(active_entity);"
+                  color_name: !lambda "return color;"
+                  brightness_pct: !lambda "return id(active_brightness_pct);"
+
+  - id: set_light_color_temperature
+    mode: queued
+    parameters:
+      kelvin: int
+    then:
+      - if:
+          condition:
+            lambda: 'return std::string("${DIRECT_ACTIONS}") == "true";'
+          then:
+            - homeassistant.action:
+                action: light.turn_on
+                data:
+                  entity_id: !lambda "return id(active_entity);"
+                  color_temp_kelvin: !lambda "return kelvin;"
+                  brightness_pct: !lambda "return id(active_brightness_pct);"
+
+  - id: slider_preview
+    parameters:
+      value: int
+    then:
+      - lambda: |-
+          char buf[20];
+          snprintf(buf, sizeof(buf), "%d%s", value, id(active_value_suffix).c_str());
+          lv_label_set_text(id(overlay_value), buf);
+          int pct = value;
+          if (pct < 0) pct = 0;
+          if (pct > 100) pct = 100;
+          std::string value_text;
+
+          if (id(active_control_kind) == "cover_position") {
+            std::string closed_label = id(active_label_off).c_str();
+            std::string open_label = id(active_label_on).c_str();
+
+            if (pct <= 0) {
+              value_text = closed_label;
+            } else if (pct >= 100) {
+              value_text = open_label;
+            } else {
+              char buf[40];
+              snprintf(buf, sizeof(buf), "%s - %d%%", open_label.c_str(), pct);
+              value_text = buf;
+            }
+          } else {
+            if (pct <= 0) {
+              value_text = id(active_label_off).c_str();
+            } else {
+              char buf[20];
+              snprintf(buf, sizeof(buf), "%d%s", pct, id(active_value_suffix).c_str());
+              value_text = buf;
+            }
+          }
+
+          lv_label_set_text(id(overlay_value), value_text.c_str());
+
+
+  - id: slider_commit
+    parameters:
+      value: int
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return id(active_control_kind) == "light_brightness";
+          then:
+            - homeassistant.action:
+                action: light.turn_on
+                data:
+                  entity_id: !lambda "return id(active_entity);"
+                  brightness_pct: !lambda "return value;"
+          else:
+            - if:
+                condition:
+                  lambda: |-
+                    return id(active_control_kind) == "fan_percentage";
+                then:
+                  - if:
+                      condition:
+                        lambda: "return value <= 0;"
+                      then:
+                        - homeassistant.action:
+                            action: fan.turn_off
+                            data:
+                              entity_id: !lambda "return id(active_entity);"
+                      else:
+                        - homeassistant.action:
+                            action: fan.turn_on
+                            data:
+                              entity_id: !lambda "return id(active_entity);"
+                        - delay: 150ms
+                        - homeassistant.action:
+                            action: fan.set_percentage
+                            data:
+                              entity_id: !lambda "return id(active_entity);"
+                              percentage: !lambda "return value;"
+                else:
+                  - if:
+                      condition:
+                        lambda: |-
+                          return id(active_control_kind) == "cover_position";
+                      then:
+                        - homeassistant.action:
+                            action: cover.set_cover_position
+                            data:
+                              entity_id: !lambda "return id(active_entity);"
+                              position: !lambda "return value;"
+
+  # ----------------------------------------------------------
+  # do_tile_action
+  #
+  # Centralized handler for executing Home Assistant actions
+  # triggered by tile taps.
+  #
+  # Parameters
+  # - tile_type: light | fan | switch | scene | script | cover
+  # - tap_action: auto | toggle | activate | fan_toggle_preset
+  # - service: optional Home Assistant service override
+  # - entity_id: target entity
+  # - param_key / param_val: optional parameters for custom services
+  # - was_on: previous entity state (pass false for longpress actions)
+  #
+  # Behavior
+  #
+  # toggle
+  #   -> toggles the entity
+  #   light.toggle / fan.toggle / switch.toggle / cover.open_cover|close_cover (based on was_on)
+  #
+  # activate
+  #   -> activates entity
+  #   scene.turn_on / script.turn_on / light.turn_on / fan.turn_on / cover.open_cover
+  #
+  # auto
+  #   -> resolves automatically based on tile_type:
+  #        light/switch/fan/cover -> toggle
+  #        scene/script           -> activate
+  #
+  # fan_toggle_preset
+  #   -> if fan was ON: fan.turn_off
+  #   -> if fan was OFF:
+  #        fan.turn_on
+  #        wait 150ms
+  #        fan.set_preset_mode(param_val)
+  #
+  # Custom service
+  #   If "service" is set, it will be called directly.
+  #   param_key / param_val may be used for parameters
+  #   like preset_mode, brightness_pct, percentage, etc.
+  # ----------------------------------------------------------
+  - id: do_tile_action
+    mode: queued
+    parameters:
+      tile_type: string
+      tap_action: string
+      service: string
+      entity_id: string
+      param_key: string
+      param_val: string
+      was_on: bool
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return std::string("${DIRECT_ACTIONS}") == "true";
+          then:
+            - lambda: |-
+                ESP_LOGD("tile", "do_tile_action type=%s action=%s service=%s entity=%s key=%s val=%s was_on=%d",
+                         tile_type.c_str(), tap_action.c_str(), service.c_str(), entity_id.c_str(),
+                         param_key.c_str(), param_val.c_str(), (int)was_on);
+
+            - if:
+                condition:
+                  lambda: |-
+                    return tap_action == "fan_toggle_preset";
+                then:
+                  - if:
+                      condition:
+                        lambda: |-
+                          return was_on;
+                      then:
+                        - homeassistant.action:
+                            action: fan.turn_off
+                            data:
+                              entity_id: !lambda 'return entity_id;'
+                      else:
+                        - homeassistant.action:
+                            action: fan.turn_on
+                            data:
+                              entity_id: !lambda 'return entity_id;'
+                        - delay: 150ms
+                        - homeassistant.action:
+                            action: fan.set_preset_mode
+                            data:
+                              entity_id: !lambda 'return entity_id;'
+                              preset_mode: !lambda 'return param_val;'
+
+                else:
+                  - if:
+                      condition:
+                        lambda: |-
+                          std::string resolved = tap_action;
+                          if (resolved == "auto") {
+                            if (tile_type == "scene" || tile_type == "script") resolved = "activate";
+                            else resolved = "toggle";
+                          }
+                          return resolved == "toggle";
+                      then:
+                        - if:
+                            condition:
+                              lambda: |-
+                                return service.size() > 0;
+                            then:
+                              - homeassistant.action:
+                                  action: !lambda 'return service;'
+                                  data:
+                                    entity_id: !lambda 'return entity_id;'
+                            else:
+                              - if:
+                                  condition:
+                                    lambda: |-
+                                      return tile_type == "light";
+                                  then:
+                                    - homeassistant.action:
+                                        action: light.toggle
+                                        data:
+                                          entity_id: !lambda 'return entity_id;'
+                                  else:
+                                    - if:
+                                        condition:
+                                          lambda: |-
+                                            return tile_type == "fan";
+                                        then:
+                                          - homeassistant.action:
+                                              action: fan.toggle
+                                              data:
+                                                entity_id: !lambda 'return entity_id;'
+                                        else:
+                                          - if:
+                                              condition:
+                                                lambda: |-
+                                                  return tile_type == "switch";
+                                              then:
+                                                - homeassistant.action:
+                                                    action: switch.toggle
+                                                    data:
+                                                      entity_id: !lambda 'return entity_id;'
+                                              else:
+                                                - if:
+                                                    condition:
+                                                      lambda: |-
+                                                        return tile_type == "cover";
+                                                    then:
+                                                      - homeassistant.action:
+                                                          action: cover.set_cover_position
+                                                          data:
+                                                            entity_id: !lambda 'return entity_id;'
+                                                            position: !lambda |-
+                                                              return was_on ? 0 : 100;
+
+                      else:
+                        - if:
+                            condition:
+                              lambda: |-
+                                std::string resolved = tap_action;
+                                if (resolved == "auto") {
+                                  if (tile_type == "scene" || tile_type == "script") resolved = "activate";
+                                  else resolved = "toggle";
+                                }
+                                return resolved == "activate";
+                            then:
+                              - if:
+                                  condition:
+                                    lambda: |-
+                                      return service.size() > 0;
+                                  then:
+                                    - if:
+                                        condition:
+                                          lambda: |-
+                                            return param_key == "preset_mode";
+                                        then:
+                                          - homeassistant.action:
+                                              action: !lambda 'return service;'
+                                              data:
+                                                entity_id: !lambda 'return entity_id;'
+                                                preset_mode: !lambda 'return param_val;'
+                                        else:
+                                          - if:
+                                              condition:
+                                                lambda: |-
+                                                  return param_key == "brightness_pct";
+                                              then:
+                                                - homeassistant.action:
+                                                    action: !lambda 'return service;'
+                                                    data:
+                                                      entity_id: !lambda 'return entity_id;'
+                                                      brightness_pct: !lambda 'return atoi(param_val.c_str());'
+                                              else:
+                                                - if:
+                                                    condition:
+                                                      lambda: |-
+                                                        return param_key == "percentage";
+                                                    then:
+                                                      - homeassistant.action:
+                                                          action: !lambda 'return service;'
+                                                          data:
+                                                            entity_id: !lambda 'return entity_id;'
+                                                            percentage: !lambda 'return atoi(param_val.c_str());'
+                                                    else:
+                                                      - homeassistant.action:
+                                                          action: !lambda 'return service;'
+                                                          data:
+                                                            entity_id: !lambda 'return entity_id;'
+                                  else:
+                                    - if:
+                                        condition:
+                                          lambda: |-
+                                            return tile_type == "scene";
+                                        then:
+                                          - homeassistant.action:
+                                              action: scene.turn_on
+                                              data:
+                                                entity_id: !lambda 'return entity_id;'
+                                        else:
+                                          - if:
+                                              condition:
+                                                lambda: |-
+                                                  return tile_type == "script";
+                                              then:
+                                                - homeassistant.action:
+                                                    action: script.turn_on
+                                                    data:
+                                                      entity_id: !lambda 'return entity_id;'
+                                              else:
+                                                - if:
+                                                    condition:
+                                                      lambda: |-
+                                                        return tile_type == "light";
+                                                    then:
+                                                      - homeassistant.action:
+                                                          action: light.turn_on
+                                                          data:
+                                                            entity_id: !lambda 'return entity_id;'
+                                                    else:
+                                                      - if:
+                                                          condition:
+                                                            lambda: |-
+                                                              return tile_type == "fan";
+                                                          then:
+                                                            - homeassistant.action:
+                                                                action: fan.turn_on
+                                                                data:
+                                                                  entity_id: !lambda 'return entity_id;'
+                                                          else:
+                                                            - if:
+                                                                condition:
+                                                                  lambda: |-
+                                                                    return tile_type == "switch";
+                                                                then:
+                                                                  - homeassistant.action:
+                                                                      action: switch.turn_on
+                                                                      data:
+                                                                        entity_id: !lambda 'return entity_id;'
+                                                                else:
+                                                                  - if:
+                                                                      condition:
+                                                                        lambda: |-
+                                                                          return tile_type == "cover";
+                                                                      then:
+                                                                        - homeassistant.action:
+                                                                            action: cover.open_cover
+                                                                            data:
+                                                                              entity_id: !lambda 'return entity_id;'
+
+  - id: open_value_overlay
+    parameters:
+      title: string
+      entity: string
+      tile_type: string
+      longpress_mode: string
+      was_on: bool
+      off_value: int
+      brightness_value: float
+      percentage_value: float
+      position_value: float
+      icon_text: string
+      slider_bg_color: uint32_t
+      slider_fill_color: uint32_t
+      slider_icon_color: uint32_t
+      label_off: string
+      label_on: string
+      supported_color_modes: string
+      climate_current_temperature: float
+      climate_target_temperature: float
+      climate_humidity: float
+      climate_mode: string
+      climate_supported_modes: string
+      climate_min_temp: string
+      climate_max_temp: string
+      climate_step: string
+    then:
+      - lambda: |-
+          std::string mode = longpress_mode;
+          auto contains_mode = [](const std::string& modes, const std::string& needle) {
+            return modes.find(needle) != std::string::npos;
+          };
+          if (mode == "auto") {
+            if (tile_type == "light") mode = "brightness";
+            else if (tile_type == "fan") mode = "percentage";
+            else if (tile_type == "cover") mode = "cover_position";
+            else if (tile_type == "climate") mode = "climate_temperature";
+            else mode = "none";
+          }
+
+          if (mode == "none") return;
+
+          id(active_entity) = entity;
+          id(active_value_suffix) = " %";
+          id(active_label_off) = label_off;
+          id(active_label_on) = label_on;
+          id(active_title) = title;
+          id(active_icon_text) = icon_text;
+          id(active_supports_color) = false;
+          id(active_supports_temperature) = false;
+          lv_obj_add_flag(id(overlay_color_button), LV_OBJ_FLAG_HIDDEN);
+
+          if (mode == "climate_temperature") {
+            auto to_x10 = [](float value, int fallback) -> int {
+              if (isnan(value)) return fallback;
+              return (int) lround(value * 10.0f);
+            };
+            auto parse_x10 = [](const std::string& value, int fallback) -> int {
+              if (value.empty()) return fallback;
+              return (int) lround(atof(value.c_str()) * 10.0f);
+            };
+            id(active_control_kind) = "climate_temperature";
+            id(active_climate_min_x10) = parse_x10(climate_min_temp, 50);
+            id(active_climate_max_x10) = parse_x10(climate_max_temp, 300);
+            id(active_climate_step_x10) = parse_x10(climate_step, 5);
+            if (id(active_climate_step_x10) < 5) id(active_climate_step_x10) = 5;
+            if (id(active_climate_max_x10) <= id(active_climate_min_x10)) {
+              id(active_climate_min_x10) = 50;
+              id(active_climate_max_x10) = 300;
+            }
+
+            id(active_climate_current_x10) = to_x10(climate_current_temperature, 0);
+            int fallback_target = isnan(climate_current_temperature) ? 200 : id(active_climate_current_x10);
+            id(active_climate_target_x10) = to_x10(climate_target_temperature, fallback_target);
+            if (id(active_climate_target_x10) < id(active_climate_min_x10)) id(active_climate_target_x10) = id(active_climate_min_x10);
+            if (id(active_climate_target_x10) > id(active_climate_max_x10)) id(active_climate_target_x10) = id(active_climate_max_x10);
+            id(active_climate_target_x10) = id(active_climate_min_x10) + (int) lround((id(active_climate_target_x10) - id(active_climate_min_x10)) / (float) id(active_climate_step_x10)) * id(active_climate_step_x10);
+            if (id(active_climate_target_x10) < id(active_climate_min_x10)) id(active_climate_target_x10) = id(active_climate_min_x10);
+            if (id(active_climate_target_x10) > id(active_climate_max_x10)) id(active_climate_target_x10) = id(active_climate_max_x10);
+            id(active_climate_humidity) = isnan(climate_humidity) ? -1 : (int) lround(climate_humidity);
+            id(active_climate_mode) = climate_mode.empty() ? std::string("Auto") : climate_mode;
+            id(active_climate_supported_modes) = climate_supported_modes;
+
+            lv_label_set_text(id(climate_detail_title), title.c_str());
+
+            char current_buf[48];
+            if (isnan(climate_current_temperature)) {
+              snprintf(current_buf, sizeof(current_buf), "Current: --");
+            } else if (id(active_climate_humidity) >= 0) {
+              snprintf(current_buf, sizeof(current_buf), "Current: %.1f° - Humidity: %d %%", climate_current_temperature, id(active_climate_humidity));
+            } else {
+              snprintf(current_buf, sizeof(current_buf), "Current: %.1f°", climate_current_temperature);
+            }
+            lv_label_set_text(id(climate_current_label), current_buf);
+
+            char target_buf[16];
+            snprintf(target_buf, sizeof(target_buf), "%.1f°", id(active_climate_target_x10) / 10.0f);
+            lv_label_set_text(id(climate_target_label), target_buf);
+            lv_label_set_text(id(climate_mode_label), id(active_climate_mode).c_str());
+
+            lv_arc_set_range(id(climate_arc), id(active_climate_min_x10), id(active_climate_max_x10));
+            lv_arc_set_value(id(climate_arc), id(active_climate_target_x10));
+
+            if (atoi("${DISPLAY_W}") < atoi("${DISPLAY_H}")) {
+              lv_obj_set_size(id(climate_arc), 196, 196);
+              lv_obj_set_y(id(climate_arc), 8);
+              lv_obj_set_y(id(climate_current_label), 48);
+              lv_obj_set_y(id(climate_minus_button), -62);
+              lv_obj_set_y(id(climate_plus_button), -62);
+              lv_obj_set_y(id(climate_mode_pill), -18);
+            } else {
+              lv_obj_set_size(id(climate_arc), 176, 176);
+              lv_obj_set_y(id(climate_arc), 18);
+              lv_obj_set_y(id(climate_current_label), 40);
+              lv_obj_set_y(id(climate_minus_button), -14);
+              lv_obj_set_y(id(climate_plus_button), -14);
+              lv_obj_set_y(id(climate_mode_pill), -15);
+            }
+
+            lv_obj_add_flag(id(brightness_overlay), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(climate_detail_overlay), LV_OBJ_FLAG_HIDDEN);
+            return;
+          }
+
+          int pct = off_value;
+
+          if (mode == "brightness") {
+            id(active_control_kind) = "light_brightness";
+            if (was_on) {
+              if (isnan(brightness_value)) pct = 100;
+              else pct = (int) lround((brightness_value / 255.0f) * 100.0f);
+            }
+          } else if (mode == "percentage") {
+            id(active_control_kind) = "fan_percentage";
+            if (was_on) {
+              if (isnan(percentage_value)) pct = 0;
+              else pct = (int) lround(percentage_value);
+            }
+          } else if (mode == "cover_position") {
+            id(active_control_kind) = "cover_position";
+            if (isnan(position_value)) pct = was_on ? 100 : 0;
+            else pct = (int) lround(position_value);
+          } else {
+            return;
+          }
+
+          if (pct < 0) pct = 0;
+          if (pct > 100) pct = 100;
+          id(active_brightness_pct) = pct;
+
+          if (tile_type == "light" && std::string("${DIRECT_ACTIONS}") == "true") {
+            id(active_supports_color) =
+              contains_mode(supported_color_modes, "hs") ||
+              contains_mode(supported_color_modes, "rgb") ||
+              contains_mode(supported_color_modes, "rgbw") ||
+              contains_mode(supported_color_modes, "rgbww") ||
+              contains_mode(supported_color_modes, "xy");
+            id(active_supports_temperature) = contains_mode(supported_color_modes, "color_temp");
+
+            if (id(active_supports_color) || id(active_supports_temperature)) {
+              lv_obj_clear_flag(id(overlay_color_button), LV_OBJ_FLAG_HIDDEN);
+            }
+          }
+
+          if (tile_type == "cover") {
+            lv_obj_set_style_bg_color(id(overlay_slider), lv_color_hex(slider_fill_color), LV_PART_MAIN);
+            lv_obj_set_style_bg_color(id(overlay_slider), lv_color_hex(slider_bg_color), LV_PART_INDICATOR);            
+            lv_obj_set_style_bg_opa(id(overlay_slider), LV_OPA_COVER, LV_PART_MAIN);
+          }
+          else{
+            lv_obj_set_style_bg_color(id(overlay_slider), lv_color_hex(slider_bg_color), LV_PART_MAIN);
+            lv_obj_set_style_bg_color(id(overlay_slider), lv_color_hex(slider_fill_color), LV_PART_INDICATOR);            
+            lv_obj_set_style_bg_opa(id(overlay_slider), LV_OPA_COVER, LV_PART_MAIN);
+          }
+          lv_obj_set_style_radius(id(overlay_slider), 28, LV_PART_MAIN);
+          lv_obj_set_style_radius(id(overlay_slider), 0, LV_PART_INDICATOR);
+
+          lv_label_set_text(id(overlay_title), title.c_str());
+          lv_label_set_text(id(overlay_icon), icon_text.c_str());
+          lv_slider_set_value(id(overlay_slider), pct, LV_ANIM_OFF);
+
+          std::string value_text;
+
+          if (tile_type == "cover") {
+            if (pct <= 0) {
+              value_text = label_off;
+            } else if (pct >= 100) {
+              value_text = label_on;
+            } else {
+              char buf[40];
+              snprintf(buf, sizeof(buf), "%s - %d%%", label_on.c_str(), pct);
+              value_text = buf;
+            }
+          } else {
+            if (pct <= 0) {
+              value_text = label_off;
+            } else {
+              char buf[20];
+              snprintf(buf, sizeof(buf), "%d%s", pct, id(active_value_suffix).c_str());
+              value_text = buf;
+            }
+          }
+
+          lv_label_set_text(id(overlay_value), value_text.c_str());
+          
+          lv_obj_set_style_bg_opa(id(overlay_slider), LV_OPA_COVER, LV_PART_INDICATOR);
+
+          lv_obj_set_style_text_color(id(overlay_icon), lv_color_hex(slider_icon_color), 0);
+
+      - if:
+          condition:
+            lambda: 'return id(active_control_kind) != "climate_temperature";'
+          then:
+            - lvgl.widget.show: brightness_overlay
+
+  # UI refresh (values + time + styles) + render
+  - id: ui_refresh
+    mode: queued
+    then:
+      - lambda: |-
+          auto set_lbl = [](lv_obj_t* lbl, const std::string& s) {
+            if (lbl) lv_label_set_text(lbl, s.c_str());
+          };
+
+          auto set_value_auto = [&](lv_obj_t* lbl,
+                                    bool on,
+                                    const std::string& tile_type,
+                                    const std::string& value_mode,
+                                    float brightness,
+                                    float percentage,
+                                    const std::string& preset,
+                                    float climate_current_temperature,
+                                    float climate_target_temperature,
+                                    float climate_humidity,
+                                    const std::string& label_on,
+                                    const std::string& label_off) {
+            std::string mode = value_mode;
+
+            if (mode == "auto" || mode.empty()) {
+              if (tile_type == "light") {
+                mode = "brightness";
+              } else if (tile_type == "fan") {
+                mode = preset.empty() ? "percentage" : "preset";
+              } else if (tile_type == "climate") {
+                mode = "climate";
+              } else {
+                mode = "text";
+              }
+            }
+
+            if (mode == "brightness") {
+              if (!on) {
+                set_lbl(lbl, label_off);
+                return;
+              }
+              if (isnan(brightness)) {
+                set_lbl(lbl, "100 %");
+                return;
+              }
+              int pct = (int) lround((brightness / 255.0f) * 100.0f);
+              char buf[8];
+              snprintf(buf, sizeof(buf), "%d %%", pct);
+              set_lbl(lbl, std::string(buf));
+              return;
+            }
+
+            if (mode == "percentage") {
+              if (!on) {
+                set_lbl(lbl, label_off);
+                return;
+              }
+              int pct = isnan(percentage) ? 0 : (int) lround(percentage);
+              char buf[8];
+              snprintf(buf, sizeof(buf), "%d %%", pct);
+              set_lbl(lbl, std::string(buf));
+              return;
+            }
+
+            if (mode == "preset") {
+              if (!on) {
+                set_lbl(lbl, label_off);
+                return;
+              }
+              if (!preset.empty()) {
+                set_lbl(lbl, preset);
+              } else {
+                set_lbl(lbl, label_on);
+              }
+              return;
+            }
+
+            if (mode == "climate") {
+              if (!on) {
+                set_lbl(lbl, label_off);
+                return;
+              }
+
+              float temp = isnan(climate_target_temperature) ? climate_current_temperature : climate_target_temperature;
+              if (isnan(temp)) {
+                set_lbl(lbl, label_on);
+                return;
+              }
+
+              char buf[16];
+              snprintf(buf, sizeof(buf), "%.1f °", temp);
+              set_lbl(lbl, std::string(buf));
+              return;
+            }
+
+            if (mode == "text") {
+              if (tile_type == "scene" || tile_type == "script") {
+                set_lbl(lbl, label_on);
+              } else {
+                set_lbl(lbl, on ? label_on : label_off);
+              }
+              return;
+            }
+
+            set_lbl(lbl, "—");
+          };
+
+          auto is_active = [](const std::string& tile_type, const std::string& state) {
+            if (tile_type == "climate") {
+              return !state.empty() && state != "off" && state != "unavailable" && state != "unknown";
+            }
+            if (tile_type == "scene" || tile_type == "script") return true;
+            return state == "on";
+          };
+
+          // Cover-aware active state: "closed" = off, anything else (open/opening/closing) = on
+          bool t1_on = (std::string("${TILE1_TYPE}") == "cover") ? (id(tile1_cover_state).state != "closed") : is_active("${TILE1_TYPE}", std::string(id(ha_state_tile1).state.c_str()));
+          bool t2_on = (std::string("${TILE2_TYPE}") == "cover") ? (id(tile2_cover_state).state != "closed") : is_active("${TILE2_TYPE}", std::string(id(ha_state_tile2).state.c_str()));
+          bool t3_on = (std::string("${TILE3_TYPE}") == "cover") ? (id(tile3_cover_state).state != "closed") : is_active("${TILE3_TYPE}", std::string(id(ha_state_tile3).state.c_str()));
+          bool t4_on = (std::string("${TILE4_TYPE}") == "cover") ? (id(tile4_cover_state).state != "closed") : is_active("${TILE4_TYPE}", std::string(id(ha_state_tile4).state.c_str()));
+          bool t5_on = (std::string("${TILE5_TYPE}") == "cover") ? (id(tile5_cover_state).state != "closed") : is_active("${TILE5_TYPE}", std::string(id(ha_state_tile5).state.c_str()));
+          bool t6_on = (std::string("${TILE6_TYPE}") == "cover") ? (id(tile6_cover_state).state != "closed") : is_active("${TILE6_TYPE}", std::string(id(ha_state_tile6).state.c_str()));
+
+          set_value_auto(id(t1_value), t1_on, "${TILE1_TYPE}", "${TILE1_VALUE_MODE}",
+                         id(tile1_brightness).state, id(tile1_percentage).state, std::string(id(tile1_preset).state.c_str()),
+                         id(tile1_climate_current_temperature).state, id(tile1_climate_target_temperature).state, id(tile1_climate_humidity).state,
+                         "${TILE1_LABEL_ON}", "${TILE1_LABEL_OFF}");
+
+          set_value_auto(id(t2_value), t2_on, "${TILE2_TYPE}", "${TILE2_VALUE_MODE}",
+                         id(tile2_brightness).state, id(tile2_percentage).state, std::string(id(tile2_preset).state.c_str()),
+                         id(tile2_climate_current_temperature).state, id(tile2_climate_target_temperature).state, id(tile2_climate_humidity).state,
+                         "${TILE2_LABEL_ON}", "${TILE2_LABEL_OFF}");
+
+          set_value_auto(id(t3_value), t3_on, "${TILE3_TYPE}", "${TILE3_VALUE_MODE}",
+                         id(tile3_brightness).state, id(tile3_percentage).state, std::string(id(tile3_preset).state.c_str()),
+                         id(tile3_climate_current_temperature).state, id(tile3_climate_target_temperature).state, id(tile3_climate_humidity).state,
+                         "${TILE3_LABEL_ON}", "${TILE3_LABEL_OFF}");
+
+          set_value_auto(id(t4_value), t4_on, "${TILE4_TYPE}", "${TILE4_VALUE_MODE}",
+                         id(tile4_brightness).state, id(tile4_percentage).state, std::string(id(tile4_preset).state.c_str()),
+                         id(tile4_climate_current_temperature).state, id(tile4_climate_target_temperature).state, id(tile4_climate_humidity).state,
+                         "${TILE4_LABEL_ON}", "${TILE4_LABEL_OFF}");
+
+          set_value_auto(id(t5_value), t5_on, "${TILE5_TYPE}", "${TILE5_VALUE_MODE}",
+                         id(tile5_brightness).state, id(tile5_percentage).state, std::string(id(tile5_preset).state.c_str()),
+                         id(tile5_climate_current_temperature).state, id(tile5_climate_target_temperature).state, id(tile5_climate_humidity).state,
+                         "${TILE5_LABEL_ON}", "${TILE5_LABEL_OFF}");
+
+          set_value_auto(id(t6_value), t6_on, "${TILE6_TYPE}", "${TILE6_VALUE_MODE}",
+                         id(tile6_brightness).state, id(tile6_percentage).state, std::string(id(tile6_preset).state.c_str()),
+                         id(tile6_climate_current_temperature).state, id(tile6_climate_target_temperature).state, id(tile6_climate_humidity).state,
+                         "${TILE6_LABEL_ON}", "${TILE6_LABEL_OFF}");
+
+          if (id(active_control_kind) == "climate_temperature" && !lv_obj_has_flag(id(climate_detail_overlay), LV_OBJ_FLAG_HIDDEN)) {
+            auto label_for_climate_mode = [](std::string mode) {
+              for (char &c : mode) {
+                if (c >= 'A' && c <= 'Z') c = (char) (c - 'A' + 'a');
+              }
+              if (mode == "off") return std::string("Off");
+              if (mode == "heat") return std::string("Heat");
+              if (mode == "cool") return std::string("Cool");
+              if (mode == "heat_cool") return std::string("Heat/Cool");
+              if (mode == "auto") return std::string("Auto");
+              if (mode == "dry") return std::string("Dry");
+              if (mode == "fan_only") return std::string("Fan");
+              return mode.empty() ? std::string("Auto") : mode;
+            };
+            auto sync_open_climate = [&](const std::string& entity,
+                                         float current_temperature,
+                                         float target_temperature,
+                                         float humidity,
+                                         const std::string& climate_mode) {
+              if (id(active_entity) != entity) return;
+              auto to_x10 = [](float value, int fallback) -> int {
+                if (isnan(value)) return fallback;
+                return (int) lround(value * 10.0f);
+              };
+
+              id(active_climate_current_x10) = to_x10(current_temperature, id(active_climate_current_x10));
+              id(active_climate_humidity) = isnan(humidity) ? -1 : (int) lround(humidity);
+              if (!climate_mode.empty()) {
+                id(active_climate_mode) = climate_mode;
+                lv_label_set_text(id(climate_mode_label), label_for_climate_mode(climate_mode).c_str());
+              }
+
+              int target_x10 = to_x10(target_temperature, id(active_climate_target_x10));
+              if (target_x10 < id(active_climate_min_x10)) target_x10 = id(active_climate_min_x10);
+              if (target_x10 > id(active_climate_max_x10)) target_x10 = id(active_climate_max_x10);
+              int step_x10 = id(active_climate_step_x10);
+              if (step_x10 < 5) step_x10 = 5;
+              target_x10 = id(active_climate_min_x10) + (int) lround((target_x10 - id(active_climate_min_x10)) / (float) step_x10) * step_x10;
+              if (target_x10 < id(active_climate_min_x10)) target_x10 = id(active_climate_min_x10);
+              if (target_x10 > id(active_climate_max_x10)) target_x10 = id(active_climate_max_x10);
+              id(active_climate_target_x10) = target_x10;
+
+              char current_buf[48];
+              if (isnan(current_temperature)) {
+                snprintf(current_buf, sizeof(current_buf), "Current: --");
+              } else if (id(active_climate_humidity) >= 0) {
+                snprintf(current_buf, sizeof(current_buf), "Current: %.1f° - Humidity: %d %%", current_temperature, id(active_climate_humidity));
+              } else {
+                snprintf(current_buf, sizeof(current_buf), "Current: %.1f°", current_temperature);
+              }
+              lv_label_set_text(id(climate_current_label), current_buf);
+
+              char target_buf[16];
+              snprintf(target_buf, sizeof(target_buf), "%.1f°", id(active_climate_target_x10) / 10.0f);
+              lv_label_set_text(id(climate_target_label), target_buf);
+              lv_arc_set_value(id(climate_arc), id(active_climate_target_x10));
+            };
+
+            if (std::string("${TILE1_TYPE}") == "climate") sync_open_climate("${TILE1_ENTITY}", id(tile1_climate_current_temperature).state, id(tile1_climate_target_temperature).state, id(tile1_climate_humidity).state, std::string(id(tile1_climate_mode).state.c_str()));
+            if (std::string("${TILE2_TYPE}") == "climate") sync_open_climate("${TILE2_ENTITY}", id(tile2_climate_current_temperature).state, id(tile2_climate_target_temperature).state, id(tile2_climate_humidity).state, std::string(id(tile2_climate_mode).state.c_str()));
+            if (std::string("${TILE3_TYPE}") == "climate") sync_open_climate("${TILE3_ENTITY}", id(tile3_climate_current_temperature).state, id(tile3_climate_target_temperature).state, id(tile3_climate_humidity).state, std::string(id(tile3_climate_mode).state.c_str()));
+            if (std::string("${TILE4_TYPE}") == "climate") sync_open_climate("${TILE4_ENTITY}", id(tile4_climate_current_temperature).state, id(tile4_climate_target_temperature).state, id(tile4_climate_humidity).state, std::string(id(tile4_climate_mode).state.c_str()));
+            if (std::string("${TILE5_TYPE}") == "climate") sync_open_climate("${TILE5_ENTITY}", id(tile5_climate_current_temperature).state, id(tile5_climate_target_temperature).state, id(tile5_climate_humidity).state, std::string(id(tile5_climate_mode).state.c_str()));
+            if (std::string("${TILE6_TYPE}") == "climate") sync_open_climate("${TILE6_ENTITY}", id(tile6_climate_current_temperature).state, id(tile6_climate_target_temperature).state, id(tile6_climate_humidity).state, std::string(id(tile6_climate_mode).state.c_str()));
+          }
+
+          {
+            auto now = id(homeassistant_time).now();
+            char buf[10];
+
+            if (std::string("${TIME_24H}") == "true") {
+              snprintf(buf, sizeof(buf), "%02d:%02d", now.hour, now.minute);
+            } else {
+              int hour12 = now.hour % 12;
+              if (hour12 == 0) hour12 = 12;
+              snprintf(buf, sizeof(buf), "%d:%02d %s", hour12, now.minute, now.hour >= 12 ? "PM" : "AM");
+            }
+
+            set_lbl(id(lbl_time), std::string(buf));
+          }
+
+          auto apply_tile = [&](bool active,
+                                lv_obj_t* tile,
+                                lv_obj_t* circle,
+                                lv_obj_t* title,
+                                lv_obj_t* value,
+                                lv_obj_t* icon_lbl,
+                                uint32_t circle_active,
+                                uint32_t circle_disabled,
+                                uint32_t icon_active,
+                                uint32_t icon_disabled,
+                                uint32_t bg_active,
+                                uint32_t bg_disabled,
+                                uint32_t title_active,
+                                uint32_t title_disabled,
+                                uint32_t value_active,
+                                uint32_t value_disabled)
+          {
+            lv_obj_set_style_bg_color(tile, lv_color_hex(active ? bg_active : bg_disabled), 0);
+            lv_obj_set_style_bg_color(circle, lv_color_hex(active ? circle_active : circle_disabled), 0);
+            lv_obj_set_style_text_color(icon_lbl, lv_color_hex(active ? icon_active : icon_disabled), 0);
+            lv_obj_set_style_text_color(title, lv_color_hex(active ? title_active : title_disabled), 0);
+            lv_obj_set_style_text_color(value, lv_color_hex(active ? value_active : value_disabled), 0);
+          };
+
+          apply_tile(t1_on,
+                    id(tile1), id(tile1_icon_circle), id(t1_title), id(t1_value), id(tile1_icon_lbl),
+                    ${TILE1_CIRCLE_ACTIVE_COLOR}, ${TILE1_CIRCLE_DISABLED_COLOR},
+                    ${TILE1_ICON_ACTIVE_COLOR}, ${TILE1_ICON_DISABLED_COLOR},
+                    ${TILE1_BG_ACTIVE_COLOR}, ${TILE1_BG_DISABLED_COLOR},
+                    ${TILE1_TITLE_ACTIVE_COLOR}, ${TILE1_TITLE_DISABLED_COLOR},
+                    ${TILE1_VALUE_ACTIVE_COLOR}, ${TILE1_VALUE_DISABLED_COLOR});
+
+          apply_tile(t2_on,
+                    id(tile2), id(tile2_icon_circle), id(t2_title), id(t2_value), id(tile2_icon_lbl),
+                    ${TILE2_CIRCLE_ACTIVE_COLOR}, ${TILE2_CIRCLE_DISABLED_COLOR},
+                    ${TILE2_ICON_ACTIVE_COLOR}, ${TILE2_ICON_DISABLED_COLOR},
+                    ${TILE2_BG_ACTIVE_COLOR}, ${TILE2_BG_DISABLED_COLOR},
+                    ${TILE2_TITLE_ACTIVE_COLOR}, ${TILE2_TITLE_DISABLED_COLOR},
+                    ${TILE2_VALUE_ACTIVE_COLOR}, ${TILE2_VALUE_DISABLED_COLOR});
+
+          apply_tile(t3_on,
+                    id(tile3), id(tile3_icon_circle), id(t3_title), id(t3_value), id(tile3_icon_lbl),
+                    ${TILE3_CIRCLE_ACTIVE_COLOR}, ${TILE3_CIRCLE_DISABLED_COLOR},
+                    ${TILE3_ICON_ACTIVE_COLOR}, ${TILE3_ICON_DISABLED_COLOR},
+                    ${TILE3_BG_ACTIVE_COLOR}, ${TILE3_BG_DISABLED_COLOR},
+                    ${TILE3_TITLE_ACTIVE_COLOR}, ${TILE3_TITLE_DISABLED_COLOR},
+                    ${TILE3_VALUE_ACTIVE_COLOR}, ${TILE3_VALUE_DISABLED_COLOR});
+
+          apply_tile(t4_on,
+                    id(tile4), id(tile4_icon_circle), id(t4_title), id(t4_value), id(tile4_icon_lbl),
+                    ${TILE4_CIRCLE_ACTIVE_COLOR}, ${TILE4_CIRCLE_DISABLED_COLOR},
+                    ${TILE4_ICON_ACTIVE_COLOR}, ${TILE4_ICON_DISABLED_COLOR},
+                    ${TILE4_BG_ACTIVE_COLOR}, ${TILE4_BG_DISABLED_COLOR},
+                    ${TILE4_TITLE_ACTIVE_COLOR}, ${TILE4_TITLE_DISABLED_COLOR},
+                    ${TILE4_VALUE_ACTIVE_COLOR}, ${TILE4_VALUE_DISABLED_COLOR});
+
+          apply_tile(t5_on,
+                    id(tile5), id(tile5_icon_circle), id(t5_title), id(t5_value), id(tile5_icon_lbl),
+                    ${TILE5_CIRCLE_ACTIVE_COLOR}, ${TILE5_CIRCLE_DISABLED_COLOR},
+                    ${TILE5_ICON_ACTIVE_COLOR}, ${TILE5_ICON_DISABLED_COLOR},
+                    ${TILE5_BG_ACTIVE_COLOR}, ${TILE5_BG_DISABLED_COLOR},
+                    ${TILE5_TITLE_ACTIVE_COLOR}, ${TILE5_TITLE_DISABLED_COLOR},
+                    ${TILE5_VALUE_ACTIVE_COLOR}, ${TILE5_VALUE_DISABLED_COLOR});
+
+          apply_tile(t6_on,
+                    id(tile6), id(tile6_icon_circle), id(t6_title), id(t6_value), id(tile6_icon_lbl),
+                    ${TILE6_CIRCLE_ACTIVE_COLOR}, ${TILE6_CIRCLE_DISABLED_COLOR},
+                    ${TILE6_ICON_ACTIVE_COLOR}, ${TILE6_ICON_DISABLED_COLOR},
+                    ${TILE6_BG_ACTIVE_COLOR}, ${TILE6_BG_DISABLED_COLOR},
+                    ${TILE6_TITLE_ACTIVE_COLOR}, ${TILE6_TITLE_DISABLED_COLOR},
+                    ${TILE6_VALUE_ACTIVE_COLOR}, ${TILE6_VALUE_DISABLED_COLOR});
+
+      - component.update: my_display
