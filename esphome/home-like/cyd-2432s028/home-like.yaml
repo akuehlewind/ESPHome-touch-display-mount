@@ -1287,8 +1287,15 @@ display:
     id: my_display
     spi_id: lcd
     model: ILI9341
-    cs_pin: 15
-    dc_pin: 2
+    # GPIO15 and GPIO2 are ESP32 strapping pins; the display is wired to
+    # them on this board, so the warning is suppressed rather than the
+    # pins moved.
+    cs_pin:
+      number: 15
+      ignore_strapping_warning: true
+    dc_pin:
+      number: 2
+      ignore_strapping_warning: true
     invert_colors: false
     update_interval: never
     auto_clear_enabled: false

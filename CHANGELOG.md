@@ -5,6 +5,13 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-09-17
+
+### Fixed
+- CYD (ESP32-2432S028) builds no longer warn about strapping pins. GPIO15 (display CS) and GPIO2 (display DC) are ESP32 strapping pins and the panel is wired to them on the board, so the pins now carry `ignore_strapping_warning: true` rather than leaving two warnings that users cannot act on. Affects the `cyd-2432s028` home-like and buttons configs.
+
+---
+
 ## 2026-06-21
 
 ### Fixed
