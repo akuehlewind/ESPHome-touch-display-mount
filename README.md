@@ -290,9 +290,9 @@ Available YAML variants (pick **one UI** for your **hardware**):
 - `esphome/home-like/ili9341-external-esp32/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles) — actively maintained
 - `esphome/buttons/ili9341-external-esp32/buttons.yaml` – lockscreen with 4 round buttons (simple / legacy)
 
-> Tip: The `home-like.yaml` file uses orientation-specific background images located in `esphome/home-like/images/`.
+> Tip: The `home-like.yaml` file uses orientation-specific background images, downloaded from this repository at build time — nothing has to be copied next to the YAML.
 > For a full reference of all tile substitutions and copy-paste examples, see [`esphome/home-like/TILE_CONFIGURATION.md`](esphome/home-like/TILE_CONFIGURATION.md).
-> Two images are included:
+> Two images are available:
 > - `smartdisplay_background.png` — used for 0° (landscape) and 180° (landscape flipped)
 > - `smartdisplay_background_90.png` — used for 90° (portrait) and 270° (portrait flipped)
 >
@@ -301,13 +301,17 @@ Available YAML variants (pick **one UI** for your **hardware**):
 
 ------------------------------------------------------------------------
 
-### Assets (required for the UI)
-- **Material Design Icons font**: `materialdesignicons-webfont.ttf` is included in each UI variant's `fonts/` folder (Apache 2.0 license, sourced from [Templarian/MaterialDesign-Webfont](https://github.com/Templarian/MaterialDesign-Webfont)).
+### Assets (downloaded at build time)
+
+Every config is self-contained: ESPHome downloads the icon font and the wallpaper while compiling, so the YAML file on its own is all you need — handy when you paste it into the ESPHome Device Builder add-on, which cannot see this repository. The URLs live in the `REMOTE ASSETS` block at the top of each config.
+
+- **Material Design Icons font**: fetched from [Templarian/MaterialDesign-Webfont](https://github.com/Templarian/MaterialDesign-Webfont) (Apache 2.0) via `MDI_FONT_URL`, pinned to a release tag so the glyph codepoints in `MDI_GLYPH_*` cannot shift under you. A copy is still vendored in `esphome/home-like/fonts/` and is byte-identical.
   - If you change icons in the YAML, ensure the glyph list contains them.
-- **Background images (home-like UI)**:
-  - `esphome/home-like/images/smartdisplay_background.png` — landscape (0° and 180°), included.
-  - `esphome/home-like/images/smartdisplay_background_90.png` — portrait (90° and 270°), included.
+- **Background images (home-like UI)**: fetched from `esphome/home-like/images/` in this repository via `ASSET_BASE`.
+  - `smartdisplay_background.png` — landscape (0° and 180°).
+  - `smartdisplay_background_90.png` — portrait (90° and 270°).
   - Selected automatically via the `BG_IMAGE` substitution in the ORIENTATION preset block.
+- Prefer local files? Point `ASSET_BASE`/`MDI_FONT_URL` at your own copies, or put the plain relative paths back — ESPHome accepts either.
 # ⚙️ UI mapping (USER CONFIG)
 
 Your config choice defines the UI style:

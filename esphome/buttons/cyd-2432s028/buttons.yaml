@@ -70,6 +70,12 @@ substitutions:
   # - "false" -> touching a button ONLY publishes the action text_sensor
   DIRECT_ACTIONS: "true"
 
+  # The Material Design Icons font is downloaded at build time, so this file
+  # is self-contained and needs no fonts/ folder beside it. It is pinned to a
+  # release tag on purpose: the icon values below are raw codepoints, and an
+  # unpinned font bump could quietly change which icon a button shows.
+  MDI_FONT_URL: "https://raw.githubusercontent.com/Templarian/MaterialDesign-Webfont/v7.4.47/fonts/materialdesignicons-webfont.ttf"
+
   # Button 1
   BTN1_ENTITY: "light.desk_lamp"
   BTN1_LABEL: "Desk"
@@ -159,9 +165,10 @@ font:
     bpp: 4
     glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°','0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','å','Ä','ä','Ö','ö','Ü','ü','/']
 
-  # Material Design Icons (MDI) — included at fonts/materialdesignicons-webfont.ttf (Apache 2.0)
+  # Material Design Icons (MDI, Apache 2.0) — downloaded at build time from
+  # the pinned MDI_FONT_URL; no local copy of the .ttf is needed.
   # Source: https://github.com/Templarian/MaterialDesign-Webfont
-  - file: 'fonts/materialdesignicons-webfont.ttf'
+  - file: "${MDI_FONT_URL}"
     id: materialdesign_icons
     size: 35
     glyphs: ["\U000F095F", "\U000F0769", "\U000F08DD", "\U000F1051"]

@@ -5,6 +5,13 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-09-17
+
+### Changed
+- Fonts and background images are now downloaded at build time instead of being read from `fonts/` and `images/` next to the YAML. Each config gained a `REMOTE ASSETS` block with `ASSET_BASE` (this repository's `main`) and `MDI_FONT_URL` (Templarian's webfont, pinned to `v7.4.47`), which makes every config a single self-contained file — in particular it can be pasted straight into the ESPHome Device Builder add-on, which has no access to this repository. The vendored copies stay in place and the plain relative paths still work if you prefer them.
+
+---
+
 ## 2026-06-21
 
 ### Fixed

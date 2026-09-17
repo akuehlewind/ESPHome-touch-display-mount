@@ -69,16 +69,16 @@ wifi_ap_password: "your_fallback_password"
 
 ---
 
-## Required assets — copy these alongside your YAML
+## Assets — downloaded for you
 
-When you copy the YAML into ESPHome, you also need to copy the following folders **next to the YAML file** (or adjust the paths inside the YAML):
+Nothing has to be copied next to the YAML. ESPHome fetches both assets while compiling, from the URLs in the `REMOTE ASSETS` block at the top of each config:
 
-| Folder | Contents | Required by |
-|--------|----------|-------------|
-| `fonts/` | `materialdesignicons-webfont.ttf` | Icon glyphs on every tile |
-| `images/` | `smartdisplay_background.png`, `smartdisplay_background_90.png` | Background wallpaper |
+| Substitution | Points at | Required by |
+|--------------|-----------|-------------|
+| `MDI_FONT_URL` | `materialdesignicons-webfont.ttf`, pinned to an upstream release tag | Icon glyphs on every tile |
+| `ASSET_BASE` | `images/` in this repository | Background wallpaper |
 
-Both folders are included here and work with both hardware variants.
+The `fonts/` and `images/` folders here are the source those URLs resolve to, and still work as local paths if you would rather not depend on a download.
 
 - `smartdisplay_background.png` — used for 0° and 180° (landscape)
 - `smartdisplay_background_90.png` — used for 90° and 270° (portrait)

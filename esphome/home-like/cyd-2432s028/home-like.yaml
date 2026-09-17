@@ -23,7 +23,8 @@
 # 1) Edit the TILE1..TILE6 blocks below.
 # 2) If you change icons, update the FONT GLYPHS block in the substitutions below.
 #    Each glyph must appear exactly once — same icon on multiple tiles is fine, just list it once.
-# 3) Provide background images (see ORIENTATION section for which file each preset uses):
+# 3) Background images are downloaded at build time (see REMOTE ASSETS in the
+#    substitutions); each ORIENTATION preset picks the matching file:
 #    - images/smartdisplay_background.png    (0° and 180°)
 #    - images/smartdisplay_background_90.png (90° and 270°)
 #
@@ -68,6 +69,21 @@ substitutions:
   NIGHT_START_HOUR: "22"                           # 0-23
   NIGHT_END_HOUR: "7"                              # 0-23
   NIGHT_DIM_BRIGHTNESS: "18"                       # backlight brightness in percent at night
+
+  # ============================================================
+  # REMOTE ASSETS
+  # The icon font and the background images are downloaded at build time,
+  # so this file is self-contained: the YAML on its own is enough to
+  # compile it, with no fonts/ or images/ folder beside it. That matters
+  # most under the ESPHome Device Builder add-on in Home Assistant, which
+  # cannot see this repository.
+  # ASSET_BASE floats on this repository's main branch. MDI_FONT_URL is
+  # pinned to a release tag on purpose: the MDI_GLYPH_* values below are
+  # raw codepoints, and an unpinned font bump could quietly change which
+  # icon a tile shows.
+  # ============================================================
+  ASSET_BASE: "https://raw.githubusercontent.com/akuehlewind/ESPHome-touch-display-mount/main/esphome/home-like"
+  MDI_FONT_URL: "https://raw.githubusercontent.com/Templarian/MaterialDesign-Webfont/v7.4.47/fonts/materialdesignicons-webfont.ttf"
 
   # ============================================================
   # FONT GLYPHS
@@ -408,7 +424,7 @@ substitutions:
   HEADER_Y: "14"
   OVERLAY_SLIDER_W: "96"
   OVERLAY_SLIDER_H: "160"
-  BG_IMAGE: "images/smartdisplay_background.png"
+  BG_IMAGE: "${ASSET_BASE}/images/smartdisplay_background.png"
   TILE_ICON_X: "0"
   TILE_ICON_Y: "0"
   TILE_TITLE_X: "48"
@@ -438,7 +454,7 @@ substitutions:
   # HEADER_Y: "14"
   # OVERLAY_SLIDER_W: "96"
   # OVERLAY_SLIDER_H: "200"
-  # BG_IMAGE: "images/smartdisplay_background_90.png"
+  # BG_IMAGE: "${ASSET_BASE}/images/smartdisplay_background_90.png"
   # TILE_ICON_X: "0"
   # TILE_ICON_Y: "0"
   # TILE_TITLE_X: "4"
@@ -468,7 +484,7 @@ substitutions:
   # HEADER_Y: "14"
   # OVERLAY_SLIDER_W: "96"
   # OVERLAY_SLIDER_H: "160"
-  # BG_IMAGE: "images/smartdisplay_background.png"
+  # BG_IMAGE: "${ASSET_BASE}/images/smartdisplay_background.png"
   # TILE_ICON_X: "0"
   # TILE_ICON_Y: "0"
   # TILE_TITLE_X: "48"
@@ -498,7 +514,7 @@ substitutions:
   # HEADER_Y: "14"
   # OVERLAY_SLIDER_W: "96"
   # OVERLAY_SLIDER_H: "200"
-  # BG_IMAGE: "images/smartdisplay_background_90.png"
+  # BG_IMAGE: "${ASSET_BASE}/images/smartdisplay_background_90.png"
   # TILE_ICON_X: "0"
   # TILE_ICON_Y: "0"
   # TILE_TITLE_X: "4"
@@ -510,7 +526,8 @@ substitutions:
 # No need to edit below this line.
 # All configuration is done via the substitutions above.
 # Credentials are managed in secrets.yaml (see secrets.yaml.example).
-# The Material Design Icons font is included at fonts/materialdesignicons-webfont.ttf (Apache 2.0).
+# The Material Design Icons font (Apache 2.0) is downloaded from its upstream
+# repository at build time — see MDI_FONT_URL in the substitutions above.
 # Source: https://github.com/Templarian/MaterialDesign-Webfont
 # ============================================================
 
@@ -738,9 +755,10 @@ font:
              ' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
              'ä','ö','ü','Ä','Ö','Ü','ß','/','…']             
 
-  # Material Design Icons (MDI) — included at fonts/materialdesignicons-webfont.ttf (Apache 2.0)
+  # Material Design Icons (MDI, Apache 2.0) — downloaded at build time from
+  # the pinned MDI_FONT_URL; no local copy of the .ttf is needed.
   # Source: https://github.com/Templarian/MaterialDesign-Webfont
-  - file: 'fonts/materialdesignicons-webfont.ttf'
+  - file: "${MDI_FONT_URL}"
     id: materialdesign_icons
     size: 28
     glyphs:
