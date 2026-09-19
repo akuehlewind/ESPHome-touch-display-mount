@@ -100,7 +100,7 @@ substitutions:
   TILE1_TITLE: "Ceiling"                           # tile title shown in the UI
   TILE1_ICON: "\U000F0769"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE1_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover | climate
-  TILE1_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE1_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | confirm_off | custom
   TILE1_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE1_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE1_LABEL_OFF: "Off"                           # text shown when entity is off
@@ -148,7 +148,7 @@ substitutions:
   TILE2_TITLE: "Desk"                              # tile title shown in the UI
   TILE2_ICON: "\U000F095F"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE2_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover | climate
-  TILE2_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE2_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | confirm_off | custom
   TILE2_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE2_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE2_LABEL_OFF: "Off"                           # text shown when entity is off
@@ -196,7 +196,7 @@ substitutions:
   TILE3_TITLE: "Floor lamp"                        # tile title shown in the UI
   TILE3_ICON: "\U000F08DD"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE3_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover | climate
-  TILE3_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE3_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | confirm_off | custom
   TILE3_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE3_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE3_LABEL_OFF: "Off"                           # text shown when entity is off
@@ -244,7 +244,7 @@ substitutions:
   TILE4_TITLE: "Ambient"                           # tile title shown in the UI
   TILE4_ICON: "\U000F1051"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE4_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover | climate
-  TILE4_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE4_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | confirm_off | custom
   TILE4_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE4_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE4_LABEL_OFF: "Off"                           # text shown when entity is off
@@ -292,7 +292,7 @@ substitutions:
   TILE5_TITLE: "Cover"                             # tile title shown in the UI
   TILE5_ICON: "\U000F111C"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE5_TYPE: "cover"                              # tile type: light | fan | switch | scene | script | cover | climate
-  TILE5_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE5_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | confirm_off | custom
   TILE5_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE5_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE5_LABEL_OFF: "Closed"                        # text shown when entity is off (closed)
@@ -340,7 +340,7 @@ substitutions:
   TILE6_TITLE: "Purifier"                          # tile title shown in the UI
   TILE6_ICON: "\U000F0D43"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE6_TYPE: "fan"                                # tile type: light | fan | switch | scene | script | cover | climate
-  TILE6_TAP_ACTION: "fan_toggle_preset"            # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE6_TAP_ACTION: "fan_toggle_preset"            # tap action: auto | toggle | activate | fan_toggle_preset | confirm_off | custom
   TILE6_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE6_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE6_LABEL_OFF: "Off"                           # text shown when entity is off
@@ -611,6 +611,14 @@ globals:
     restore_value: no
 
   - id: active_value_suffix
+    type: std::string
+    restore_value: no
+
+  - id: confirm_entity
+    type: std::string
+    restore_value: no
+
+  - id: confirm_type
     type: std::string
     restore_value: no
 
@@ -1367,6 +1375,91 @@ lvgl:
       text_font: sublabel
       text_color: 0xD9D9D9
       text_opa: 100%
+
+  # Confirmation dialog for tiles with TAP_ACTION: confirm_off. Hidden unless a
+  # tile asks for it, and only raised when the entity is currently on, so
+  # turning something off takes two taps and turning it on still takes one.
+  top_layer:
+    widgets:
+      - obj:
+          id: confirm_overlay
+          x: 0
+          y: 0
+          width: ${DISPLAY_W}
+          height: ${DISPLAY_H}
+          bg_color: 0x000000
+          bg_opa: 60%
+          radius: 0
+          border_width: 0
+          hidden: true
+          scrollable: false
+          on_click:
+            - lvgl.widget.hide: confirm_overlay
+          widgets:
+            - obj:
+                id: confirm_card
+                align: CENTER
+                width: 88%
+                height: 150
+                bg_color: 0xFFFFFF
+                bg_opa: COVER
+                radius: 18
+                border_width: 0
+                pad_all: 14
+                scrollable: false
+                widgets:
+                  - label:
+                      id: confirm_label
+                      align: TOP_MID
+                      width: 90%
+                      long_mode: WRAP
+                      text_align: CENTER
+                      text_font: headline
+                      text_color: 0x000000
+                      text: "Turn off?"
+                  - button:
+                      id: confirm_cancel_btn
+                      align: BOTTOM_LEFT
+                      width: 45%
+                      height: 44
+                      bg_color: 0x939391
+                      radius: 12
+                      shadow_width: 0
+                      on_click:
+                        - lvgl.widget.hide: confirm_overlay
+                      widgets:
+                        - label:
+                            align: CENTER
+                            text: "Cancel"
+                            text_font: headline
+                            text_color: 0xFFFFFF
+                  - button:
+                      id: confirm_ok_btn
+                      align: BOTTOM_RIGHT
+                      width: 45%
+                      height: 44
+                      bg_color: 0xFF3B30
+                      radius: 12
+                      shadow_width: 0
+                      on_click:
+                        - lvgl.widget.hide: confirm_overlay
+                        # Hand the work back to do_tile_action as a plain toggle,
+                        # so every entity type keeps its normal off behaviour.
+                        - script.execute:
+                            id: do_tile_action
+                            tile_type: !lambda 'return id(confirm_type);'
+                            tap_action: "toggle"
+                            service: ""
+                            entity_id: !lambda 'return id(confirm_entity);'
+                            param_key: ""
+                            param_val: ""
+                            was_on: true
+                      widgets:
+                        - label:
+                            align: CENTER
+                            text: "Turn off"
+                            text_font: headline
+                            text_color: 0xFFFFFF
 
   pages:
     - id: home_page
@@ -3513,10 +3606,28 @@ script:
       param_val: string
       was_on: bool
     then:
+      # TAP_ACTION: confirm_off raises the dialog instead of acting, but only
+      # while the entity is on: switching something ON is never gated.
+      - if:
+          condition:
+            lambda: 'return tap_action == "confirm_off" && was_on && std::string("${DIRECT_ACTIONS}") == "true";'
+          then:
+            - lambda: |-
+                id(confirm_entity) = entity_id;
+                id(confirm_type) = tile_type;
+                std::string title = entity_id;
+                if (entity_id == "${TILE1_ENTITY}") title = "${TILE1_TITLE}";
+                if (entity_id == "${TILE2_ENTITY}") title = "${TILE2_TITLE}";
+                if (entity_id == "${TILE3_ENTITY}") title = "${TILE3_TITLE}";
+                if (entity_id == "${TILE4_ENTITY}") title = "${TILE4_TITLE}";
+                if (entity_id == "${TILE5_ENTITY}") title = "${TILE5_TITLE}";
+                if (entity_id == "${TILE6_ENTITY}") title = "${TILE6_TITLE}";
+                lv_label_set_text(id(confirm_label), ("Turn off " + title + "?").c_str());
+            - lvgl.widget.show: confirm_overlay
       - if:
           condition:
             lambda: |-
-              return std::string("${DIRECT_ACTIONS}") == "true";
+              return std::string("${DIRECT_ACTIONS}") == "true" && !(tap_action == "confirm_off" && was_on);
           then:
             - lambda: |-
                 ESP_LOGD("tile", "do_tile_action type=%s action=%s service=%s entity=%s key=%s val=%s was_on=%d",
@@ -3553,7 +3664,7 @@ script:
                   - if:
                       condition:
                         lambda: |-
-                          std::string resolved = tap_action;
+                          std::string resolved = tap_action == "confirm_off" ? std::string("toggle") : tap_action;
                           if (resolved == "auto") {
                             if (tile_type == "scene" || tile_type == "script") resolved = "activate";
                             else resolved = "toggle";
@@ -3616,7 +3727,7 @@ script:
                         - if:
                             condition:
                               lambda: |-
-                                std::string resolved = tap_action;
+                                std::string resolved = tap_action == "confirm_off" ? std::string("toggle") : tap_action;
                                 if (resolved == "auto") {
                                   if (tile_type == "scene" || tile_type == "script") resolved = "activate";
                                   else resolved = "toggle";

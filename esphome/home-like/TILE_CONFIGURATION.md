@@ -118,6 +118,7 @@ Only relevant when `TILE*_LONGPRESS` is set to `"action"`.
 | `toggle` | Toggles the entity (light.toggle / fan.toggle / switch.toggle / cover open↔close). |
 | `activate` | Turns on / activates the entity (scene.turn_on / script.turn_on / light.turn_on / cover.open_cover). |
 | `fan_toggle_preset` | If fan is ON: turns it off. If fan is OFF: turns it on and sets a preset mode (configure with `TAP_PARAM_KEY` / `TAP_PARAM_VAL`). |
+| `confirm_off` | Like `toggle`, except that switching the entity **off** first raises a confirmation dialog — useful for anything expensive to interrupt, such as a smart plug feeding a 3D printer. Switching it **on** is not gated and still takes one tap. Needs `DIRECT_ACTIONS: "true"`. |
 | `custom` | Use `TAP_SERVICE` + `TAP_PARAM_KEY` / `TAP_PARAM_VAL` for a fully custom service call. |
 
 ---

@@ -5,6 +5,13 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-09-18
+
+### Added
+- `TILE*_TAP_ACTION: confirm_off` for both home-like variants: a tile that would switch its entity **off** raises a confirmation dialog first, while switching it **on** stays a single tap. Meant for entities that are expensive to interrupt, such as a smart plug powering a 3D printer. The dialog lives on the LVGL top layer, so it also covers the brightness and colour overlays, and its "Turn off" button hands the work back to `do_tile_action` as a plain `toggle`, so every entity type keeps its normal off behaviour. Inert unless a tile opts in, and requires `DIRECT_ACTIONS: "true"`.
+
+---
+
 ## 2026-06-21
 
 ### Fixed
