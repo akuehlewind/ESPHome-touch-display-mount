@@ -1339,6 +1339,11 @@ display:
       number: 2
       ignore_strapping_warning: true
     invert_colors: false
+    # ESPHome's ILI9342 model declares no color_order, so it inherits mipi_spi's
+    # BGR default and this panel draws red as blue. Verified on hardware with a
+    # pure-primary test pattern: RGB is correct here. Easy to miss, because BGR
+    # only exchanges red and blue -- greens, greys and whites are unaffected.
+    color_order: RGB
     update_interval: never
     auto_clear_enabled: false
 
