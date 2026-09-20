@@ -9,6 +9,7 @@ Pure documentation and README updates are not included.
 
 ### Changed
 - Colour presets in the light detail view are drawn at the colour they actually produce. They were soft iOS tones — red was `0xFF3B30`, which reads as salmon, and yellow was `0xFFD60A`, which reads as amber — while tapping one sends `color_name: red`, and Home Assistant turns that into pure `0xFF0000`. Each swatch is now a full-brightness preview of the hue the light will be set to, including magenta for `purple`, since CSS `purple` is hue 300.
+- Colour presets are bigger and laid out 3×2 in the landscape presets, sized from the room between the mode tabs and the brightness slider — about 47px where a light has no colour-temperature tabs and about 37px where it does, against a fixed 30px before. The brightness slider moves down to sit 6px off the bottom edge to make that room. The portrait presets keep their existing 30px 3×2 grid, which is limited by card width rather than height.
 
 ---
 

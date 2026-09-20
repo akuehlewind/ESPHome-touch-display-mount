@@ -3235,6 +3235,9 @@ script:
             int palette_y = show_tabs ? 96 : 76;
             lv_obj_set_size(id(color_palette_card), 150, 86);
             lv_obj_set_y(id(color_palette_card), palette_y);
+            lv_obj_t *dots_p[6] = { id(color_preset_red), id(color_preset_orange), id(color_preset_yellow),
+                                    id(color_preset_green), id(color_preset_blue), id(color_preset_purple) };
+            for (int i = 0; i < 6; i++) lv_obj_set_size(dots_p[i], 30, 30);
             lv_obj_set_pos(id(color_preset_red), 13, 4);
             lv_obj_set_pos(id(color_preset_orange), 60, 4);
             lv_obj_set_pos(id(color_preset_yellow), 107, 4);
@@ -3251,22 +3254,36 @@ script:
             lv_obj_set_y(id(color_brightness_card), 256);
           } else {
             int palette_y = show_tabs ? 98 : 78;
-            lv_obj_set_size(id(color_palette_card), 286, 48);
+
+            // Brightness slider as low as it goes (46 tall, 6px clear of the
+            // bottom edge), so the swatches get every spare pixel above it.
+            int brightness_y = atoi("${DISPLAY_H}") - 52;
+            lv_obj_set_y(id(color_brightness_card), brightness_y);
+
+            // Swatches in a 3x2 grid, as large as the room between the tabs and
+            // the slider allows: ~47px with no tabs, ~37px with them, where the
+            // old single row of six was fixed at 30px.
+            int room = brightness_y - palette_y - 10;
+            int d = (room - 10) / 2;
+            if (d > 52) d = 52;
+            if (d < 30) d = 30;
+            int gap_x = (286 - 3 * d) / 4;
+            int col[3] = { gap_x, 2 * gap_x + d, 3 * gap_x + 2 * d };
+            int row[2] = { 0, d + 10 };
+            lv_obj_set_size(id(color_palette_card), 286, 2 * d + 10);
             lv_obj_set_y(id(color_palette_card), palette_y);
-            lv_obj_set_pos(id(color_preset_red), 14, 8);
-            lv_obj_set_pos(id(color_preset_orange), 61, 8);
-            lv_obj_set_pos(id(color_preset_yellow), 108, 8);
-            lv_obj_set_pos(id(color_preset_green), 155, 8);
-            lv_obj_set_pos(id(color_preset_blue), 202, 8);
-            lv_obj_set_pos(id(color_preset_purple), 249, 8);
+            lv_obj_t *dots[6] = { id(color_preset_red), id(color_preset_orange), id(color_preset_yellow),
+                                  id(color_preset_green), id(color_preset_blue), id(color_preset_purple) };
+            for (int i = 0; i < 6; i++) {
+              lv_obj_set_size(dots[i], d, d);
+              lv_obj_set_pos(dots[i], col[i % 3], row[i / 3]);
+            }
 
             lv_obj_set_size(id(temp_palette_card), 286, 48);
             lv_obj_set_y(id(temp_palette_card), palette_y);
             lv_obj_set_pos(id(temp_preset_2700), 24, 8);
             lv_obj_set_pos(id(temp_preset_4000), 112, 8);
             lv_obj_set_pos(id(temp_preset_6500), 200, 8);
-
-            lv_obj_set_y(id(color_brightness_card), 165);
           }
 
           id(active_color_detail_tab) = id(active_supports_color) ? 0 : 1;
