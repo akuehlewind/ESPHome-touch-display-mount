@@ -2552,7 +2552,7 @@ lvgl:
                         width: 30
                         height: 30
                         radius: 999
-                        bg_color: 0xFF3B30
+                        bg_color: 0xFF0000
                         bg_opa: COVER
                         border_width: 0
                         clickable: true
@@ -2565,7 +2565,7 @@ lvgl:
                         width: 30
                         height: 30
                         radius: 999
-                        bg_color: 0xFF9F0A
+                        bg_color: 0xFFA500
                         bg_opa: COVER
                         border_width: 0
                         clickable: true
@@ -2578,7 +2578,7 @@ lvgl:
                         width: 30
                         height: 30
                         radius: 999
-                        bg_color: 0xFFD60A
+                        bg_color: 0xFFFF00
                         bg_opa: COVER
                         border_width: 0
                         clickable: true
@@ -2591,7 +2591,7 @@ lvgl:
                         width: 30
                         height: 30
                         radius: 999
-                        bg_color: 0x30D158
+                        bg_color: 0x00FF00
                         bg_opa: COVER
                         border_width: 0
                         clickable: true
@@ -2604,7 +2604,7 @@ lvgl:
                         width: 30
                         height: 30
                         radius: 999
-                        bg_color: 0x0A84FF
+                        bg_color: 0x0000FF
                         bg_opa: COVER
                         border_width: 0
                         clickable: true
@@ -2617,7 +2617,7 @@ lvgl:
                         width: 30
                         height: 30
                         radius: 999
-                        bg_color: 0xBF5AF2
+                        bg_color: 0xFF00FF
                         bg_opa: COVER
                         border_width: 0
                         clickable: true

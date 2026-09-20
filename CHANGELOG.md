@@ -5,6 +5,13 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-09-18
+
+### Changed
+- Colour presets in the light detail view are drawn at the colour they actually produce. They were soft iOS tones — red was `0xFF3B30`, which reads as salmon, and yellow was `0xFFD60A`, which reads as amber — while tapping one sends `color_name: red`, and Home Assistant turns that into pure `0xFF0000`. Each swatch is now a full-brightness preview of the hue the light will be set to, including magenta for `purple`, since CSS `purple` is hue 300.
+
+---
+
 ## 2026-06-21
 
 ### Fixed
