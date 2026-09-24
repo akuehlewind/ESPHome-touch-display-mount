@@ -40,6 +40,8 @@ Two hardware variants are supported:
 The ESP32-2432S028 integrates the ESP32, ILI9341 display, touchscreen controller, and backlight circuitry on a single board.  
 It is commonly known as the **Cheap Yellow Display (CYD)** in the maker community and is the easiest option for this project.
 
+Some CYD boards use an ILI9342 panel. The existing CYD home-like YAML contains complete display/orientation presets for both ILI9341 and ILI9342; ILI9341 at 0 degrees remains active by default. USB connector type alone does not identify the controller. See the [hardware selection notes](esphome/home-like/README.md#picking-your-hardware-variant).
+
 <img src="images/display-home-like.png" width="100%">
 <img src="images/display-home-like-overlay.png" width="100%">
 
@@ -121,7 +123,7 @@ This keeps the tile UI clean while still allowing detailed control.
 
 - Home Assistant installed
 - ESPHome Add-on installed
-- **ESPHome 2026.4 or newer** — the YAML configs are written for the current display stack (`mipi_spi` + LVGL-managed rotation) and are validated on **2026.6**. On older ESPHome versions you need the adjustments described under [Troubleshooting](#troubleshooting).
+- **ESPHome 2026.9.0 or newer** is required by encrypted OTA in all four configs. Existing devices need the [OTA migration](#encrypted-ota-and-migration) before using the final config wirelessly.
 - Home Assistant 2026.2+
 - Basic ESPHome knowledge
 - 3D printer access (optional)
@@ -130,12 +132,13 @@ This keeps the tile UI clean while still allowing detailed control.
 
 # 🧪 Tested With
 
-This project was tested using:
+The current home-like integration was hardware-tested with:
 
-- **ESPHome 2026.6** (configs target 2026.4+)
-- **Home Assistant 2026.2+**
-- ESP32-2432S028 (Cheap Yellow Display / CYD)
-- ILI9341 + XPT2046 standalone wiring variant
+- **ESPHome 2026.9.0** and **Home Assistant 2026.2+**
+- ESP32-2432S028 (Cheap Yellow Display / CYD) with ILI9341
+- all existing tile actions and overlays, localized OFF confirmation, auto-dim/wake, touch alignment and encrypted OTA migration
+
+Earlier releases were also tested on the standalone ILI9341 + XPT2046 wiring variant. The ILI9342 contribution author reported testing all four orientations; the integrated ILI9342 profile has not been independently hardware-verified by the maintainer.
 
 # ⚠️ IMPORTANT -- Enable "Actions" in Home Assistant
 
@@ -275,12 +278,12 @@ Use the wiring table below, which shows how to put everything together.
 2.  Create a new device
 3.  Copy the appropriate YAML file
 4.  Edit the **USER CONFIG / substitutions** section at the top of the YAML (entities, labels, icons)
-5.  Copy `esphome/secrets.yaml.example` to `secrets.yaml` and fill in your credentials
-6.  Flash the device
+5.  Copy `esphome/secrets.yaml.example` to `secrets.yaml` **in the same directory as the chosen YAML** and fill in your credentials
+6.  Flash the device; for an existing password-based installation, follow [OTA migration](#encrypted-ota-and-migration)
 
 Available YAML variants (pick **one UI** for your **hardware**):
 
-> ℹ️ **ESPHome version:** these configs are written for **ESPHome 2026.4+** (display `mipi_spi` + LVGL-managed rotation) and validated on **2026.6**. Older versions need the tweaks under [Troubleshooting](#troubleshooting).
+> **ESPHome version:** all configs require **ESPHome 2026.9.0+**. The current CYD home-like configuration has been verified on ILI9341 hardware; see [Tested With](#-tested-with) for the remaining hardware scope.
 
 ### Cheap Yellow Display (ESP32-2432S028 / CYD)
 - `esphome/home-like/cyd-2432s028/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles) — actively maintained
@@ -290,7 +293,7 @@ Available YAML variants (pick **one UI** for your **hardware**):
 - `esphome/home-like/ili9341-external-esp32/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles) — actively maintained
 - `esphome/buttons/ili9341-external-esp32/buttons.yaml` – lockscreen with 4 round buttons (simple / legacy)
 
-> Tip: The `home-like.yaml` file uses orientation-specific background images located in `esphome/home-like/images/`.
+> Tip: The `home-like.yaml` file downloads orientation-specific background images at build time from a pinned repository revision.
 > For a full reference of all tile substitutions and copy-paste examples, see [`esphome/home-like/TILE_CONFIGURATION.md`](esphome/home-like/TILE_CONFIGURATION.md).
 > Two images are included:
 > - `smartdisplay_background.png` — used for 0° (landscape) and 180° (landscape flipped)
@@ -301,13 +304,44 @@ Available YAML variants (pick **one UI** for your **hardware**):
 
 ------------------------------------------------------------------------
 
-### Assets (required for the UI)
-- **Material Design Icons font**: `materialdesignicons-webfont.ttf` is included in each UI variant's `fonts/` folder (Apache 2.0 license, sourced from [Templarian/MaterialDesign-Webfont](https://github.com/Templarian/MaterialDesign-Webfont)).
+### Assets (downloaded at build time)
+
+The icon font and home-like wallpapers download during compilation, so they do not need to be copied alongside the YAML for the default setup. Credentials still belong in `secrets.yaml` next to that YAML. Existing Google Fonts entries also need network access at build time.
+
+- **Material Design Icons font**: `MDI_FONT_URL` points to `materialdesignicons-webfont.ttf` at release **v7.4.47** of [Templarian/MaterialDesign-Webfont](https://github.com/Templarian/MaterialDesign-Webfont) (Apache 2.0).
   - If you change icons in the YAML, ensure the glyph list contains them.
 - **Background images (home-like UI)**:
   - `esphome/home-like/images/smartdisplay_background.png` — landscape (0° and 180°), included.
   - `esphome/home-like/images/smartdisplay_background_90.png` — portrait (90° and 270°), included.
   - Selected automatically via the `BG_IMAGE` substitution in the ORIENTATION preset block.
+  - `ASSET_BASE` is pinned to public commit `9ffa5dfddf695150ad0388f5f5e2bcf786772195`, under `esphome/home-like`, so it does not follow changes on `main`.
+
+For local home-like assets, copy that UI's `images/` and `fonts/` folders next to the chosen YAML and set these substitutions:
+
+```yaml
+ASSET_BASE: '.'
+MDI_FONT_URL: 'fonts/materialdesignicons-webfont.ttf'
+```
+
+The buttons UI only needs the font override and local `fonts/` folder; it has no wallpaper. These overrides do not replace the Google Fonts downloads.
+
+### Encrypted OTA and migration
+
+Current configs use `ota: - platform: esphome` with `encryption:`, inheriting `smartdisplay_api_key` from API encryption. Keep the existing API key.
+
+For firmware that only supports password-based OTA, use **two wireless installs** with ESPHome 2026.9.x:
+
+1. In your local config, temporarily replace OTA `encryption:` with `password: !secret ota_password`. Keep the existing password in the adjacent `secrets.yaml` and API encryption enabled. Install, reboot, and verify the log says `Encryption: offered, plaintext accepted`.
+2. Replace OTA `password:` with the bare `encryption:` block below, then install again. Verify `Encryption: required`. Subsequent OTA updates use encryption; the unused OTA password secret can now be removed.
+
+```yaml
+ota:
+  - platform: esphome
+    encryption:
+```
+
+Do not combine OTA `password:` and `encryption:`. The first transfer to old firmware is plaintext. Alternatively, install the final encrypted config directly over USB/serial. See [ESPHome's migration instructions](https://esphome.io/components/ota/esphome/#enabling-encryption-on-an-existing-device).
+
 # ⚙️ UI mapping (USER CONFIG)
 
 Your config choice defines the UI style:
@@ -325,6 +359,7 @@ Your config choice defines the UI style:
 - Action strings: `tile1_press` .. `tile6_press` (short tap), `tile1_long_press` .. `tile6_long_press` (long press)
 - Each tile can optionally call a Home Assistant service directly (e.g. light toggle, fan preset toggle, cover open/close, cover position, or climate target temperature).
 - Per-tile OFF label is configurable via `TILE*_LABEL_OFF` (e.g. "Off" / "Aus").
+- Optional `TILEn_CONFIRM_OFF: "true"` guards short taps that would turn off or close a supported entity; the default is `"false"`. Cancellation emits no event and performs no action. Acceptance publishes `tileN_confirmed_off` and performs an explicit off/close action instead of a toggle. See [supported actions and limitations](esphome/home-like/TILE_CONFIGURATION.md#short-tap-off-confirmation), including automation-only mode and unprotected long presses.
 
 ### Long-Press Behavior
 
@@ -358,6 +393,8 @@ In all modes, the `tileN_long_press` event is always published to `sensor.smartd
 
 ### Direct Mode
 
+For a guarded home-like short tap that would switch an entity off, confirmation happens before step 2. Acceptance publishes `tileN_confirmed_off`; cancellation stops the flow.
+
 1. Button pressed  
 2. Action string published  
 3. Home Assistant service called  
@@ -366,6 +403,8 @@ In all modes, the `tileN_long_press` event is always published to `sensor.smartd
 6. UI refreshed  
 
 ### Automation Mode
+
+The same short-tap gate replaces the normal event with `tileN_confirmed_off` after acceptance. The automation must handle that event with an explicit off/close service, not a toggle.
 
 1. Button pressed  
 2. Action string published  
@@ -389,8 +428,7 @@ You can also:
 -   Date localization can be adjusted in the ui_refresh script (days[] / months[] arrays).
 -   Adjust transforms for your panel
 
-If touch alignment is wrong, ensure `display.transform` and `touchscreen.transform`
-are **identical** (they must always match).
+For home-like touch alignment, use the matching hardware profile and ORIENTATION preset first. LVGL rotates the display and touch coordinates together; touchscreen transforms correct the controller's native axes and do not need to match a display transform. Tune `TOUCH_CAL_*` for your panel.
 
 ------------------------------------------------------------------------
 # Troubleshooting
@@ -399,25 +437,7 @@ are **identical** (they must always match).
 
 If the display stays **completely white** after updating ESPHome but the device still connects to Home Assistant, the cause is a breaking change in ESPHome 2026.4: the `ili9xxx` display platform was deprecated in favor of `mipi_spi`.
 
-The YAML configs in this repo already use `mipi_spi`. If you are on an **older ESPHome version (before 2026.4)** and `mipi_spi` is not available yet, change the display platform back to `ili9xxx` and add `color_palette: 8BIT`:
-
-```yaml
-display:
-  - platform: ili9xxx
-    model: ILI9341
-    color_palette: 8BIT
-    ...
-```
-
-Also re-add `miso_pin` to the LCD SPI bus:
-
-```yaml
-spi:
-  - id: lcd
-    clk_pin: GPIO14   # or GPIO18 for the external ESP32 variant
-    mosi_pin: GPIO13  # or GPIO23
-    miso_pin: GPIO12  # or GPIO19 — add this back for older ESPHome
-```
+The current configs use `mipi_spi` and require ESPHome 2026.9.0+ for encrypted OTA. Upgrade the builder and follow the OTA migration above; reverting only the display platform does not make these configs compatible with older releases.
 
 ---
 
@@ -428,27 +448,9 @@ If the display shows **corrupted graphics, horizontal lines, or random pixels**,
 Most CYD boards use **ILI9341**, but some variants ship with **ST7789** or **ILI9342**.  
 If the driver in ESPHome does not match the controller, the display output may look broken.
 
-Try changing the display model in the YAML:
+For a confirmed ILI9342 panel, use the existing `esphome/home-like/cyd-2432s028/home-like.yaml`. In **DISPLAY / ORIENTATION PRESETS**, comment out the active ILI9341 block and uncomment one complete ILI9342 block for the required orientation. No separate ILI9342 YAML is needed and no calculated substitutions are involved.
 
-```yaml
-display:
-  - platform: mipi_spi
-    model: ILI9341
-```
-
-Alternative models that may work depending on your board:
-
-```yaml
-model: ST7789V
-```
-
-or
-
-```yaml
-model: ILI9342
-```
-
-Flashing with a different model is usually the fastest way to identify the correct controller.
+Diagonal stripes can indicate a mismatch between the native panel dimensions and driver. Check the board/controller information; neither that symptom nor a USB-C/Micro-USB connector arrangement is definitive identification. ST7789 boards need a separately verified configuration and are not covered by the ILI9341/ILI9342 selector. The selector applies to the CYD home-like config, not the buttons or external-wiring variants.
 
 ---
 
@@ -462,37 +464,37 @@ display.mipi_spi: Invalid offsets.
 
 this is the ESPHome 2026.6 change to `mipi_spi`: a `transform:` block on the display combined with swapped (rotated) `dimensions:` is no longer accepted. **The configs in this repo are already fixed for this** — rotation is now handled by LVGL:
 
-- the display is driven at its **native** size (`dimensions: 240 × 320`) with **no** `transform:` block
+- the display is driven at its **native** size (240 × 320 for ILI9341; 320 × 240 for ILI9342) with **no** rotation transform on the display
 - rotation is set via `LVGL_ROTATION` in the chosen ORIENTATION preset, which feeds `rotation:` in the `lvgl:` block (LVGL rotates the display **and** the touch coordinates together)
 
-If you copied an older version of the YAML, pull the current one. Simply updating `git`/your local copy is enough.
+If you copied an older YAML, update your device configuration, compile with ESPHome 2026.9.0+, and install it using the appropriate migration path above.
 
 ---
 
 ### Display rotated / mirrored
 
-If the UI appears **rotated, mirrored, or upside down**, use the built-in **ORIENTATION preset block** in the substitutions section at the top of `home-like.yaml`.
+If the UI appears **rotated, mirrored, or upside down**, use the built-in **DISPLAY / ORIENTATION PRESETS** in the substitutions section at the top of `home-like.yaml`.
 
-Four presets are provided and documented as comments — uncomment the one matching your desired orientation (0°, 90°, 180°, 270°) and comment out the others. Each preset sets the matching `LVGL_ROTATION` (0/90/180/270), touch axis correction, grid layout, and background image automatically.
+The CYD home-like config provides eight complete presets: four orientations for ILI9341 and four for ILI9342. Uncomment exactly one complete block and comment out all others. The external ILI9341 config continues to provide its four orientation presets.
 
 > Note: touch calibration values (`TOUCH_CAL_*`) are device-specific. The presets include approximate values that may need tuning after flashing.
 
-Since ESPHome 2026.4 **LVGL manages rotation** for both the display and the touchscreen — you should **not** add a `transform:`/`rotation:` to the `display:` block. If only the orientation is wrong, change `LVGL_ROTATION`:
+**LVGL manages rotation** for both the display and the touchscreen. Do not add display rotation to compensate for touch alignment; use the matching profile and preset. The resulting rotation is supplied through `LVGL_ROTATION`:
 
 ```yaml
-# in the active ORIENTATION preset
+# in the active display/orientation preset
 LVGL_ROTATION: "90"   # 0 / 90 / 180 / 270
 ```
 
-If touch is mirrored or axes are swapped relative to the display, tune the touchscreen axis correction (these only correct the raw XPT2046 vs. the native panel and stay the same across orientations):
+If touch is mirrored or axes are swapped relative to the display, check the touchscreen axis correction for your selected controller. These values correct raw XPT2046 coordinates against the native panel; the ILI9341 example below is not a universal ILI9342 profile:
 
 ```yaml
 TOUCH_SWAP_XY: "false"
-TOUCH_MIRROR_X: "false"
-TOUCH_MIRROR_Y: "true"
+TOUCH_MIRROR_X: "true"
+TOUCH_MIRROR_Y: "false"
 ```
 
-> On **ESPHome before 2026.4** the `lvgl: rotation:` option is not available. In that case remove `rotation:` from the `lvgl:` block and instead rotate on the display via a `transform:` block (`swap_xy` / `mirror_x` / `mirror_y`) with the `dimensions:` set to the final rotated size — and keep `display.transform` and `touchscreen.transform` in sync.
+After changing a display/orientation preset, verify touch targets and calibration on the physical panel. Current configs require ESPHome 2026.9.0+.
 
 ------------------------------------------------------------------------
 

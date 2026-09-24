@@ -2,6 +2,8 @@
 
 This folder contains the original "buttons" UI: a minimal lockscreen with a clock and 4 round toggle buttons.
 
+Requires **ESPHome 2026.9.0 or newer**. Existing password-based devices need the [two-step wireless OTA migration](../../README.md#encrypted-ota-and-migration), or a USB/serial install.
+
 > **Looking for the full-featured UI?**
 > The actively maintained version is in [`../home-like/`](../home-like/).
 > It offers a 2×3 tile grid, per-tile entity types, brightness/fan/cover sliders, long press actions, orientation presets, and much more.
@@ -24,6 +26,7 @@ This folder contains the original "buttons" UI: a minimal lockscreen with a cloc
 - No long press actions
 - No orientation presets
 - No auto-dim or night mode
+- No per-tile OFF confirmation or ILI9342 model selector; those belong to the home-like UI
 
 ## When to use it
 
@@ -47,19 +50,20 @@ Use this file if you have a **separate ILI9341 display module** wired to a gener
 
 ## Credentials — secrets.yaml
 
-All sensitive values (API key, OTA password, WiFi credentials) are referenced via ESPHome's `!secret` system.
+All sensitive values (API key and WiFi credentials) are referenced via ESPHome's `!secret` system. Encrypted OTA inherits the API encryption key.
 
-Copy `../secrets.yaml.example` to `secrets.yaml` (one level up, next to your ESPHome config root) and fill in your values. `secrets.yaml` is gitignored and never committed.
+Copy [`../secrets.yaml.example`](../secrets.yaml.example) to `secrets.yaml` **in the same directory as the chosen YAML**, and fill in your values. For example, `cyd-2432s028/buttons.yaml` needs `cyd-2432s028/secrets.yaml`. `secrets.yaml` is gitignored and never committed. Keep the old OTA password secret only for the first wireless migration step.
 
 ---
 
-## Required assets — copy these alongside your YAML
+## Assets downloaded at build time
 
-When you copy the YAML into ESPHome, you also need to copy the following folders **next to the YAML file** (or adjust the paths inside the YAML):
+The icon font downloads at build time through `MDI_FONT_URL`, pinned to Material Design Webfont **v7.4.47**. The buttons UI has **no wallpaper and needs no background image**.
 
-| Folder | Contents | Required by |
-|--------|----------|-------------|
-| `fonts/` | `materialdesignicons-webfont.ttf` | Button icons |
-| `images/` | `smartdisplay_background.png` | Background wallpaper |
+For a local icon font, copy the bundled `fonts/` folder next to the chosen YAML and set:
 
-Both folders are included here and work with both hardware variants.
+```yaml
+MDI_FONT_URL: 'fonts/materialdesignicons-webfont.ttf'
+```
+
+Existing Google Fonts entries still require network access at build time. Both button configurations are compile-validated with ESPHome 2026.9.0; the current integration was hardware-tested with the home-like CYD UI, not this legacy UI.
