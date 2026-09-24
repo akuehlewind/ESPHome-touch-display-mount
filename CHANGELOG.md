@@ -5,6 +5,13 @@ Pure documentation and README updates are not included.
 
 ---
 
+## Unreleased
+
+### Added
+- Optional per-tile `TILE*_AVAILABILITY_ENTITY` for home-like tiles. While that entity is not `on`, the tile is drawn inactive and shows `UI_OFFLINE` ("Offline") instead of a state Home Assistant may still be reporting from before the device lost power. It defaults to the tile's own entity, which disables the check.
+
+---
+
 ## 2026-09-24
 
 ### Added

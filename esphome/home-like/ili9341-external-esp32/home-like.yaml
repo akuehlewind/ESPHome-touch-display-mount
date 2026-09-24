@@ -88,6 +88,7 @@ substitutions:
   UI_CANCEL: "Cancel"
   UI_TURN_OFF: "Turn off"
   UI_CLOSE: "Close"
+  UI_OFFLINE: "Offline"
   UI_COLOR: "Color"
   UI_TEMPERATURE_SHORT: "Temp."
   UI_BRIGHTNESS: "Brightness"
@@ -147,6 +148,7 @@ substitutions:
   TILE1_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE1_LABEL_OFF: "Off"                           # text shown when entity is off
   TILE1_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+  TILE1_AVAILABILITY_ENTITY: "${TILE1_ENTITY}"     # must be "on" for the tile to be live; the tile's own entity disables the check
 
   # --- colors ---
   TILE1_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
@@ -196,6 +198,7 @@ substitutions:
   TILE2_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE2_LABEL_OFF: "Off"                           # text shown when entity is off
   TILE2_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+  TILE2_AVAILABILITY_ENTITY: "${TILE2_ENTITY}"     # must be "on" for the tile to be live; the tile's own entity disables the check
 
   # --- colors ---
   TILE2_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
@@ -245,6 +248,7 @@ substitutions:
   TILE3_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE3_LABEL_OFF: "Off"                           # text shown when entity is off
   TILE3_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+  TILE3_AVAILABILITY_ENTITY: "${TILE3_ENTITY}"     # must be "on" for the tile to be live; the tile's own entity disables the check
 
   # --- colors ---
   TILE3_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
@@ -294,6 +298,7 @@ substitutions:
   TILE4_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE4_LABEL_OFF: "Off"                           # text shown when entity is off
   TILE4_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+  TILE4_AVAILABILITY_ENTITY: "${TILE4_ENTITY}"     # must be "on" for the tile to be live; the tile's own entity disables the check
 
   # --- colors ---
   TILE4_CIRCLE_ACTIVE_COLOR: "0xFEC600"            # icon circle color when active
@@ -343,6 +348,7 @@ substitutions:
   TILE5_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE5_LABEL_OFF: "Closed"                        # text shown when entity is off (closed)
   TILE5_LABEL_ON: "Open"                           # text shown when entity is on (open)
+  TILE5_AVAILABILITY_ENTITY: "${TILE5_ENTITY}"     # must be "on" for the tile to be live; the tile's own entity disables the check
 
   # --- colors ---
   TILE5_CIRCLE_ACTIVE_COLOR: "0x00C5EC"            # icon circle color when active
@@ -392,6 +398,7 @@ substitutions:
   TILE6_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE6_LABEL_OFF: "Off"                           # text shown when entity is off
   TILE6_LABEL_ON: "On"                             # text shown for text-mode tiles when entity is on
+  TILE6_AVAILABILITY_ENTITY: "${TILE6_ENTITY}"     # must be "on" for the tile to be live; the tile's own entity disables the check
 
   # --- colors ---
   TILE6_CIRCLE_ACTIVE_COLOR: "0x00C5EC"            # icon circle color when active
@@ -1089,8 +1096,18 @@ text_sensor:
     on_value: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
+    id: ha_avail_tile1
+    entity_id: ${TILE1_AVAILABILITY_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
     id: ha_state_tile2
     entity_id: ${TILE2_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_avail_tile2
+    entity_id: ${TILE2_AVAILABILITY_ENTITY}
     on_value: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
@@ -1099,8 +1116,18 @@ text_sensor:
     on_value: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
+    id: ha_avail_tile3
+    entity_id: ${TILE3_AVAILABILITY_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
     id: ha_state_tile4
     entity_id: ${TILE4_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_avail_tile4
+    entity_id: ${TILE4_AVAILABILITY_ENTITY}
     on_value: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
@@ -1109,8 +1136,18 @@ text_sensor:
     on_value: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
+    id: ha_avail_tile5
+    entity_id: ${TILE5_AVAILABILITY_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
     id: ha_state_tile6
     entity_id: ${TILE6_STATE_ENTITY}
+    on_value: { then: [ script.execute: ui_refresh ] }
+
+  - platform: homeassistant
+    id: ha_avail_tile6
+    entity_id: ${TILE6_AVAILABILITY_ENTITY}
     on_value: { then: [ script.execute: ui_refresh ] }
 
   - platform: homeassistant
@@ -4413,6 +4450,26 @@ script:
           bool t5_on = (std::string("${TILE5_TYPE}") == "cover") ? (id(tile5_cover_state).state != "closed") : is_active("${TILE5_TYPE}", std::string(id(ha_state_tile5).state.c_str()));
           bool t6_on = (std::string("${TILE6_TYPE}") == "cover") ? (id(tile6_cover_state).state != "closed") : is_active("${TILE6_TYPE}", std::string(id(ha_state_tile6).state.c_str()));
 
+          // TILE*_AVAILABILITY_ENTITY: while that entity is not "on" the device behind this
+          // tile is offline (e.g. a printer that lost power), so whatever state Home Assistant
+          // still reports is stale. Show the tile inactive and say so instead.
+          auto tile_offline = [](const char* avail_entity, const char* own_entity, const std::string& avail_state) {
+            if (std::string(avail_entity) == std::string(own_entity)) return false;  // check disabled
+            return avail_state != "on";
+          };
+          bool t1_offline = tile_offline("${TILE1_AVAILABILITY_ENTITY}", "${TILE1_ENTITY}", std::string(id(ha_avail_tile1).state.c_str()));
+          if (t1_offline) t1_on = false;
+          bool t2_offline = tile_offline("${TILE2_AVAILABILITY_ENTITY}", "${TILE2_ENTITY}", std::string(id(ha_avail_tile2).state.c_str()));
+          if (t2_offline) t2_on = false;
+          bool t3_offline = tile_offline("${TILE3_AVAILABILITY_ENTITY}", "${TILE3_ENTITY}", std::string(id(ha_avail_tile3).state.c_str()));
+          if (t3_offline) t3_on = false;
+          bool t4_offline = tile_offline("${TILE4_AVAILABILITY_ENTITY}", "${TILE4_ENTITY}", std::string(id(ha_avail_tile4).state.c_str()));
+          if (t4_offline) t4_on = false;
+          bool t5_offline = tile_offline("${TILE5_AVAILABILITY_ENTITY}", "${TILE5_ENTITY}", std::string(id(ha_avail_tile5).state.c_str()));
+          if (t5_offline) t5_on = false;
+          bool t6_offline = tile_offline("${TILE6_AVAILABILITY_ENTITY}", "${TILE6_ENTITY}", std::string(id(ha_avail_tile6).state.c_str()));
+          if (t6_offline) t6_on = false;
+
           set_value_auto(id(t1_value), t1_on, "${TILE1_TYPE}", "${TILE1_VALUE_MODE}",
                          id(tile1_brightness).state, id(tile1_percentage).state, std::string(id(tile1_preset).state.c_str()),
                          id(tile1_climate_current_temperature).state, id(tile1_climate_target_temperature).state, id(tile1_climate_humidity).state,
@@ -4442,6 +4499,13 @@ script:
                          id(tile6_brightness).state, id(tile6_percentage).state, std::string(id(tile6_preset).state.c_str()),
                          id(tile6_climate_current_temperature).state, id(tile6_climate_target_temperature).state, id(tile6_climate_humidity).state,
                          "${TILE6_LABEL_ON}", "${TILE6_LABEL_OFF}");
+
+          if (t1_offline) set_lbl(id(t1_value), "${UI_OFFLINE}");
+          if (t2_offline) set_lbl(id(t2_value), "${UI_OFFLINE}");
+          if (t3_offline) set_lbl(id(t3_value), "${UI_OFFLINE}");
+          if (t4_offline) set_lbl(id(t4_value), "${UI_OFFLINE}");
+          if (t5_offline) set_lbl(id(t5_value), "${UI_OFFLINE}");
+          if (t6_offline) set_lbl(id(t6_value), "${UI_OFFLINE}");
 
           if (id(active_control_kind) == "climate_temperature" && !lv_obj_has_flag(id(climate_detail_overlay), LV_OBJ_FLAG_HIDDEN)) {
             auto label_for_climate_mode = [](std::string mode) {

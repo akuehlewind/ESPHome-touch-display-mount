@@ -57,6 +57,7 @@ The complete interface text set is:
 | `UI_CANCEL` | `Cancel` | Non-destructive alert action |
 | `UI_TURN_OFF` | `Turn off` | Destructive OFF action |
 | `UI_CLOSE` | `Close` | Destructive cover action |
+| `UI_OFFLINE` | `Offline` | Value line of a tile whose [availability entity](#device-availability) is not on |
 | `UI_COLOR` | `Color` | Color picker heading |
 | `UI_TEMPERATURE_SHORT` | `Temp.` | Color-temperature heading |
 | `UI_BRIGHTNESS` | `Brightness` | Brightness heading |
@@ -94,6 +95,7 @@ Each of the 6 tiles has the same set of keys, just with a different number (TILE
 | `TILE*_VALUE_MODE` | How the value line below the title is rendered — see [Value modes](#value-modes) below. |
 | `TILE*_LABEL_OFF` | Text shown in the value line when the entity is off / inactive. |
 | `TILE*_LABEL_ON` | Text shown in the value line when `VALUE_MODE` is `text` and entity is on. |
+| `TILE*_AVAILABILITY_ENTITY` | Defaults to the tile's own entity, which disables the check. Point it at another entity to mark the tile [offline](#device-availability) whenever that entity is not `on`. |
 
 ### Colors
 
@@ -223,6 +225,21 @@ With `DIRECT_ACTIONS: "false"`, the display only publishes the event. The Home A
 ```
 
 Scenes, scripts, climate tiles and opaque custom services are not gated because their effect cannot be inferred safely from the tile configuration.
+
+---
+
+## Device availability
+
+Some integrations keep reporting an entity's last state after the device behind it loses power. A 3D printer's chamber light, for example, can still read `on` long after the printer was switched off at the plug. `TILE*_AVAILABILITY_ENTITY` names a second entity that says whether the device is actually reachable:
+
+```yaml
+TILE2_ENTITY: "light.printer_chamber_light"
+TILE2_AVAILABILITY_ENTITY: "binary_sensor.printer_online"
+```
+
+While that entity is anything other than `on` (including `off`, `unavailable` and `unknown`), the tile is drawn inactive and its value line shows `UI_OFFLINE` instead of the stale state. When it returns to `on`, the tile shows the entity's state again.
+
+The default, `"${TILE2_ENTITY}"`, points the check at the tile's own entity, which disables it, so existing configurations are unaffected. The check only changes what the tile displays. Taps and long presses still go to Home Assistant, which reports whether the device can act on them.
 
 ---
 
