@@ -8,5 +8,5 @@
 fonts
 images
 
-# Personal device configuration (not part of the example)
-testdevice.yaml
+# Personal device configurations (not part of the example)
+testdevice*.yaml

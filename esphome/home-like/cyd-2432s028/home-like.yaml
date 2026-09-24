@@ -5,7 +5,7 @@
 #
 # Target hardware
 # - Cheap Yellow Display (ESP32-2432S028 or compatible)
-# - Built-in ILI9341 320x240 display
+# - Built-in ILI9341 or ILI9342 display (select one hardware/orientation preset)
 # - Built-in XPT2046 touchscreen
 #
 # What this config does
@@ -23,7 +23,8 @@
 # 1) Edit the TILE1..TILE6 blocks below.
 # 2) If you change icons, update the FONT GLYPHS block in the substitutions below.
 #    Each glyph must appear exactly once — same icon on multiple tiles is fine, just list it once.
-# 3) Provide background images (see ORIENTATION section for which file each preset uses):
+# 3) Background images are downloaded at build time (see REMOTE ASSETS in the
+#    substitutions); each ORIENTATION preset picks the matching file:
 #    - images/smartdisplay_background.png    (0° and 180°)
 #    - images/smartdisplay_background_90.png (90° and 270°)
 #
@@ -44,7 +45,7 @@
 #   light -> brightness, fan -> percentage/preset, scene/script -> text
 #
 # What you must adapt before flashing
-# 1) Secrets: api.encryption.key, ota.password, WiFi credentials (prefer secrets.yaml)
+# 1) Secrets: API/OTA encryption key and WiFi credentials (in secrets.yaml)
 # 2) Pins, touch calibration and transform if your CYD variant differs
 # 3) TILE*_ENTITY / TILE*_STATE_ENTITY: Home Assistant entity IDs you want to control/mirror
 # 4) Orientation + touch calibration:
@@ -68,6 +69,46 @@ substitutions:
   NIGHT_START_HOUR: "22"                           # 0-23
   NIGHT_END_HOUR: "7"                              # 0-23
   NIGHT_DIM_BRIGHTNESS: "18"                       # backlight brightness in percent at night
+
+  # ============================================================
+  # UI TEXT / LOCALIZATION
+  # Override these values to translate the built-in overlays. The {title}
+  # placeholder can appear anywhere in a confirmation question.
+  # ============================================================
+  UI_CONFIRM_OFF_QUESTION: "Turn off {title}?"
+  UI_CONFIRM_CLOSE_QUESTION: "Close {title}?"
+  UI_CONFIRM_FALLBACK_TITLE: "this device"
+  UI_CANCEL: "Cancel"
+  UI_TURN_OFF: "Turn off"
+  UI_CLOSE: "Close"
+  UI_COLOR: "Color"
+  UI_TEMPERATURE_SHORT: "Temp."
+  UI_BRIGHTNESS: "Brightness"
+  UI_CURRENT: "Current"
+  UI_HUMIDITY: "Humidity"
+  UI_SET_TO: "SET TO"
+  UI_CLIMATE_MODE_OFF: "Off"
+  UI_CLIMATE_MODE_HEAT: "Heat"
+  UI_CLIMATE_MODE_COOL: "Cool"
+  UI_CLIMATE_MODE_HEAT_COOL: "Heat/Cool"
+  UI_CLIMATE_MODE_AUTO: "Auto"
+  UI_CLIMATE_MODE_DRY: "Dry"
+  UI_CLIMATE_MODE_FAN: "Fan"
+
+  # ============================================================
+  # REMOTE ASSETS
+  # The icon font and the background images are downloaded at build time,
+  # so no fonts/ or images/ folder is needed beside this YAML. A matching
+  # secrets.yaml is still required. This matters
+  # most under the ESPHome Device Builder add-on in Home Assistant, which
+  # cannot see this repository.
+  # ASSET_BASE is pinned to a repository commit. MDI_FONT_URL is
+  # pinned to a release tag on purpose: the MDI_GLYPH_* values below are
+  # raw codepoints, and an unpinned font bump could quietly change which
+  # icon a tile shows.
+  # ============================================================
+  ASSET_BASE: "https://raw.githubusercontent.com/akuehlewind/ESPHome-touch-display-mount/9ffa5dfddf695150ad0388f5f5e2bcf786772195/esphome/home-like"
+  MDI_FONT_URL: "https://raw.githubusercontent.com/Templarian/MaterialDesign-Webfont/v7.4.47/fonts/materialdesignicons-webfont.ttf"
 
   # ============================================================
   # FONT GLYPHS
@@ -94,6 +135,7 @@ substitutions:
   TILE1_ICON: "\U000F0769"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE1_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover | climate
   TILE1_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE1_CONFIRM_OFF: "false"                      # true = confirm before an off/close short-tap action
   TILE1_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE1_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE1_LABEL_OFF: "Off"                           # text shown when entity is off
@@ -142,6 +184,7 @@ substitutions:
   TILE2_ICON: "\U000F095F"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE2_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover | climate
   TILE2_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE2_CONFIRM_OFF: "false"                      # true = confirm before an off/close short-tap action
   TILE2_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE2_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE2_LABEL_OFF: "Off"                           # text shown when entity is off
@@ -190,6 +233,7 @@ substitutions:
   TILE3_ICON: "\U000F08DD"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE3_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover | climate
   TILE3_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE3_CONFIRM_OFF: "false"                      # true = confirm before an off/close short-tap action
   TILE3_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE3_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE3_LABEL_OFF: "Off"                           # text shown when entity is off
@@ -238,6 +282,7 @@ substitutions:
   TILE4_ICON: "\U000F1051"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE4_TYPE: "light"                              # tile type: light | fan | switch | scene | script | cover | climate
   TILE4_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE4_CONFIRM_OFF: "false"                      # true = confirm before an off/close short-tap action
   TILE4_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE4_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE4_LABEL_OFF: "Off"                           # text shown when entity is off
@@ -286,6 +331,7 @@ substitutions:
   TILE5_ICON: "\U000F111C"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE5_TYPE: "cover"                              # tile type: light | fan | switch | scene | script | cover | climate
   TILE5_TAP_ACTION: "auto"                         # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE5_CONFIRM_OFF: "false"                      # true = confirm before an off/close short-tap action
   TILE5_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE5_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE5_LABEL_OFF: "Closed"                        # text shown when entity is off (closed)
@@ -334,6 +380,7 @@ substitutions:
   TILE6_ICON: "\U000F0D43"                         # MDI glyph — also add to MDI_GLYPH_* list above if not already there
   TILE6_TYPE: "fan"                                # tile type: light | fan | switch | scene | script | cover | climate
   TILE6_TAP_ACTION: "fan_toggle_preset"            # tap action: auto | toggle | activate | fan_toggle_preset | custom
+  TILE6_CONFIRM_OFF: "false"                      # true = confirm before an off/close short-tap action
   TILE6_LONGPRESS: "slider"                        # long press mode: none | slider | action
   TILE6_VALUE_MODE: "auto"                         # value mode: auto | brightness | percentage | preset | text
   TILE6_LABEL_OFF: "Off"                           # text shown when entity is off
@@ -371,25 +418,23 @@ substitutions:
   TILE6_CLIMATE_HUMIDITY_ATTRIBUTE: "current_humidity"         # HA attribute for humidity; leave as-is if unavailable
 
   # ============================================================
-  # ORIENTATION / LAYOUT
-  # Uncomment ONE preset block below, comment out the others.
+  # DISPLAY / ORIENTATION PRESETS
+  # Uncomment exactly ONE complete preset, comment out the others.
+  # ILI9341 / 0 degrees is enabled by default. USB connectors alone do
+  # not reliably identify the display controller.
+  # ILI9342 values are based on contributor hardware tests.
   # Touch calibration values (TOUCH_CAL_*) are device-specific —
   # portrait/flipped values are approximate and may need tuning.
-  #
-  # LVGL_ROTATION (0/90/180/270) drives the rotation — LVGL rotates both the
-  # display output and the touch coordinates (ESPHome 2026.4+). DISPLAY_W/H are
-  # the *logical* (post-rotation) canvas size used by the tile layout below;
-  # the physical panel is always driven at its native 240×320 (see display:).
-  #
   # Tile content layout:
   #   Landscape — icon left, title + value to its right
   #   Portrait  — icon centered on top, title + value stacked below
   # ============================================================
 
-  # ----- 0° — Landscape 320×240 (default, USB on right) -----
+  # ----- ILI9341 / 0° — Landscape 320×240 (default, USB on right) -----
+  DISPLAY_MODEL: "ILI9341"
+  DISPLAY_COLOR_ORDER: "BGR"
+  DISPLAY_DATA_RATE: "10MHz"
   ORIENTATION: "0"
-  DISPLAY_W: "320"
-  DISPLAY_H: "240"
   LVGL_ROTATION: "90"
   TOUCH_SWAP_XY: "false"
   TOUCH_MIRROR_X: "true"
@@ -398,6 +443,8 @@ substitutions:
   TOUCH_CAL_X_MAX: "3860"
   TOUCH_CAL_Y_MIN: "340"
   TOUCH_CAL_Y_MAX: "3860"
+  DISPLAY_W: "320"
+  DISPLAY_H: "240"
   GRID_COL1_X: "9"
   GRID_COL2_X: "164"
   GRID_ROW1_Y: "54"
@@ -408,7 +455,7 @@ substitutions:
   HEADER_Y: "14"
   OVERLAY_SLIDER_W: "96"
   OVERLAY_SLIDER_H: "160"
-  BG_IMAGE: "images/smartdisplay_background.png"
+  BG_IMAGE: "${ASSET_BASE}/images/smartdisplay_background.png"
   TILE_ICON_X: "0"
   TILE_ICON_Y: "0"
   TILE_TITLE_X: "48"
@@ -416,10 +463,11 @@ substitutions:
   TILE_VALUE_X: "48"
   TILE_VALUE_Y: "18"
 
-  # ----- 90° — Portrait 240×320 (USB on bottom) -----
+  # ----- ILI9341 / 90° — Portrait 240×320 (USB on bottom) -----
+  # DISPLAY_MODEL: "ILI9341"
+  # DISPLAY_COLOR_ORDER: "BGR"
+  # DISPLAY_DATA_RATE: "10MHz"
   # ORIENTATION: "90"
-  # DISPLAY_W: "240"
-  # DISPLAY_H: "320"
   # LVGL_ROTATION: "180"
   # TOUCH_SWAP_XY: "false"
   # TOUCH_MIRROR_X: "true"
@@ -428,6 +476,8 @@ substitutions:
   # TOUCH_CAL_X_MAX: "3860"
   # TOUCH_CAL_Y_MIN: "340"
   # TOUCH_CAL_Y_MAX: "3860"
+  # DISPLAY_W: "240"
+  # DISPLAY_H: "320"
   # GRID_COL1_X: "6"
   # GRID_COL2_X: "123"
   # GRID_ROW1_Y: "54"
@@ -438,7 +488,7 @@ substitutions:
   # HEADER_Y: "14"
   # OVERLAY_SLIDER_W: "96"
   # OVERLAY_SLIDER_H: "200"
-  # BG_IMAGE: "images/smartdisplay_background_90.png"
+  # BG_IMAGE: "${ASSET_BASE}/images/smartdisplay_background_90.png"
   # TILE_ICON_X: "0"
   # TILE_ICON_Y: "0"
   # TILE_TITLE_X: "4"
@@ -446,10 +496,11 @@ substitutions:
   # TILE_VALUE_X: "4"
   # TILE_VALUE_Y: "52"
 
-  # ----- 180° — Landscape flipped 320×240 (USB on left) -----
+  # ----- ILI9341 / 180° — Landscape flipped 320×240 (USB on left) -----
+  # DISPLAY_MODEL: "ILI9341"
+  # DISPLAY_COLOR_ORDER: "BGR"
+  # DISPLAY_DATA_RATE: "10MHz"
   # ORIENTATION: "180"
-  # DISPLAY_W: "320"
-  # DISPLAY_H: "240"
   # LVGL_ROTATION: "270"
   # TOUCH_SWAP_XY: "false"
   # TOUCH_MIRROR_X: "true"
@@ -458,6 +509,8 @@ substitutions:
   # TOUCH_CAL_X_MAX: "3860"
   # TOUCH_CAL_Y_MIN: "340"
   # TOUCH_CAL_Y_MAX: "3860"
+  # DISPLAY_W: "320"
+  # DISPLAY_H: "240"
   # GRID_COL1_X: "9"
   # GRID_COL2_X: "164"
   # GRID_ROW1_Y: "54"
@@ -468,7 +521,7 @@ substitutions:
   # HEADER_Y: "14"
   # OVERLAY_SLIDER_W: "96"
   # OVERLAY_SLIDER_H: "160"
-  # BG_IMAGE: "images/smartdisplay_background.png"
+  # BG_IMAGE: "${ASSET_BASE}/images/smartdisplay_background.png"
   # TILE_ICON_X: "0"
   # TILE_ICON_Y: "0"
   # TILE_TITLE_X: "48"
@@ -476,10 +529,11 @@ substitutions:
   # TILE_VALUE_X: "48"
   # TILE_VALUE_Y: "18"
 
-  # ----- 270° — Portrait flipped 240×320 (USB on top) -----
+  # ----- ILI9341 / 270° — Portrait flipped 240×320 (USB on top) -----
+  # DISPLAY_MODEL: "ILI9341"
+  # DISPLAY_COLOR_ORDER: "BGR"
+  # DISPLAY_DATA_RATE: "10MHz"
   # ORIENTATION: "270"
-  # DISPLAY_W: "240"
-  # DISPLAY_H: "320"
   # LVGL_ROTATION: "0"
   # TOUCH_SWAP_XY: "false"
   # TOUCH_MIRROR_X: "true"
@@ -488,6 +542,8 @@ substitutions:
   # TOUCH_CAL_X_MAX: "3860"
   # TOUCH_CAL_Y_MIN: "340"
   # TOUCH_CAL_Y_MAX: "3860"
+  # DISPLAY_W: "240"
+  # DISPLAY_H: "320"
   # GRID_COL1_X: "6"
   # GRID_COL2_X: "123"
   # GRID_ROW1_Y: "54"
@@ -498,7 +554,139 @@ substitutions:
   # HEADER_Y: "14"
   # OVERLAY_SLIDER_W: "96"
   # OVERLAY_SLIDER_H: "200"
-  # BG_IMAGE: "images/smartdisplay_background_90.png"
+  # BG_IMAGE: "${ASSET_BASE}/images/smartdisplay_background_90.png"
+  # TILE_ICON_X: "0"
+  # TILE_ICON_Y: "0"
+  # TILE_TITLE_X: "4"
+  # TILE_TITLE_Y: "38"
+  # TILE_VALUE_X: "4"
+  # TILE_VALUE_Y: "52"
+
+  # ----- ILI9342 / 0° — Landscape 320×240 (USB on right) -----
+  # DISPLAY_MODEL: "ILI9342"
+  # DISPLAY_COLOR_ORDER: "RGB"
+  # DISPLAY_DATA_RATE: "40MHz"
+  # ORIENTATION: "0"
+  # LVGL_ROTATION: "180"
+  # TOUCH_SWAP_XY: "true"
+  # TOUCH_MIRROR_X: "true"
+  # TOUCH_MIRROR_Y: "true"
+  # TOUCH_CAL_X_MIN: "340"
+  # TOUCH_CAL_X_MAX: "3860"
+  # TOUCH_CAL_Y_MIN: "280"
+  # TOUCH_CAL_Y_MAX: "3860"
+  # DISPLAY_W: "320"
+  # DISPLAY_H: "240"
+  # GRID_COL1_X: "9"
+  # GRID_COL2_X: "164"
+  # GRID_ROW1_Y: "54"
+  # GRID_ROW2_Y: "114"
+  # GRID_ROW3_Y: "174"
+  # TILE_W: "147"
+  # TILE_H: "52"
+  # HEADER_Y: "14"
+  # OVERLAY_SLIDER_W: "96"
+  # OVERLAY_SLIDER_H: "160"
+  # BG_IMAGE: "${ASSET_BASE}/images/smartdisplay_background.png"
+  # TILE_ICON_X: "0"
+  # TILE_ICON_Y: "0"
+  # TILE_TITLE_X: "48"
+  # TILE_TITLE_Y: "4"
+  # TILE_VALUE_X: "48"
+  # TILE_VALUE_Y: "18"
+
+  # ----- ILI9342 / 90° — Portrait 240×320 (USB on bottom) -----
+  # DISPLAY_MODEL: "ILI9342"
+  # DISPLAY_COLOR_ORDER: "RGB"
+  # DISPLAY_DATA_RATE: "40MHz"
+  # ORIENTATION: "90"
+  # LVGL_ROTATION: "270"
+  # TOUCH_SWAP_XY: "true"
+  # TOUCH_MIRROR_X: "false"
+  # TOUCH_MIRROR_Y: "false"
+  # TOUCH_CAL_X_MIN: "340"
+  # TOUCH_CAL_X_MAX: "3860"
+  # TOUCH_CAL_Y_MIN: "280"
+  # TOUCH_CAL_Y_MAX: "3860"
+  # DISPLAY_W: "240"
+  # DISPLAY_H: "320"
+  # GRID_COL1_X: "6"
+  # GRID_COL2_X: "123"
+  # GRID_ROW1_Y: "54"
+  # GRID_ROW2_Y: "142"
+  # GRID_ROW3_Y: "230"
+  # TILE_W: "111"
+  # TILE_H: "80"
+  # HEADER_Y: "14"
+  # OVERLAY_SLIDER_W: "96"
+  # OVERLAY_SLIDER_H: "200"
+  # BG_IMAGE: "${ASSET_BASE}/images/smartdisplay_background_90.png"
+  # TILE_ICON_X: "0"
+  # TILE_ICON_Y: "0"
+  # TILE_TITLE_X: "4"
+  # TILE_TITLE_Y: "38"
+  # TILE_VALUE_X: "4"
+  # TILE_VALUE_Y: "52"
+
+  # ----- ILI9342 / 180° — Landscape flipped 320×240 (USB on left) -----
+  # DISPLAY_MODEL: "ILI9342"
+  # DISPLAY_COLOR_ORDER: "RGB"
+  # DISPLAY_DATA_RATE: "40MHz"
+  # ORIENTATION: "180"
+  # LVGL_ROTATION: "0"
+  # TOUCH_SWAP_XY: "true"
+  # TOUCH_MIRROR_X: "true"
+  # TOUCH_MIRROR_Y: "true"
+  # TOUCH_CAL_X_MIN: "340"
+  # TOUCH_CAL_X_MAX: "3860"
+  # TOUCH_CAL_Y_MIN: "280"
+  # TOUCH_CAL_Y_MAX: "3860"
+  # DISPLAY_W: "320"
+  # DISPLAY_H: "240"
+  # GRID_COL1_X: "9"
+  # GRID_COL2_X: "164"
+  # GRID_ROW1_Y: "54"
+  # GRID_ROW2_Y: "114"
+  # GRID_ROW3_Y: "174"
+  # TILE_W: "147"
+  # TILE_H: "52"
+  # HEADER_Y: "14"
+  # OVERLAY_SLIDER_W: "96"
+  # OVERLAY_SLIDER_H: "160"
+  # BG_IMAGE: "${ASSET_BASE}/images/smartdisplay_background.png"
+  # TILE_ICON_X: "0"
+  # TILE_ICON_Y: "0"
+  # TILE_TITLE_X: "48"
+  # TILE_TITLE_Y: "4"
+  # TILE_VALUE_X: "48"
+  # TILE_VALUE_Y: "18"
+
+  # ----- ILI9342 / 270° — Portrait flipped 240×320 (USB on top) -----
+  # DISPLAY_MODEL: "ILI9342"
+  # DISPLAY_COLOR_ORDER: "RGB"
+  # DISPLAY_DATA_RATE: "40MHz"
+  # ORIENTATION: "270"
+  # LVGL_ROTATION: "90"
+  # TOUCH_SWAP_XY: "true"
+  # TOUCH_MIRROR_X: "false"
+  # TOUCH_MIRROR_Y: "false"
+  # TOUCH_CAL_X_MIN: "340"
+  # TOUCH_CAL_X_MAX: "3860"
+  # TOUCH_CAL_Y_MIN: "280"
+  # TOUCH_CAL_Y_MAX: "3860"
+  # DISPLAY_W: "240"
+  # DISPLAY_H: "320"
+  # GRID_COL1_X: "6"
+  # GRID_COL2_X: "123"
+  # GRID_ROW1_Y: "54"
+  # GRID_ROW2_Y: "142"
+  # GRID_ROW3_Y: "230"
+  # TILE_W: "111"
+  # TILE_H: "80"
+  # HEADER_Y: "14"
+  # OVERLAY_SLIDER_W: "96"
+  # OVERLAY_SLIDER_H: "200"
+  # BG_IMAGE: "${ASSET_BASE}/images/smartdisplay_background_90.png"
   # TILE_ICON_X: "0"
   # TILE_ICON_Y: "0"
   # TILE_TITLE_X: "4"
@@ -510,11 +698,13 @@ substitutions:
 # No need to edit below this line.
 # All configuration is done via the substitutions above.
 # Credentials are managed in secrets.yaml (see secrets.yaml.example).
-# The Material Design Icons font is included at fonts/materialdesignicons-webfont.ttf (Apache 2.0).
+# The Material Design Icons font (Apache 2.0) is downloaded from its upstream
+# repository at build time — see MDI_FONT_URL in the substitutions above.
 # Source: https://github.com/Templarian/MaterialDesign-Webfont
 # ============================================================
 
 esphome:
+  min_version: 2026.9.0
   name: smartdisplay
   friendly_name: SmartDisplay
   on_boot:
@@ -542,7 +732,11 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret ota_password
+    id: esphome_ota
+    # A bare 'encryption:' inherits the api encryption key, which authenticates
+    # the uploader; ESPHome 2026.9 warns that a separate ota password costs
+    # ~3.5 KB of flash and 60 bytes of RAM for no added protection.
+    encryption:
 
 wifi:
   ssid: !secret wifi_ssid
@@ -604,6 +798,20 @@ globals:
     restore_value: no
 
   - id: active_value_suffix
+    type: std::string
+    restore_value: no
+
+  # One shared confirmation dialog is used by all tiles. The overlay blocks
+  # further tile input while these pending values are active.
+  - id: pending_confirm_event
+    type: std::string
+    restore_value: no
+
+  - id: pending_confirm_entity
+    type: std::string
+    restore_value: no
+
+  - id: pending_confirm_type
     type: std::string
     restore_value: no
 
@@ -738,9 +946,10 @@ font:
              ' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
              'ä','ö','ü','Ä','Ö','Ü','ß','/','…']             
 
-  # Material Design Icons (MDI) — included at fonts/materialdesignicons-webfont.ttf (Apache 2.0)
+  # Material Design Icons (MDI, Apache 2.0) — downloaded at build time from
+  # the pinned MDI_FONT_URL; no local copy of the .ttf is needed.
   # Source: https://github.com/Templarian/MaterialDesign-Webfont
-  - file: 'fonts/materialdesignicons-webfont.ttf'
+  - file: "${MDI_FONT_URL}"
     id: materialdesign_icons
     size: 28
     glyphs:
@@ -753,7 +962,8 @@ font:
       - "\U000F012C" # check
 
 image:
-  - file: "${BG_IMAGE}"
+  - platform: file
+    file: "${BG_IMAGE}"
     id: bg_home
     type: RGB565
 
@@ -1252,11 +1462,9 @@ light:
 # Touchscreen configuration (XPT2046)
 # IMPORTANT:
 # - calibration values are device-specific
-# - Since ESPHome 2026.4 LVGL manages rotation (see `rotation:` in the lvgl
-#   block) and rotates touch coordinates automatically. The transform below is
-#   therefore NOT a per-orientation rotation — it only corrects the raw XPT2046
-#   axis orientation against the panel's native (portrait) frame and stays the
-#   same for every ORIENTATION preset.
+# - LVGL manages rotation for display and touch. Use the selected hardware
+#   profile above for raw-axis corrections; the ILI9342 profile includes
+#   contributor-tested mirror settings for portrait and landscape.
 touchscreen:
   platform: xpt2046
   id: ts_touch
@@ -1281,24 +1489,29 @@ touchscreen:
     - lambda: |-
         id(last_touch_ms) = millis();
 
-# Display configuration (ILI9341)
+# Display configuration (selected CYD controller)
 display:
   - platform: mipi_spi
     id: my_display
     spi_id: lcd
-    model: ILI9341
-    cs_pin: 15
-    dc_pin: 2
+    model: ${DISPLAY_MODEL}
+    color_order: ${DISPLAY_COLOR_ORDER}
+    data_rate: ${DISPLAY_DATA_RATE}
+    # GPIO15 and GPIO2 are ESP32 strapping pins; the display is wired to
+    # them on this board, so the warning is suppressed rather than the
+    # pins moved.
+    cs_pin:
+      number: 15
+      ignore_strapping_warning: true
+    dc_pin:
+      number: 2
+      ignore_strapping_warning: true
     invert_colors: false
     update_interval: never
     auto_clear_enabled: false
 
-    # Native panel dimensions (portrait). Do NOT swap these per orientation and
-    # do NOT add a display transform — rotation is handled by LVGL below.
-    # ESPHome 2026.6+ rejects a swapped transform here with "Invalid offsets".
-    dimensions:
-      width: 240
-      height: 320
+    # Use the model's native dimensions: ILI9341 240x320, ILI9342 320x240.
+    # Do not add a display transform; LVGL handles rotation below.
 
 lvgl:
   displays:
@@ -1381,6 +1594,117 @@ lvgl:
       text_color: 0xD9D9D9
       text_opa: 100%
 
+  # Confirmation shown only for tiles with TILE*_CONFIRM_OFF enabled.
+  top_layer:
+    widgets:
+      - obj:
+          id: confirm_off_overlay
+          x: 0
+          y: 0
+          width: ${DISPLAY_W}
+          height: ${DISPLAY_H}
+          bg_color: 0x000000
+          bg_opa: 38%
+          radius: 0
+          border_width: 0
+          hidden: true
+          scrollable: false
+          clickable: true
+          on_click:
+            - lvgl.widget.hide: confirm_off_overlay
+          widgets:
+            - obj:
+                id: confirm_off_card
+                align: CENTER
+                width: 82%
+                height: 116
+                bg_color: 0xF2F2F7
+                bg_opa: 96%
+                radius: 16
+                border_width: 1
+                border_color: 0xFFFFFF
+                border_opa: 35%
+                pad_all: 0
+                scrollable: false
+                clickable: true
+                widgets:
+                  - label:
+                      id: confirm_off_label
+                      align: TOP_MID
+                      y: 14
+                      width: 88%
+                      height: 50
+                      long_mode: WRAP
+                      text_align: CENTER
+                      text_font: headline
+                      text_color: 0x000000
+                      text: "${UI_CONFIRM_OFF_QUESTION}"
+                      clickable: false
+                  - obj:
+                      align: BOTTOM_MID
+                      y: -44
+                      width: 100%
+                      height: 1
+                      bg_color: 0xC6C6C8
+                      bg_opa: 85%
+                      border_width: 0
+                      clickable: false
+                      scrollable: false
+                  - obj:
+                      align: BOTTOM_MID
+                      width: 1
+                      height: 44
+                      bg_color: 0xC6C6C8
+                      bg_opa: 85%
+                      border_width: 0
+                      clickable: false
+                      scrollable: false
+                  - button:
+                      id: confirm_off_cancel
+                      align: BOTTOM_LEFT
+                      width: 50%
+                      height: 44
+                      bg_opa: TRANSP
+                      radius: 0
+                      border_width: 0
+                      shadow_width: 0
+                      on_click:
+                        - lvgl.widget.hide: confirm_off_overlay
+                      widgets:
+                        - label:
+                            align: CENTER
+                            text: "${UI_CANCEL}"
+                            text_font: sublabel_big
+                            text_color: 0x007AFF
+                            clickable: false
+                  - button:
+                      id: confirm_off_accept
+                      align: BOTTOM_RIGHT
+                      width: 50%
+                      height: 44
+                      bg_opa: TRANSP
+                      radius: 0
+                      border_width: 0
+                      shadow_width: 0
+                      on_click:
+                        - lvgl.widget.hide: confirm_off_overlay
+                        - script.execute:
+                            id: publish_action
+                            action: !lambda 'return id(pending_confirm_event);'
+                        - script.execute:
+                            id: turn_off_tile
+                            tile_type: !lambda 'return id(pending_confirm_type);'
+                            entity_id: !lambda 'return id(pending_confirm_entity);'
+                      widgets:
+                        - label:
+                            id: confirm_off_accept_label
+                            align: CENTER
+                            text: "${UI_TURN_OFF}"
+                            text_font: sublabel_big
+                            text_color: 0xFF3B30
+                            clickable: false
+
+
   pages:
     - id: home_page
       bg_color: 0x000000
@@ -1453,19 +1777,21 @@ lvgl:
                   styles: style_value
                   clickable: false
             on_short_click:
-              - script.execute: { id: publish_action, action: "tile1_press" }
               - script.execute:
-                  id: do_tile_action
+                  id: handle_tile_short_press
+                  action_event: "tile1_press"
+                  title: "${TILE1_TITLE}"
                   tile_type: "${TILE1_TYPE}"
                   tap_action: "${TILE1_TAP_ACTION}"
                   service: "${TILE1_TAP_SERVICE}"
                   entity_id: "${TILE1_ENTITY}"
                   param_key: "${TILE1_TAP_PARAM_KEY}"
                   param_val: "${TILE1_TAP_PARAM_VAL}"
-                  was_on: !lambda |-
+                  state_value: !lambda |-
                     if (std::string("${TILE1_TYPE}") == "cover")
-                      return id(tile1_cover_state).state != "closed";
-                    return std::string(id(ha_state_tile1).state.c_str()) == "on";
+                      return std::string(id(tile1_cover_state).state.c_str());
+                    return std::string(id(ha_state_tile1).state.c_str());
+                  confirm_off: "${TILE1_CONFIRM_OFF}"
             on_long_press:
               - script.execute: { id: publish_action, action: "tile1_long_press" }
               - if:
@@ -1562,19 +1888,21 @@ lvgl:
                   styles: style_value
                   clickable: false
             on_short_click:
-              - script.execute: { id: publish_action, action: "tile2_press" }
               - script.execute:
-                  id: do_tile_action
+                  id: handle_tile_short_press
+                  action_event: "tile2_press"
+                  title: "${TILE2_TITLE}"
                   tile_type: "${TILE2_TYPE}"
                   tap_action: "${TILE2_TAP_ACTION}"
                   service: "${TILE2_TAP_SERVICE}"
                   entity_id: "${TILE2_ENTITY}"
                   param_key: "${TILE2_TAP_PARAM_KEY}"
                   param_val: "${TILE2_TAP_PARAM_VAL}"
-                  was_on: !lambda |-
+                  state_value: !lambda |-
                     if (std::string("${TILE2_TYPE}") == "cover")
-                      return id(tile2_cover_state).state != "closed";
-                    return std::string(id(ha_state_tile2).state.c_str()) == "on";
+                      return std::string(id(tile2_cover_state).state.c_str());
+                    return std::string(id(ha_state_tile2).state.c_str());
+                  confirm_off: "${TILE2_CONFIRM_OFF}"
             on_long_press:
               - script.execute: { id: publish_action, action: "tile2_long_press" }
               - if:
@@ -1671,19 +1999,21 @@ lvgl:
                   styles: style_value
                   clickable: false
             on_short_click:
-              - script.execute: { id: publish_action, action: "tile3_press" }
               - script.execute:
-                  id: do_tile_action
+                  id: handle_tile_short_press
+                  action_event: "tile3_press"
+                  title: "${TILE3_TITLE}"
                   tile_type: "${TILE3_TYPE}"
                   tap_action: "${TILE3_TAP_ACTION}"
                   service: "${TILE3_TAP_SERVICE}"
                   entity_id: "${TILE3_ENTITY}"
                   param_key: "${TILE3_TAP_PARAM_KEY}"
                   param_val: "${TILE3_TAP_PARAM_VAL}"
-                  was_on: !lambda |-
+                  state_value: !lambda |-
                     if (std::string("${TILE3_TYPE}") == "cover")
-                      return id(tile3_cover_state).state != "closed";
-                    return std::string(id(ha_state_tile3).state.c_str()) == "on";
+                      return std::string(id(tile3_cover_state).state.c_str());
+                    return std::string(id(ha_state_tile3).state.c_str());
+                  confirm_off: "${TILE3_CONFIRM_OFF}"
             on_long_press:
               - script.execute: { id: publish_action, action: "tile3_long_press" }
               - if:
@@ -1780,19 +2110,21 @@ lvgl:
                   styles: style_value
                   clickable: false
             on_short_click:
-              - script.execute: { id: publish_action, action: "tile4_press" }
               - script.execute:
-                  id: do_tile_action
+                  id: handle_tile_short_press
+                  action_event: "tile4_press"
+                  title: "${TILE4_TITLE}"
                   tile_type: "${TILE4_TYPE}"
                   tap_action: "${TILE4_TAP_ACTION}"
                   service: "${TILE4_TAP_SERVICE}"
                   entity_id: "${TILE4_ENTITY}"
                   param_key: "${TILE4_TAP_PARAM_KEY}"
                   param_val: "${TILE4_TAP_PARAM_VAL}"
-                  was_on: !lambda |-
+                  state_value: !lambda |-
                     if (std::string("${TILE4_TYPE}") == "cover")
-                      return id(tile4_cover_state).state != "closed";
-                    return std::string(id(ha_state_tile4).state.c_str()) == "on";
+                      return std::string(id(tile4_cover_state).state.c_str());
+                    return std::string(id(ha_state_tile4).state.c_str());
+                  confirm_off: "${TILE4_CONFIRM_OFF}"
             on_long_press:
               - script.execute: { id: publish_action, action: "tile4_long_press" }
               - if:
@@ -1889,19 +2221,21 @@ lvgl:
                   styles: style_value
                   clickable: false
             on_short_click:
-              - script.execute: { id: publish_action, action: "tile5_press" }
               - script.execute:
-                  id: do_tile_action
+                  id: handle_tile_short_press
+                  action_event: "tile5_press"
+                  title: "${TILE5_TITLE}"
                   tile_type: "${TILE5_TYPE}"
                   tap_action: "${TILE5_TAP_ACTION}"
                   service: "${TILE5_TAP_SERVICE}"
                   entity_id: "${TILE5_ENTITY}"
                   param_key: "${TILE5_TAP_PARAM_KEY}"
                   param_val: "${TILE5_TAP_PARAM_VAL}"
-                  was_on: !lambda |-
+                  state_value: !lambda |-
                     if (std::string("${TILE5_TYPE}") == "cover")
-                      return id(tile5_cover_state).state != "closed";
-                    return std::string(id(ha_state_tile5).state.c_str()) == "on";
+                      return std::string(id(tile5_cover_state).state.c_str());
+                    return std::string(id(ha_state_tile5).state.c_str());
+                  confirm_off: "${TILE5_CONFIRM_OFF}"
             on_long_press:
               - script.execute: { id: publish_action, action: "tile5_long_press" }
               - if:
@@ -1998,19 +2332,21 @@ lvgl:
                   styles: style_value
                   clickable: false
             on_short_click:
-              - script.execute: { id: publish_action, action: "tile6_press" }
               - script.execute:
-                  id: do_tile_action
+                  id: handle_tile_short_press
+                  action_event: "tile6_press"
+                  title: "${TILE6_TITLE}"
                   tile_type: "${TILE6_TYPE}"
                   tap_action: "${TILE6_TAP_ACTION}"
                   service: "${TILE6_TAP_SERVICE}"
                   entity_id: "${TILE6_ENTITY}"
                   param_key: "${TILE6_TAP_PARAM_KEY}"
                   param_val: "${TILE6_TAP_PARAM_VAL}"
-                  was_on: !lambda |-
+                  state_value: !lambda |-
                     if (std::string("${TILE6_TYPE}") == "cover")
-                      return id(tile6_cover_state).state != "closed";
-                    return std::string(id(ha_state_tile6).state.c_str()) == "on";
+                      return std::string(id(tile6_cover_state).state.c_str());
+                    return std::string(id(ha_state_tile6).state.c_str());
+                  confirm_off: "${TILE6_CONFIRM_OFF}"
             on_long_press:
               - script.execute: { id: publish_action, action: "tile6_long_press" }
               - if:
@@ -2105,7 +2441,7 @@ lvgl:
                   id: overlay_title
                   align: TOP_MID
                   y: 10
-                  text: "Light"
+                  text: " "
                   styles: style_room
 
               - label:
@@ -2426,7 +2762,7 @@ lvgl:
                   id: color_detail_title
                   align: TOP_MID
                   y: 16
-                  text: "Light Color"
+                  text: " "
                   styles: style_room
 
               - obj:
@@ -2501,7 +2837,7 @@ lvgl:
                           - label:
                               id: color_tab_label
                               align: CENTER
-                              text: "Color"
+                              text: "${UI_COLOR}"
                               text_font: sublabel_big
                               text_color: 0xFFFFFF
                               clickable: false
@@ -2526,7 +2862,7 @@ lvgl:
                           - label:
                               id: temp_tab_label
                               align: CENTER
-                              text: "Temp."
+                              text: "${UI_TEMPERATURE_SHORT}"
                               text_font: sublabel_big
                               text_color: 0xFFFFFF
                               clickable: false
@@ -2735,7 +3071,7 @@ lvgl:
                     - label:
                         x: 13
                         y: 6
-                        text: "Brightness"
+                        text: "${UI_BRIGHTNESS}"
                         text_font: sublabel
                         text_color: 0xD1D1D6
                         hidden: true
@@ -2868,14 +3204,14 @@ lvgl:
                   id: climate_detail_title
                   align: TOP_MID
                   y: 16
-                  text: "Climate"
+                  text: " "
                   styles: style_room
 
               - label:
                   id: climate_current_label
                   align: TOP_MID
                   y: 42
-                  text: "Current: --"
+                  text: "${UI_CURRENT}: --"
                   text_font: sublabel_big
                   text_color: 0xD1E8FF
                   text_opa: 85%
@@ -2922,7 +3258,7 @@ lvgl:
                   id: climate_set_label
                   align: CENTER
                   y: -16
-                  text: "SET TO"
+                  text: "${UI_SET_TO}"
                   text_font: sublabel_big
                   text_color: 0xFFFFFF
                   text_opa: 68%
@@ -3009,7 +3345,7 @@ lvgl:
                     - label:
                         id: climate_mode_label
                         align: CENTER
-                        text: "Auto"
+                        text: "${UI_CLIMATE_MODE_AUTO}"
                         text_font: sublabel_big
                         text_color: 0xFFFFFF
                         clickable: false
@@ -3040,12 +3376,14 @@ script:
           id: back_light
           brightness: !lambda "return atoi(\"${MAX_BRIGHTNESS}\") / 100.0f;"
       - lvgl.widget.hide: dim_wake_overlay
+      - lvgl.widget.hide: confirm_off_overlay
       - lvgl.widget.hide: color_detail_overlay
       - lvgl.widget.hide: climate_detail_overlay
 
   - id: dim_display
     mode: restart
     then:
+      - lvgl.widget.hide: confirm_off_overlay
       - if:
           condition:
             lambda: 'return std::string("${AUTO_DIM}") == "true";'
@@ -3160,14 +3498,14 @@ script:
             return value;
           };
           auto label_for = [](const std::string& mode) {
-            if (mode == "off") return std::string("Off");
-            if (mode == "heat") return std::string("Heat");
-            if (mode == "cool") return std::string("Cool");
-            if (mode == "heat_cool") return std::string("Heat/Cool");
-            if (mode == "auto") return std::string("Auto");
-            if (mode == "dry") return std::string("Dry");
-            if (mode == "fan_only") return std::string("Fan");
-            return mode.empty() ? std::string("Auto") : mode;
+            if (mode == "off") return std::string("${UI_CLIMATE_MODE_OFF}");
+            if (mode == "heat") return std::string("${UI_CLIMATE_MODE_HEAT}");
+            if (mode == "cool") return std::string("${UI_CLIMATE_MODE_COOL}");
+            if (mode == "heat_cool") return std::string("${UI_CLIMATE_MODE_HEAT_COOL}");
+            if (mode == "auto") return std::string("${UI_CLIMATE_MODE_AUTO}");
+            if (mode == "dry") return std::string("${UI_CLIMATE_MODE_DRY}");
+            if (mode == "fan_only") return std::string("${UI_CLIMATE_MODE_FAN}");
+            return mode.empty() ? std::string("${UI_CLIMATE_MODE_AUTO}") : mode;
           };
 
           std::string supported = lower(id(active_climate_supported_modes));
@@ -3474,6 +3812,148 @@ script:
                               entity_id: !lambda "return id(active_entity);"
                               position: !lambda "return value;"
 
+  # A confirmed shutdown never uses toggle: the entity might have changed
+  # while the dialog was open. Automation-only mode only publishes the
+  # corresponding *_confirmed_off event and intentionally skips this action.
+  - id: turn_off_tile
+    mode: queued
+    parameters:
+      tile_type: string
+      entity_id: string
+    then:
+      - if:
+          condition:
+            lambda: 'return std::string("${DIRECT_ACTIONS}") == "true";'
+          then:
+            - if:
+                condition:
+                  lambda: 'return tile_type == "light";'
+                then:
+                  - homeassistant.action:
+                      action: light.turn_off
+                      data:
+                        entity_id: !lambda 'return entity_id;'
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return tile_type == "fan";'
+                      then:
+                        - homeassistant.action:
+                            action: fan.turn_off
+                            data:
+                              entity_id: !lambda 'return entity_id;'
+                      else:
+                        - if:
+                            condition:
+                              lambda: 'return tile_type == "switch";'
+                            then:
+                              - homeassistant.action:
+                                  action: switch.turn_off
+                                  data:
+                                    entity_id: !lambda 'return entity_id;'
+                            else:
+                              - if:
+                                  condition:
+                                    lambda: 'return tile_type == "cover";'
+                                  then:
+                                    - homeassistant.action:
+                                        action: cover.close_cover
+                                        data:
+                                          entity_id: !lambda 'return entity_id;'
+
+  # Central short-tap gate. It only asks when the configured action is known
+  # to switch a controllable entity off or close a cover.
+  - id: handle_tile_short_press
+    mode: restart
+    parameters:
+      action_event: string
+      title: string
+      tile_type: string
+      tap_action: string
+      service: string
+      entity_id: string
+      param_key: string
+      param_val: string
+      state_value: string
+      confirm_off: string
+    then:
+      - if:
+          condition:
+            lambda: |-
+              if (confirm_off != "true") return false;
+
+              std::string resolved = tap_action;
+              if (resolved == "auto") {
+                resolved = (tile_type == "scene" || tile_type == "script") ? "activate" : "toggle";
+              }
+
+              bool supported = tile_type == "light" || tile_type == "fan" ||
+                               tile_type == "switch" || tile_type == "cover";
+              bool known_off = tile_type == "cover" ? state_value == "closed" : state_value == "off";
+              bool implicit_toggle = supported && service.empty() &&
+                                     (resolved == "toggle" ||
+                                      (tile_type == "fan" && resolved == "fan_toggle_preset"));
+              bool toggle_service =
+                (tile_type == "light" && service == "light.toggle") ||
+                (tile_type == "fan" && service == "fan.toggle") ||
+                (tile_type == "switch" && service == "switch.toggle") ||
+                (tile_type == "cover" && service == "cover.toggle");
+              bool off_service =
+                (tile_type == "light" && service == "light.turn_off") ||
+                (tile_type == "fan" && service == "fan.turn_off") ||
+                (tile_type == "switch" && service == "switch.turn_off") ||
+                (tile_type == "cover" && service == "cover.close_cover");
+
+              return !known_off && (implicit_toggle || toggle_service || off_service);
+          then:
+            - lambda: |-
+                id(pending_confirm_event) = action_event;
+                const std::string suffix = "_press";
+                if (id(pending_confirm_event).size() >= suffix.size() &&
+                    id(pending_confirm_event).compare(
+                      id(pending_confirm_event).size() - suffix.size(), suffix.size(), suffix) == 0) {
+                  id(pending_confirm_event).replace(
+                    id(pending_confirm_event).size() - suffix.size(), suffix.size(), "_confirmed_off");
+                } else {
+                  id(pending_confirm_event) += "_confirmed_off";
+                }
+                id(pending_confirm_entity) = entity_id;
+                id(pending_confirm_type) = tile_type;
+
+                std::string question = tile_type == "cover"
+                  ? std::string("${UI_CONFIRM_CLOSE_QUESTION}")
+                  : std::string("${UI_CONFIRM_OFF_QUESTION}");
+                const std::string target = title.empty()
+                  ? std::string("${UI_CONFIRM_FALLBACK_TITLE}")
+                  : title;
+                const std::string placeholder = "{title}";
+                size_t pos = 0;
+                while ((pos = question.find(placeholder, pos)) != std::string::npos) {
+                  question.replace(pos, placeholder.size(), target);
+                  pos += target.size();
+                }
+                lv_label_set_text(id(confirm_off_label), question.c_str());
+                lv_label_set_text(
+                  id(confirm_off_accept_label),
+                  tile_type == "cover" ? "${UI_CLOSE}" : "${UI_TURN_OFF}"
+                );
+            - lvgl.widget.show: confirm_off_overlay
+          else:
+            - script.execute:
+                id: publish_action
+                action: !lambda 'return action_event;'
+            - script.execute:
+                id: do_tile_action
+                tile_type: !lambda 'return tile_type;'
+                tap_action: !lambda 'return tap_action;'
+                service: !lambda 'return service;'
+                entity_id: !lambda 'return entity_id;'
+                param_key: !lambda 'return param_key;'
+                param_val: !lambda 'return param_val;'
+                was_on: !lambda |-
+                  if (tile_type == "cover") return state_value != "closed";
+                  return state_value == "on";
+
   # ----------------------------------------------------------
   # do_tile_action
   #
@@ -3634,7 +4114,7 @@ script:
                                   if (tile_type == "scene" || tile_type == "script") resolved = "activate";
                                   else resolved = "toggle";
                                 }
-                                return resolved == "activate";
+                                return resolved == "activate" || resolved == "custom";
                             then:
                               - if:
                                   condition:
@@ -3819,25 +4299,39 @@ script:
             if (id(active_climate_target_x10) < id(active_climate_min_x10)) id(active_climate_target_x10) = id(active_climate_min_x10);
             if (id(active_climate_target_x10) > id(active_climate_max_x10)) id(active_climate_target_x10) = id(active_climate_max_x10);
             id(active_climate_humidity) = isnan(climate_humidity) ? -1 : (int) lround(climate_humidity);
-            id(active_climate_mode) = climate_mode.empty() ? std::string("Auto") : climate_mode;
+            id(active_climate_mode) = climate_mode.empty() ? std::string("auto") : climate_mode;
             id(active_climate_supported_modes) = climate_supported_modes;
+
+            auto label_for_climate_mode = [](std::string mode) {
+              for (char &c : mode) {
+                if (c >= 'A' && c <= 'Z') c = (char) (c - 'A' + 'a');
+              }
+              if (mode == "off") return std::string("${UI_CLIMATE_MODE_OFF}");
+              if (mode == "heat") return std::string("${UI_CLIMATE_MODE_HEAT}");
+              if (mode == "cool") return std::string("${UI_CLIMATE_MODE_COOL}");
+              if (mode == "heat_cool") return std::string("${UI_CLIMATE_MODE_HEAT_COOL}");
+              if (mode == "auto") return std::string("${UI_CLIMATE_MODE_AUTO}");
+              if (mode == "dry") return std::string("${UI_CLIMATE_MODE_DRY}");
+              if (mode == "fan_only") return std::string("${UI_CLIMATE_MODE_FAN}");
+              return mode.empty() ? std::string("${UI_CLIMATE_MODE_AUTO}") : mode;
+            };
 
             lv_label_set_text(id(climate_detail_title), title.c_str());
 
-            char current_buf[48];
+            char current_buf[72];
             if (isnan(climate_current_temperature)) {
-              snprintf(current_buf, sizeof(current_buf), "Current: --");
+              snprintf(current_buf, sizeof(current_buf), "${UI_CURRENT}: --");
             } else if (id(active_climate_humidity) >= 0) {
-              snprintf(current_buf, sizeof(current_buf), "Current: %.1f° - Humidity: %d %%", climate_current_temperature, id(active_climate_humidity));
+              snprintf(current_buf, sizeof(current_buf), "${UI_CURRENT}: %.1f° - ${UI_HUMIDITY}: %d %%", climate_current_temperature, id(active_climate_humidity));
             } else {
-              snprintf(current_buf, sizeof(current_buf), "Current: %.1f°", climate_current_temperature);
+              snprintf(current_buf, sizeof(current_buf), "${UI_CURRENT}: %.1f°", climate_current_temperature);
             }
             lv_label_set_text(id(climate_current_label), current_buf);
 
             char target_buf[16];
             snprintf(target_buf, sizeof(target_buf), "%.1f°", id(active_climate_target_x10) / 10.0f);
             lv_label_set_text(id(climate_target_label), target_buf);
-            lv_label_set_text(id(climate_mode_label), id(active_climate_mode).c_str());
+            lv_label_set_text(id(climate_mode_label), label_for_climate_mode(id(active_climate_mode)).c_str());
 
             lv_arc_set_range(id(climate_arc), id(active_climate_min_x10), id(active_climate_max_x10));
             lv_arc_set_value(id(climate_arc), id(active_climate_target_x10));
@@ -4111,14 +4605,14 @@ script:
               for (char &c : mode) {
                 if (c >= 'A' && c <= 'Z') c = (char) (c - 'A' + 'a');
               }
-              if (mode == "off") return std::string("Off");
-              if (mode == "heat") return std::string("Heat");
-              if (mode == "cool") return std::string("Cool");
-              if (mode == "heat_cool") return std::string("Heat/Cool");
-              if (mode == "auto") return std::string("Auto");
-              if (mode == "dry") return std::string("Dry");
-              if (mode == "fan_only") return std::string("Fan");
-              return mode.empty() ? std::string("Auto") : mode;
+              if (mode == "off") return std::string("${UI_CLIMATE_MODE_OFF}");
+              if (mode == "heat") return std::string("${UI_CLIMATE_MODE_HEAT}");
+              if (mode == "cool") return std::string("${UI_CLIMATE_MODE_COOL}");
+              if (mode == "heat_cool") return std::string("${UI_CLIMATE_MODE_HEAT_COOL}");
+              if (mode == "auto") return std::string("${UI_CLIMATE_MODE_AUTO}");
+              if (mode == "dry") return std::string("${UI_CLIMATE_MODE_DRY}");
+              if (mode == "fan_only") return std::string("${UI_CLIMATE_MODE_FAN}");
+              return mode.empty() ? std::string("${UI_CLIMATE_MODE_AUTO}") : mode;
             };
             auto sync_open_climate = [&](const std::string& entity,
                                          float current_temperature,
@@ -4148,13 +4642,13 @@ script:
               if (target_x10 > id(active_climate_max_x10)) target_x10 = id(active_climate_max_x10);
               id(active_climate_target_x10) = target_x10;
 
-              char current_buf[48];
+              char current_buf[72];
               if (isnan(current_temperature)) {
-                snprintf(current_buf, sizeof(current_buf), "Current: --");
+                snprintf(current_buf, sizeof(current_buf), "${UI_CURRENT}: --");
               } else if (id(active_climate_humidity) >= 0) {
-                snprintf(current_buf, sizeof(current_buf), "Current: %.1f° - Humidity: %d %%", current_temperature, id(active_climate_humidity));
+                snprintf(current_buf, sizeof(current_buf), "${UI_CURRENT}: %.1f° - ${UI_HUMIDITY}: %d %%", current_temperature, id(active_climate_humidity));
               } else {
-                snprintf(current_buf, sizeof(current_buf), "Current: %.1f°", current_temperature);
+                snprintf(current_buf, sizeof(current_buf), "${UI_CURRENT}: %.1f°", current_temperature);
               }
               lv_label_set_text(id(climate_current_label), current_buf);
 

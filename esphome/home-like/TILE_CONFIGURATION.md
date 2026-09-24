@@ -32,6 +32,49 @@ ESPHome substitutions are compile-time text replacements. There is no runtime lo
 
 ---
 
+## Interface text and localization
+
+All built-in overlay text is configured through `UI_*` substitutions. This keeps translations in the editable configuration and does not require language-specific branches in the implementation. Tile titles and on/off labels remain configurable per tile.
+
+The confirmation questions use `{title}` as a required placeholder. It may appear anywhere in the sentence, so languages can use their natural word order. For example:
+
+```yaml
+UI_CONFIRM_OFF_QUESTION: "{title} ausschalten?"
+UI_CONFIRM_CLOSE_QUESTION: "{title} schließen?"
+UI_CONFIRM_FALLBACK_TITLE: "dieses Gerät"
+UI_CANCEL: "Abbrechen"
+UI_TURN_OFF: "Ausschalten"
+UI_CLOSE: "Schließen"
+```
+
+The complete interface text set is:
+
+| Substitution | Default | Used for |
+|--------------|---------|----------|
+| `UI_CONFIRM_OFF_QUESTION` | `Turn off {title}?` | Light, fan and switch confirmation |
+| `UI_CONFIRM_CLOSE_QUESTION` | `Close {title}?` | Cover confirmation |
+| `UI_CONFIRM_FALLBACK_TITLE` | `this device` | Missing tile title in a confirmation |
+| `UI_CANCEL` | `Cancel` | Non-destructive alert action |
+| `UI_TURN_OFF` | `Turn off` | Destructive OFF action |
+| `UI_CLOSE` | `Close` | Destructive cover action |
+| `UI_COLOR` | `Color` | Color picker heading |
+| `UI_TEMPERATURE_SHORT` | `Temp.` | Color-temperature heading |
+| `UI_BRIGHTNESS` | `Brightness` | Brightness heading |
+| `UI_CURRENT` | `Current` | Current climate value |
+| `UI_HUMIDITY` | `Humidity` | Climate humidity value |
+| `UI_SET_TO` | `SET TO` | Climate target value |
+| `UI_CLIMATE_MODE_OFF` | `Off` | Climate mode |
+| `UI_CLIMATE_MODE_HEAT` | `Heat` | Climate mode |
+| `UI_CLIMATE_MODE_COOL` | `Cool` | Climate mode |
+| `UI_CLIMATE_MODE_HEAT_COOL` | `Heat/Cool` | Climate mode |
+| `UI_CLIMATE_MODE_AUTO` | `Auto` | Climate mode |
+| `UI_CLIMATE_MODE_DRY` | `Dry` | Climate mode |
+| `UI_CLIMATE_MODE_FAN` | `Fan` | Climate mode |
+
+Changes are applied when the firmware is compiled. Keep translations concise for the 320 x 240 display and test long tile titles in the confirmation alert.
+
+---
+
 ## Per-tile substitutions
 
 Each of the 6 tiles has the same set of keys, just with a different number (TILE1 … TILE6).
@@ -46,6 +89,7 @@ Each of the 6 tiles has the same set of keys, just with a different number (TILE
 | `TILE*_ICON` | Material Design Icons Unicode glyph. Find icons at [pictogrammers.com/library/mdi](https://pictogrammers.com/library/mdi/) — click an icon and copy the Unicode value (e.g. `U+F0769` → `"\U000F0769"`). |
 | `TILE*_TYPE` | Entity type: `light` \| `fan` \| `switch` \| `scene` \| `script` \| `cover` \| `climate`. Controls tap behavior, value display, and slider type in auto mode. |
 | `TILE*_TAP_ACTION` | What happens on short tap — see [Tap actions](#tap-actions) below. |
+| `TILE*_CONFIRM_OFF` | `"false"` by default. Set `"true"` to enable the [short-tap confirmation guard](#short-tap-off-confirmation), independently of the tap action. |
 | `TILE*_LONGPRESS` | What happens on long press — see [Long press modes](#long-press-modes) below. |
 | `TILE*_VALUE_MODE` | How the value line below the title is rendered — see [Value modes](#value-modes) below. |
 | `TILE*_LABEL_OFF` | Text shown in the value line when the entity is off / inactive. |
@@ -151,6 +195,37 @@ For climate tiles in `slider` mode, the thermostat overlay sends `climate.set_te
 
 ---
 
+## Short-tap OFF confirmation
+
+Enable the guard independently for each tile:
+
+```yaml
+TILE1_TAP_ACTION: "auto"
+TILE1_CONFIRM_OFF: "true"
+```
+
+For lights, fans, switches and covers, a tap that would turn the entity on or open it still runs immediately and publishes `tile1_press`. A tap that would turn it off or close it opens a confirmation dialog instead. This applies to:
+
+- built-in `auto` and `toggle` actions
+- `fan_toggle_preset`
+- matching `light.toggle`, `fan.toggle`, `switch.toggle` and `cover.toggle` service overrides
+- matching explicit `turn_off` or `cover.close_cover` service overrides
+
+If the state is `unknown` or `unavailable`, a guarded toggle asks for confirmation rather than risking an unintended OFF action. Cancelling, tapping outside the dialog, or display dimming performs no action and emits no event. Long presses are unaffected.
+
+After acceptance, direct mode publishes `tile1_confirmed_off` and calls an explicit `light.turn_off`, `fan.turn_off`, `switch.turn_off` or `cover.close_cover`. It never sends a delayed toggle, because the entity state may have changed while the dialog was open.
+
+With `DIRECT_ACTIONS: "false"`, the display only publishes the event. The Home Assistant automation must therefore handle both paths:
+
+```yaml
+# tile1_press: normal immediate action, such as turning an off light on
+# tile1_confirmed_off: explicit light.turn_off; do not use light.toggle here
+```
+
+Scenes, scripts, climate tiles and opaque custom services are not gated because their effect cannot be inferred safely from the tile configuration.
+
+---
+
 ## Home Assistant events
 
 Every tap publishes a short-lived state to `sensor.smartdisplay_action`:
@@ -158,9 +233,10 @@ Every tap publishes a short-lived state to `sensor.smartdisplay_action`:
 | Event | Trigger |
 |-------|---------|
 | `tile1_press` … `tile6_press` | Short tap on tile 1–6 |
+| `tile1_confirmed_off` … `tile6_confirmed_off` | Accepted OFF/close confirmation for tile 1–6 |
 | `tile1_long_press` … `tile6_long_press` | Long press on tile 1–6 |
 
-The state resets to `""` after 500ms. In HA automations, trigger on `state` → `to: "tile1_press"` etc.
+The state resets to `""` after 500ms. In HA automations, trigger on `state` → `to: "tile1_press"` etc. A confirmed OFF action publishes only `tileN_confirmed_off`, not `tileN_press`.
 
 ---
 

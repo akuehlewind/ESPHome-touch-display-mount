@@ -38,7 +38,7 @@
 #   (mirrored into ESPHome to keep LVGL button states in sync).
 #
 # What you must adapt before flashing
-# 1) Secrets: api.encryption.key, ota.password, WiFi credentials (prefer secrets.yaml)
+# 1) Secrets: api.encryption.key and WiFi credentials (prefer secrets.yaml)
 # 2) BTN*_ENTITY: Home Assistant entity IDs you want to control/mirror
 # 3) Touch calibration + transform:
 #    - calibration is panel-specific
@@ -70,6 +70,12 @@ substitutions:
   # - "false" -> touching a button ONLY publishes the action text_sensor
   DIRECT_ACTIONS: "true"
 
+  # The Material Design Icons font is downloaded at build time, so this file
+  # is self-contained and needs no fonts/ folder beside it. It is pinned to a
+  # release tag on purpose: the icon values below are raw codepoints, and an
+  # unpinned font bump could quietly change which icon a button shows.
+  MDI_FONT_URL: "https://raw.githubusercontent.com/Templarian/MaterialDesign-Webfont/v7.4.47/fonts/materialdesignicons-webfont.ttf"
+
   # Button 1
   BTN1_ENTITY: "light.desk_lamp"
   BTN1_LABEL: "Desk"
@@ -98,6 +104,7 @@ substitutions:
 # ============================================================
 
 esphome:
+  min_version: 2026.9.0
   name: smartdisplay
   friendly_name: SmartDisplay
   on_boot:
@@ -119,7 +126,11 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret ota_password
+    id: esphome_ota
+    # A bare 'encryption:' inherits the api encryption key, which authenticates
+    # the uploader; ESPHome 2026.9 warns that a separate ota password costs
+    # ~3.5 KB of flash and 60 bytes of RAM for no added protection.
+    encryption:
 
 wifi:
   ssid: !secret wifi_ssid
@@ -159,9 +170,10 @@ font:
     bpp: 4
     glyphs: ['&','@','!',',','.','?','"','%','(',')','+','-','_',':','°','0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','å','Ä','ä','Ö','ö','Ü','ü','/']
 
-  # Material Design Icons (MDI) — included at fonts/materialdesignicons-webfont.ttf (Apache 2.0)
+  # Material Design Icons (MDI, Apache 2.0) — downloaded at build time from
+  # the pinned MDI_FONT_URL; no local copy of the .ttf is needed.
   # Source: https://github.com/Templarian/MaterialDesign-Webfont
-  - file: 'fonts/materialdesignicons-webfont.ttf'
+  - file: "${MDI_FONT_URL}"
     id: materialdesign_icons
     size: 35
     glyphs: ["\U000F095F", "\U000F0769", "\U000F08DD", "\U000F1051"]
@@ -334,8 +346,15 @@ display:
     id: my_display
     spi_id: lcd
     model: ILI9341
-    cs_pin: 15
-    dc_pin: 2
+    # GPIO15 and GPIO2 are ESP32 strapping pins; the display is wired to
+    # them on this board, so the warning is suppressed rather than the
+    # pins moved.
+    cs_pin:
+      number: 15
+      ignore_strapping_warning: true
+    dc_pin:
+      number: 2
+      ignore_strapping_warning: true
     invert_colors: false
     update_interval: never
     auto_clear_enabled: false

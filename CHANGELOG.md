@@ -5,6 +5,25 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-09-24
+
+### Added
+- CYD home-like display/orientation presets for ILI9342 panels, including RGB color order, 40 MHz data rate and contributor-tested touch transforms for all four orientations (#26). ILI9341 remains the active default; all presets are explicit values without template expressions. Thanks @pleasantone.
+- Optional per-tile `TILE*_CONFIRM_OFF` guard for home-like short taps (#32 concept). Confirmation is limited to known OFF/close actions, emits a dedicated `tileN_confirmed_off` event and executes an explicit off/close service instead of a delayed toggle. Long presses remain independent. Thanks @pleasantone for the feature proposal.
+- Localizable `UI_*` substitutions for confirmation, color and climate overlays, including language-specific confirmation templates with a `{title}` placeholder.
+
+### Changed
+- File images now declare `platform: file` for current ESPHome compatibility (#27).
+- Material Design Icons and home-like wallpapers are downloaded at build time from pinned sources, with documented local overrides (#29).
+- OTA uses encryption inherited from the Home Assistant API key and requires ESPHome 2026.9.0 or newer; documentation includes the two-step wireless migration from password-based OTA (#30).
+- The OFF confirmation now uses a compact Home-style alert with a translucent system surface, subtle separators, and text actions instead of large filled buttons.
+
+### Fixed
+- Suppressed expected ESP32 strapping-pin warnings for the CYD display pins without changing the board wiring (#28).
+- Custom short-tap services now execute when `TILE*_TAP_ACTION` is `custom`, matching the documented behavior.
+
+---
+
 ## 2026-06-21
 
 ### Fixed
