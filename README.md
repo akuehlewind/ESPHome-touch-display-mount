@@ -14,10 +14,9 @@
 >
 > **[Discover Tessera: the next-level Home Assistant touchscreen project](https://github.com/MaxGramser/homeassistant_espscreen)**
 
-ESPHome-powered Home Assistant control panels for the popular Cheap Yellow Display (ESP32-2432S028), the 4.0-inch Guition ESP32-4848S040C_I, and a standalone ILI9341 with external ESP32.
+**About this project:** This repository focuses on a straightforward DIY approach with ready-to-flash ESPHome configurations and 3D-printable mounts for Home Assistant touch panels. It supports the popular Cheap Yellow Display (ESP32-2432S028), the 4.0-inch Guition ESP32-4848S040C_I, and a standalone ILI9341 with external ESP32.
 
-A 3D-printable enclosure with adjustable tilt for an ESP32 2.8" ILI9341 touchscreen, powered by ESPHome + LVGL and integrated with Home Assistant.  
-Includes ready-to-flash YAML configs for all three hardware variants. The existing 3D-printable mounts are designed for the 2.8-inch CYD and standalone ILI9341 configurations; a Guition-specific mount is not included yet.
+For the 2.8-inch displays, the repository also includes an adjustable 3D-printable enclosure. The existing mounts are designed for the CYD and standalone ILI9341 configurations; a Guition-specific mount is not included yet.
 
 Multiple mounting options are supported:
 
