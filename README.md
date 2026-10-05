@@ -5,6 +5,15 @@
 ![Cheap Yellow Display](https://img.shields.io/badge/CYD-Supported-yellow)
 ![Guition 4.0](https://img.shields.io/badge/Guition%204.0-Supported-blue)
 
+> [!TIP]
+> **Want to build this kind of Home Assistant display, but with a much more powerful and user-friendly setup?**
+>
+> This repository gives you ready-to-flash YAML configurations and 3D-printable mounts. **Tessera** is a separate project by Max Gramser whose first version started from this repository and has since taken the idea much further: a visual drag-and-drop editor inside Home Assistant, multiple pages, richer controls, centralized screen management, broad display support, and normally no YAML or MQTT required.
+>
+> I am genuinely impressed by what Max and the community have built. If you want the most capable and polished version of this concept, this is the project I recommend.
+>
+> **[Discover Tessera: the next-level Home Assistant touchscreen project](https://github.com/MaxGramser/homeassistant_espscreen)**
+
 ESPHome-powered Home Assistant control panels for the popular Cheap Yellow Display (ESP32-2432S028), the 4.0-inch Guition ESP32-4848S040C_I, and a standalone ILI9341 with external ESP32.
 
 A 3D-printable enclosure with adjustable tilt for an ESP32 2.8" ILI9341 touchscreen, powered by ESPHome + LVGL and integrated with Home Assistant.  
