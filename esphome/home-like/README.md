@@ -1,6 +1,6 @@
 # Home-Like UI — Tile Grid Layout
 
-This folder contains the main, actively maintained UI: a wallpaper-backed 2×3 tile grid inspired by modern smart home apps.
+This folder contains the main, actively maintained UI: a wallpaper-backed tile grid inspired by modern smart home apps. The 320×240 variants use a 2×3 grid; the Guition 480×480 variant uses a 2×4 grid.
 
 Requires **ESPHome 2026.9.0 or newer**. For existing password-based devices, follow the [two-step wireless OTA migration](../../README.md#encrypted-ota-and-migration), or install over USB/serial.
 
@@ -11,13 +11,13 @@ Requires **ESPHome 2026.9.0 or newer**. For existing password-based devices, fol
 
 ## What this UI does
 
-- 2×3 grid of configurable tiles, each with icon, title, and value line
+- 6 or 8 configurable tiles, depending on the hardware variant, each with icon, title, and value line
 - Supports lights, fans, switches, covers, climate entities, scenes, and scripts per tile
 - Real-time state synchronization with Home Assistant
 - Long press opens a value overlay (brightness / fan speed / cover position / climate temperature)
 - Color-capable lights can open a color/temperature picker from the brightness overlay
 - Long press can alternatively fire a completely different HA entity than the short tap
-- Orientation presets: 0°, 90°, 180°, 270° — uncomment to switch
+- Four orientation presets on the 320×240 variants; a hardware-tested USB-C-down orientation on Guition
 - Auto-dim and night mode with configurable brightness levels
 - Optional direct HA service calls or automation-only mode
 - Optional short-tap OFF confirmation per tile; defaults to disabled and leaves long presses independent
@@ -65,6 +65,12 @@ The ILI9342 contributor reported testing all four orientations on hardware. Its 
 
 Use this file if you have a **separate ILI9341 display module** wired to a generic ESP32 board (e.g. ESP32 DevKit / Wroom 32D). This requires manual wiring according to the pin table in the main README.
 
+### `guition-4848s040c-i/home-like.yaml` — Guition 4.0-inch 480×480
+
+Use this file for the **Guition ESP32-4848S040C_I** with ESP32-S3, ST7701S RGB display, and GT911 capacitive touchscreen. It provides eight tiles in a 2×4 grid. The display timings, touch transform, full LVGL buffer, and USB-C-down orientation were verified on physical hardware with ESPHome 2026.9.0.
+
+This variant currently adds firmware/UI support only. The repository's existing 3D-printable enclosures are sized for the 2.8-inch displays and do not fit the Guition board.
+
 ---
 
 ## Credentials — secrets.yaml
@@ -93,12 +99,13 @@ The default config downloads its icon font and wallpapers while compiling. No lo
 | Substitution | Source | Required by |
 |--------------|--------|-------------|
 | `MDI_FONT_URL` | Templarian/MaterialDesign-Webfont release `v7.4.47` | Icon glyphs on every tile |
-| `ASSET_BASE` | This repository's `esphome/home-like` at public commit `9ffa5dfddf695150ad0388f5f5e2bcf786772195` | Background wallpaper |
+| `ASSET_BASE` | This repository's `esphome/home-like` at the immutable commit selected in each YAML | Background wallpaper |
 
-The pinned background URL is `https://raw.githubusercontent.com/akuehlewind/ESPHome-touch-display-mount/9ffa5dfddf695150ad0388f5f5e2bcf786772195/esphome/home-like`.
+The 320×240 variants pin `ASSET_BASE` to commit `9ffa5dfddf695150ad0388f5f5e2bcf786772195`. The Guition variant pins it to the asset commit `cb3531a7fdf057d4b7273d1feba648162bcfd5c9` containing its square background.
 
 - `smartdisplay_background.png` — used for 0° and 180° (landscape)
 - `smartdisplay_background_90.png` — used for 90° and 270° (portrait)
+- `smartdisplay_background_480.png` — used by the square Guition variant
 
 The active image is selected by `BG_IMAGE` in the chosen display/orientation preset inside the YAML.
 

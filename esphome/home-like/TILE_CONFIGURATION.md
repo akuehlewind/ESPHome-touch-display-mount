@@ -71,13 +71,13 @@ The complete interface text set is:
 | `UI_CLIMATE_MODE_DRY` | `Dry` | Climate mode |
 | `UI_CLIMATE_MODE_FAN` | `Fan` | Climate mode |
 
-Changes are applied when the firmware is compiled. Keep translations concise for the 320 x 240 display and test long tile titles in the confirmation alert.
+Changes are applied when the firmware is compiled. Keep translations concise for the target display and test long tile titles in the confirmation alert.
 
 ---
 
 ## Per-tile substitutions
 
-Each of the 6 tiles has the same set of keys, just with a different number (TILE1 … TILE6).
+Each tile has the same set of keys, just with a different number. The 320×240 variants provide TILE1 … TILE6; the Guition 480×480 variant provides TILE1 … TILE8.
 
 ### Basic settings
 

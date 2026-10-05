@@ -1,13 +1,14 @@
-# ESP32 Cheap Yellow Display (ESP32-2432S028) Home Assistant Touch Panel – LVGL UI + 3D Printed Desk / Under Desk / Wall / Flush Mounts
+# ESPHome Home Assistant Touch Panel – CYD, Guition 4.0 and External ILI9341
 ![ESPHome](https://img.shields.io/badge/ESPHome-Compatible-blue)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Integrated-orange)
 ![LVGL](https://img.shields.io/badge/LVGL-UI-green)
 ![Cheap Yellow Display](https://img.shields.io/badge/CYD-Supported-yellow)
+![Guition 4.0](https://img.shields.io/badge/Guition%204.0-Supported-blue)
 
-ESPHome powered Home Assistant control panel using the popular Cheap Yellow Display (ESP32-2432S028).
+ESPHome-powered Home Assistant control panels for the popular Cheap Yellow Display (ESP32-2432S028), the 4.0-inch Guition ESP32-4848S040C_I, and a standalone ILI9341 with external ESP32.
 
 A 3D-printable enclosure with adjustable tilt for an ESP32 2.8" ILI9341 touchscreen, powered by ESPHome + LVGL and integrated with Home Assistant.  
-Includes ready-to-flash YAML configs for the ESP32-2432S028 (Cheap Yellow Display) and a standalone ILI9341 + external ESP32 wiring variant.
+Includes ready-to-flash YAML configs for all three hardware variants. The existing 3D-printable mounts are designed for the 2.8-inch CYD and standalone ILI9341 configurations; a Guition-specific mount is not included yet.
 
 Multiple mounting options are supported:
 
@@ -32,10 +33,11 @@ The enclosure is designed for:
 - Minimal footprint  
 - Professional, integrated appearance  
 
-Two hardware variants are supported:
+Three hardware variants are supported:
 
 - ✅ **ESP32-2432S028 (Cheap Yellow Display / CYD)**
 - ✅ **Standalone ILI9341 + External ESP32 wiring variant**
+- ✅ **Guition ESP32-4848S040C_I (4.0-inch, 480×480, capacitive touch)** — home-like UI; firmware support only for now
 
 The ESP32-2432S028 integrates the ESP32, ILI9341 display, touchscreen controller, and backlight circuitry on a single board.  
 It is commonly known as the **Cheap Yellow Display (CYD)** in the maker community and is the easiest option for this project.
@@ -44,6 +46,13 @@ Some CYD boards use an ILI9342 panel. The existing CYD home-like YAML contains c
 
 <img src="images/display-home-like.png" width="100%">
 <img src="images/display-home-like-overlay.png" width="100%">
+
+### Guition ESP32-4848S040C_I
+
+The Guition variant uses the same home-like interaction model in a larger 2×4 grid with eight configurable tiles. The tested orientation places the USB-C connector at the bottom.
+
+<img src="images/guition-4848s040c-i-ui.jpg" width="48%">
+<img src="images/guition-4848s040c-i-side.jpg" width="48%">
 
 <img src="images/display-buttons.png" width="50%">
 <img src="images/desk-mount2.jpeg" width="50%">
@@ -73,7 +82,7 @@ This project uses ESPHome LVGL instead of a classic display lambda approach.
 ### Core Concepts
 
 - UI rendered fully using LVGL widgets
-- 4 configurable touch buttons
+- 4 configurable buttons in the simple UI, or 6/8 configurable tiles in the home-like UI
 - Real-time state mirroring from Home Assistant
 - Central `ui_refresh` script keeps UI synchronized
 - Optional direct Home Assistant service calls
@@ -123,7 +132,7 @@ This keeps the tile UI clean while still allowing detailed control.
 
 - Home Assistant installed
 - ESPHome Add-on installed
-- **ESPHome 2026.9.0 or newer** is required by encrypted OTA in all four configs. Existing devices need the [OTA migration](#encrypted-ota-and-migration) before using the final config wirelessly.
+- **ESPHome 2026.9.0 or newer** is required by encrypted OTA in all five configs. Existing devices need the [OTA migration](#encrypted-ota-and-migration) before using the final config wirelessly.
 - Home Assistant 2026.2+
 - Basic ESPHome knowledge
 - 3D printer access (optional)
@@ -136,6 +145,7 @@ The current home-like integration was hardware-tested with:
 
 - **ESPHome 2026.9.0** and **Home Assistant 2026.2+**
 - ESP32-2432S028 (Cheap Yellow Display / CYD) with ILI9341
+- Guition ESP32-4848S040C_I with ST7701S RGB display and GT911 capacitive touch
 - all existing tile actions and overlays, localized OFF confirmation, auto-dim/wake, touch alignment and encrypted OTA migration
 
 Earlier releases were also tested on the standalone ILI9341 + XPT2046 wiring variant. The ILI9342 contribution author reported testing all four orientations; the integrated ILI9342 profile has not been independently hardware-verified by the maintainer.
@@ -168,7 +178,7 @@ Without this setting, direct control will not work.
 # ✨ Features
 
 - LVGL-based UI (lockscreen or tile layout depending on configuration)
-- 2×3 configurable tile layout (home-like UI)
+- 2×3 configurable tile layout on 320×240 hardware and 2×4 on the 480×480 Guition (home-like UI)
 - Long-press per tile: value overlay (brightness / fan speed / cover position / climate temperature) or independent entity action
 - Real-time state synchronization with Home Assistant
 - Optional direct Home Assistant service calls
@@ -176,7 +186,7 @@ Without this setting, direct control will not work.
 - Adjustable 3D-printed enclosure
 - Multiple mounting options: desk mount, under-desk mount, wall mount, and flush mount
 - Hidden cable routing
-- Works with CYD or external ESP32 wiring
+- Works with CYD, Guition ESP32-4848S040C_I, or external ESP32 wiring
 
 ------------------------------------------------------------------------
 
@@ -272,6 +282,14 @@ Use the wiring table below, which shows how to put everything together.
 
 ------------------------------------------------------------------------
 
+## Option C -- Guition ESP32-4848S040C_I
+
+The Guition is an all-in-one ESP32-S3 board with a 4.0-inch 480×480 ST7701S RGB display, GT911 capacitive touchscreen, 16 MB flash, and 8 MB octal PSRAM. Use `esphome/home-like/guition-4848s040c-i/home-like.yaml`; its display timings, touch transform, and USB-C-down orientation are already configured.
+
+No manual display wiring is required. The existing 2.8-inch printable enclosures do not fit this board.
+
+------------------------------------------------------------------------
+
 # 🚀 Installation
 
 1.  Open ESPHome in Home Assistant
@@ -283,7 +301,7 @@ Use the wiring table below, which shows how to put everything together.
 
 Available YAML variants (pick **one UI** for your **hardware**):
 
-> **ESPHome version:** all configs require **ESPHome 2026.9.0+**. The current CYD home-like configuration has been verified on ILI9341 hardware; see [Tested With](#-tested-with) for the remaining hardware scope.
+> **ESPHome version:** all configs require **ESPHome 2026.9.0+**. The CYD ILI9341 and Guition home-like configurations have been verified on hardware; see [Tested With](#-tested-with) for the remaining hardware scope.
 
 ### Cheap Yellow Display (ESP32-2432S028 / CYD)
 - `esphome/home-like/cyd-2432s028/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles) — actively maintained
@@ -293,13 +311,17 @@ Available YAML variants (pick **one UI** for your **hardware**):
 - `esphome/home-like/ili9341-external-esp32/home-like.yaml` – 2x3 “tiles” UI (wallpaper + tiles) — actively maintained
 - `esphome/buttons/ili9341-external-esp32/buttons.yaml` – lockscreen with 4 round buttons (simple / legacy)
 
+### Guition ESP32-4848S040C_I
+- `esphome/home-like/guition-4848s040c-i/home-like.yaml` – 2x4 home-like UI with 8 tiles — actively maintained and hardware-tested
+
 > Tip: The `home-like.yaml` file downloads orientation-specific background images at build time from a pinned repository revision.
 > For a full reference of all tile substitutions and copy-paste examples, see [`esphome/home-like/TILE_CONFIGURATION.md`](esphome/home-like/TILE_CONFIGURATION.md).
-> Two images are included:
+> Three images are included:
 > - `smartdisplay_background.png` — used for 0° (landscape) and 180° (landscape flipped)
 > - `smartdisplay_background_90.png` — used for 90° (portrait) and 270° (portrait flipped)
+> - `smartdisplay_background_480.png` — square Guition background
 >
-> The active image is selected via the `BG_IMAGE` substitution in the ORIENTATION preset block.
+> The active image is selected via the `BG_IMAGE` substitution. On the 320×240 variants it belongs to the selected orientation preset; the Guition config uses its fixed square background.
 
 
 ------------------------------------------------------------------------
@@ -313,8 +335,9 @@ The icon font and home-like wallpapers download during compilation, so they do n
 - **Background images (home-like UI)**:
   - `esphome/home-like/images/smartdisplay_background.png` — landscape (0° and 180°), included.
   - `esphome/home-like/images/smartdisplay_background_90.png` — portrait (90° and 270°), included.
-  - Selected automatically via the `BG_IMAGE` substitution in the ORIENTATION preset block.
-  - `ASSET_BASE` is pinned to public commit `9ffa5dfddf695150ad0388f5f5e2bcf786772195`, under `esphome/home-like`, so it does not follow changes on `main`.
+  - `esphome/home-like/images/smartdisplay_background_480.png` — 480×480 Guition, included.
+  - Selected via the `BG_IMAGE` substitution; the 320×240 variants tie it to the active orientation preset.
+  - Every `ASSET_BASE` is pinned to an immutable repository commit under `esphome/home-like`, so it does not follow changes on `main`. The 320×240 variants use `9ffa5dfddf695150ad0388f5f5e2bcf786772195`; the Guition variant uses `cb3531a7fdf057d4b7273d1feba648162bcfd5c9`.
 
 For local home-like assets, copy that UI's `images/` and `fonts/` folders next to the chosen YAML and set these substitutions:
 
@@ -355,8 +378,8 @@ Your config choice defines the UI style:
 
 
 ## `home-like.yaml` (tiles)
-- Tiles: TILE1..TILE6
-- Action strings: `tile1_press` .. `tile6_press` (short tap), `tile1_long_press` .. `tile6_long_press` (long press)
+- Tiles: TILE1..TILE6 on 320×240 variants; TILE1..TILE8 on Guition
+- Action strings follow the configured tile range, e.g. `tile1_press` through `tile8_press` and the corresponding `tileN_long_press` events
 - Each tile can optionally call a Home Assistant service directly (e.g. light toggle, fan preset toggle, cover open/close, cover position, or climate target temperature).
 - Per-tile OFF label is configurable via `TILE*_LABEL_OFF` (e.g. "Off" / "Aus").
 - Optional `TILEn_CONFIRM_OFF: "true"` guards short taps that would turn off or close a supported entity; the default is `"false"`. Cancellation emits no event and performs no action. Acceptance publishes `tileN_confirmed_off` and performs an explicit off/close action instead of a toggle. See [supported actions and limitations](esphome/home-like/TILE_CONFIGURATION.md#short-tap-off-confirmation), including automation-only mode and unprotected long presses.
