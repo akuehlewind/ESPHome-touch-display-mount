@@ -5,6 +5,17 @@ Pure documentation and README updates are not included.
 
 ---
 
+## 2026-10-05
+
+### Added
+- Home-like UI support for the Guition ESP32-4848S040C_I with ESP32-S3, 4.0-inch 480×480 ST7701S RGB display, GT911 capacitive touch, and eight configurable tiles in a 2×4 layout.
+- Hardware-tested USB-C-down display and touch orientation, Guition-specific display timings, full LVGL buffer, and a dedicated 480×480 background image.
+
+### Changed
+- Home-like documentation and tile configuration reference now distinguish the six-tile 320×240 variants from the eight-tile Guition variant.
+
+---
+
 ## 2026-09-24
 
 ### Added

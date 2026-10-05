@@ -6,7 +6,7 @@ Requires **ESPHome 2026.9.0 or newer**. Existing password-based devices need the
 
 > **Looking for the full-featured UI?**
 > The actively maintained version is in [`../home-like/`](../home-like/).
-> It offers a 2×3 tile grid, per-tile entity types, brightness/fan/cover sliders, long press actions, orientation presets, and much more.
+> It offers a 2×3 or 2×4 tile grid depending on hardware, per-tile entity types, brightness/fan/cover sliders, long press actions, orientation presets, and much more.
 
 ---
 
